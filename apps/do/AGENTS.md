@@ -1,0 +1,144 @@
+
+# AGENTS.md: SolidStart AI Task List
+
+_Last updated: 2025-11-22_
+
+> **Purpose** – This file is the onboarding manual for every AI assistant (Claude, Cursor, GPT, etc.) and every human who edits this repository.
+> It encodes our coding standards, architectural principles, and workflow to ensure high-quality, maintainable code.
+
+---
+
+## Project Overview
+
+This is a **Local-First AI Task Manager** built with **SolidStart**. It is designed to help users (specifically targeting neurodivergent needs) break down complex tasks into manageable chunks using Generative AI.
+
+**Key Components:**
+
+- **Framework**: SolidStart (SolidJS meta-framework) using `vinxi`.
+- **Language**: TypeScript.
+- **Data Layer (Local-First)**: **cr-sqlite** for structured queries with CRDTs, persisted via **OPFS** (Origin Private File System) with IndexedDB fallback. Tasks stored in SQL tables. There is **no** traditional backend database (Postgres/MySQL).
+- **AI Layer**: Vercel AI SDK (`ai`, `@ai-sdk/google`) running on Server Actions to interface with Gemini.
+- **Styling**: **Tailwind CSS v4** with utility classes. Stone color palette, Outfit font. Component-level styling via Tailwind utilities inline in JSX.
+- **Ordering**: `lexorank` for efficient drag-and-drop sorting.
+- **Sync Architecture**: File-based encrypted changesets stored in **Cloudflare R2**. Sync is pull-to-refresh (no real-time WebSocket). Device-to-device pairing via QR codes with end-to-end encryption.
+
+**Golden Rule**: When unsure about implementation details, architectural choices, or requirements, **ALWAYS consult the developer** rather than making assumptions.
+
+---
+
+## Non-negotiable Golden Rules
+
+| #:  | AI _may_ do                                                                                                                                         | AI _must NOT_ do                                                                                                                                      |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G-0 | Ask for clarification if the task involves adding a backend database or changing the local-first architecture.                                      | ❌ Attempt to install ORMs (Prisma/Drizzle) or switch to React.                                                                            |
+| G-1 | Generate code **only inside** `src/` or explicitly pointed configuration files.                                                                     | ❌ Touch `.vinxi/`, `.output/`, or `node_modules/`.                                                                                                   |
+| G-2 | Use **SolidJS primitives** (`createSignal`, `createEffect`, `Show`, `For`).                                                                         | ❌ Use React hooks (`useState`, `useEffect`) or React patterns (dependency arrays, virtual DOM logic).                                                |
+| G-3 | Follow existing Tailwind CSS patterns (utility classes in JSX, theme in `app.css`).                                                                 | ❌ Introduce CSS-in-JS libraries. Use Tailwind utilities, not separate CSS files per component.                                                       |
+| G-4 | For changes >300 LOC or >5 files, **ask for confirmation** before proceeding.                                                                       | ❌ Refactor the `taskStore.ts` synchronization logic without deep understanding of Y.js.                                                              |
+| G-5 | Stay within the current task context. Inform the developer if it would be better to start afresh.                                                   | ❌ Continue work from a prior prompt after "new task" – start a fresh session.                                                                        |
+
+---
+
+## Coding Standards
+
+- **Framework**: SolidStart (Vinxi).
+- **Reactivity**: Fine-grained reactivity.
+    -   Use `createSignal` for local state.
+    -   Use `createStore` for complex nested state.
+    -   **Never** destructure props in Solid components (you lose reactivity). Access them via `props.value`.
+- **Control Flow**: Use Solid's `<Show>`, `<For>`, `<Switch>`, `<Match>` components instead of `array.map()` or ternary operators for rendering.
+- **Data Persistence**:
+    -   All persistent data goes through `src/stores/taskStore.ts` and `src/stores/vaultStore.ts`.
+    -   Task mutations happen via SQL queries to cr-sqlite database.
+    -   Vault keys and sync state stored in IndexedDB.
+- **Styling**:
+    -   Use Tailwind CSS utility classes inline in JSX for all styling.
+    -   Theme variables defined in `src/app.css` via `@theme` block.
+    -   Stone color palette (`stone-50` through `stone-950`), Outfit font family.
+    -   Design for mobile-first experience.
+- **Icons**: Use `lucide-solid`.
+
+---
+
+## Project Layout & Core Components
+
+| Directory | Description |
+| :--- | :--- |
+| `src/actions/` | Server Actions (`use server`). Handles AI calls and sensitive logic. |
+| `src/components/` | UI Components and their specific `.css` files. |
+| `src/routes/` | File-based routing. `index.tsx` is the home. |
+| `src/stores/` | **Critical**. Contains `taskStore.ts` which handles Y.js, IndexedDB, and Lexorank logic. |
+| `src/app.tsx` | Root application component and provider setup. |
+| `src/app.css` | Global styles and CSS variables. |
+
+---
+
+## Key Architectural Concepts
+
+### 1. Local-First Data (cr-sqlite + OPFS)
+-   **Concept**: The app works offline. Data is stored in cr-sqlite WASM database persisted via OPFS (Origin Private File System) with IndexedDB fallback.
+-   **State**: The UI reads from a Solid `createStore` that mirrors SQLite queries.
+-   **Sync**: Changes trigger reactive updates to the Solid store to update the UI efficiently.
+-   **Implication**: Do not try to fetch tasks from an API endpoint. Read them from `tasks()` in `taskStore.ts`.
+
+### 2. Server Actions for AI
+-   **Concept**: Heavy AI processing happens on the server to protect API keys.
+-   **Flow**:
+    1.  User submits form in `TaskPrompt.tsx`.
+    2.  `breakdownTask` action (in `src/actions/taskActions.ts`) runs on the server.
+    3.  Server calls Google Gemini via Vercel AI SDK.
+    4.  Action returns structured data (JSON) to the client.
+    5.  Client receives data and updates the **local** SQLite database.
+
+### 3. Lexorank Ordering
+-   **Concept**: To support drag-and-drop without re-indexing the whole list, we use `lexorank`.
+-   **Usage**: Every task has a `rank` string. When moving a task, calculate the new rank between the previous and next sibling.
+
+### 4. Vault-Based Sync (Cloudflare R2 + cr-sqlite CRDTs)
+-   **Concept**: Optional sync via encrypted changesets stored in Cloudflare R2. Device pairing via QR codes.
+-   **Flow**:
+    1.  First device = local-only (no sync)
+    2.  Adding first paired device generates vault key and stores in IndexedDB
+    3.  QR code contains vault key + device ID
+    4.  cr-sqlite generates changesets on local changes
+    5.  Changesets encrypted with vault key (AES-GCM) before upload
+    6.  Upload to R2 with path = SHA256(vaultKey) (prevents enumeration)
+    7.  Sync on page load: fetch changesets since last sync, decrypt, apply to local DB
+    8.  Offline queue for failed uploads with retry on next sync
+-   **Zero-Knowledge**: Server (R2 proxy) never sees unencrypted data. All encryption happens client-side.
+-   **CRDT Merger**: cr-sqlite handles conflicts automatically with last-write-wins per column.
+
+---
+
+## Common Pitfalls (SolidJS Specific)
+
+-   **Destructuring Props**: `const { title } = props;` breaks reactivity. **Always** use `props.title`.
+-   **Dependency Arrays**: `createEffect` tracks dependencies automatically. Do not pass a dependency array like in React.
+-   **Class vs ClassName**: Solid uses `class="..."`, not `className`.
+- **Server vs Client**:
+     -   Files with `"use server"` run only on the server.
+     -   Components using browser APIs (like `IndexedDB`, `document`, or `crypto`) must be wrapped in `clientOnly` or checked with `isServer` / `onMount`.
+- **SQL Database**:
+     -   When working with cr-sqlite, always use camelCase for TypeScript types (e.g., `parentId`, `dueAt`) but snake_case for SQL queries (e.g., `parent_id`, `due_at`).
+     -   Convert between types using helper functions (e.g., `dbRowToTask`).
+
+---
+
+## Files to NOT Modify
+
+- `.vinxi/`
+- `.output/`
+- `pnpm-lock.yaml`
+- `node_modules/`
+- `dist/`
+
+## Browser Automation
+
+Use `agent-browser` for web automation. Run `agent-browser --help` for all commands.
+
+Core workflow:
+
+1. `agent-browser open <url>` - Navigate to page
+2. `agent-browser snapshot -i` - Get interactive elements with refs (@e1, @e2)
+3. `agent-browser click @e1` / `fill @e2 "text"` - Interact using refs
+4. Re-snapshot after page changes

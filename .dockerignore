@@ -1,0 +1,15 @@
+.git
+.gitignore
+.DS_Store
+.agents
+.claude
+.codex
+.nitro
+.opencode
+node_modules
+dist
+server-dist
+.output
+storage
+docs
+README.md

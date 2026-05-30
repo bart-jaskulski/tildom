@@ -1,0 +1,629 @@
+:root {
+  --bg-canvas: #fafafa;
+  --bg-surface: #ffffff;
+  --fg-default: #24292e;
+  --fg-muted: #6a737d;
+  --syntax-keyword: #d73a49; /* Pinkish red */
+  --syntax-string: #032f62; /* Dark blue */
+  --syntax-comment: #6a737d; /* Gray */
+  --syntax-error: #d73a49; /* Red */
+  --syntax-bg-active: #dbedff; /* Soft blue block */
+  --border-color: #e1e4e8;
+  --border-focus: #24292e;
+
+  /* Accent highlights */
+  --highlight-blue: #005cc5;
+  --highlight-green: #22863a;
+  --highlight-orange: #e36209;
+}
+
+* {
+  box-sizing: border-box;
+  border-radius: 0px !important; /* Strict border-radius: 0px globally. No rounded corners. */
+}
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--bg-canvas);
+}
+
+body {
+  color: var(--fg-default);
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: var(--highlight-blue);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+a:hover {
+  text-decoration: underline;
+  color: var(--syntax-keyword);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+}
+
+/* Base TUI App Shell */
+.tui-page {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header Buffer / Tabline */
+.tui-tabline {
+  display: flex;
+  align-items: stretch;
+  background: var(--bg-canvas);
+  border-bottom: 2px solid var(--border-color);
+  min-height: 44px;
+  max-width: 120ch;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.tui-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 2ch;
+  background: var(--fg-default);
+  color: var(--bg-canvas);
+  font-weight: bold;
+}
+
+.tui-brand-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--syntax-keyword);
+  color: var(--bg-surface) !important;
+  width: 24px;
+  height: 24px;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.tui-nav {
+  display: flex;
+  align-items: stretch;
+}
+
+.tui-nav-item {
+  display: flex;
+  align-items: center;
+  padding: 0 2.5ch;
+  color: var(--fg-muted);
+  border-right: 1px solid var(--border-color);
+  min-height: 44px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease-out;
+  user-select: none;
+}
+
+.tui-nav-item:hover {
+  background: var(--syntax-bg-active);
+  color: var(--fg-default);
+}
+
+.tui-nav-item.active-tab {
+  background: var(--bg-surface);
+  color: var(--fg-default);
+  border-bottom: 2px solid var(--syntax-keyword);
+  font-weight: bold;
+}
+
+.tui-search {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  border-left: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  padding: 0 1.5ch;
+}
+
+.tui-search::before {
+  content: "❯";
+  color: var(--syntax-keyword);
+  font-weight: bold;
+  margin-right: 1ch;
+}
+
+.tui-search input {
+  border: none;
+  background: transparent;
+  color: var(--fg-default);
+  padding: 0.5rem 0;
+  outline: none;
+  width: 160px;
+  transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tui-search input:focus {
+  width: 260px;
+}
+
+.tui-search input::placeholder {
+  color: var(--fg-muted);
+  opacity: 0.8;
+}
+
+/* App Main Container */
+.tui-content {
+  padding: 2rem 3ch;
+  max-width: 120ch;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  flex-grow: 1;
+}
+
+/* Split Pane Layout (For List / Details Panel) */
+.tui-split-pane {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 3ch;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .tui-split-pane {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* TUI Panels & Rails */
+.tui-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  padding: 1.5rem 2ch;
+  min-height: 100px;
+}
+
+.tui-panel-heading {
+  margin: 0 0 1.25rem;
+  font-size: 15px;
+  font-weight: bold;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--fg-default);
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
+.tui-panel-heading::before {
+  content: "■";
+  color: var(--syntax-keyword);
+  font-size: 10px;
+}
+
+/* TUI Lists with Left Rails */
+.tui-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: tui-counter;
+}
+
+.tui-list-item {
+  counter-increment: tui-counter;
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.tui-list-item:last-child {
+  margin-bottom: 0;
+}
+
+.tui-list-row {
+  border-left: 2px solid var(--border-color);
+  padding: 0.75rem 0 0.75rem 2.5ch;
+  margin-left: 2ch;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.15s ease-out;
+}
+
+.tui-list-row::before {
+  content: counter(tui-counter);
+  position: absolute;
+  right: calc(100% + 1.5ch);
+  top: 0.85rem;
+  color: var(--fg-muted);
+  font-size: 12px;
+  text-align: right;
+  width: 3ch;
+}
+
+.tui-list-row:hover,
+.tui-list-row.active-row {
+  border-left-color: var(--syntax-keyword);
+  background: var(--syntax-bg-active);
+}
+
+.tui-list-title {
+  font-weight: bold;
+  font-size: 15px;
+  color: var(--fg-default);
+}
+
+.tui-list-sub {
+  color: var(--fg-muted);
+  font-size: 12px;
+  margin-top: 0.25rem;
+}
+
+/* Form Controls with TUI Style */
+.tui-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.tui-label {
+  font-weight: bold;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg-default);
+}
+
+.tui-input,
+.tui-textarea,
+.tui-select {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--fg-default);
+  padding: 0.75rem 1.5ch;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.tui-input:focus,
+.tui-textarea:focus,
+.tui-select:focus {
+  border: 2px solid var(--fg-default);
+  padding: calc(0.75rem - 1px) calc(1.5ch - 1px);
+}
+
+.tui-textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* Buttons */
+.tui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 3ch;
+  border: 2px solid var(--fg-default);
+  background: var(--bg-surface);
+  color: var(--fg-default);
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.15s ease-out;
+  user-select: none;
+}
+
+.tui-btn:hover:not(:disabled) {
+  background: var(--fg-default);
+  color: var(--bg-surface);
+}
+
+.tui-btn:active:not(:disabled) {
+  background: var(--syntax-bg-active);
+  color: var(--fg-default);
+}
+
+.tui-btn:disabled {
+  border-color: var(--border-color);
+  color: var(--fg-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.tui-btn-danger {
+  border-color: var(--syntax-error);
+  color: var(--syntax-error);
+}
+
+.tui-btn-danger:hover:not(:disabled) {
+  background: var(--syntax-error);
+  color: var(--bg-surface);
+}
+
+/* Inline Add drawers */
+.tui-inline-add {
+  border: 1px dashed var(--border-color);
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.tui-inline-trigger {
+  font-weight: bold;
+  color: var(--highlight-blue);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5ch;
+  min-height: 44px;
+}
+
+.tui-inline-trigger:hover {
+  text-decoration: underline;
+  color: var(--syntax-keyword);
+}
+
+/* Single Unified Timeline Feed */
+.tui-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.tui-feed-item {
+  border-left: 2px solid var(--border-color);
+  padding-left: 2ch;
+  position: relative;
+}
+
+.tui-feed-item.pinned-note {
+  border-left-color: var(--highlight-green);
+  background: #f0fdf4; /* Very soft light green background for pinned notes */
+}
+
+.tui-feed-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--fg-muted);
+  margin-bottom: 0.5rem;
+}
+
+.tui-feed-pin-badge {
+  background: var(--highlight-green);
+  color: var(--bg-surface);
+  padding: 1px 6px;
+  font-weight: bold;
+  font-size: 10px;
+}
+
+.tui-feed-body {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--fg-default);
+  word-break: break-word;
+}
+
+/* Tag Highlighting */
+.tui-tag {
+  color: var(--highlight-blue);
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.tui-tag:hover {
+  color: var(--syntax-keyword);
+  text-decoration: underline;
+}
+
+/* Details Sidebar / Panel elements */
+.tui-meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.tui-meta-item {
+  display: grid;
+  grid-template-columns: 12ch 1fr;
+  font-size: 13px;
+}
+
+.tui-meta-label {
+  font-weight: bold;
+  color: var(--fg-muted);
+}
+
+.tui-meta-value {
+  color: var(--fg-default);
+}
+
+/* Symmetrical relationships component styles */
+.tui-relationship-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tui-relationship-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-canvas);
+  padding: 0.5rem 1ch;
+  font-size: 13px;
+  border-left: 2px solid var(--highlight-orange);
+}
+
+.tui-relationship-name {
+  font-weight: bold;
+}
+
+.tui-relationship-label {
+  color: var(--fg-muted);
+  margin-left: 1ch;
+}
+
+.tui-relationship-delete {
+  color: var(--syntax-error);
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0.25rem 0.5ch;
+  user-select: none;
+}
+
+.tui-relationship-delete:hover {
+  text-decoration: underline;
+}
+
+/* Settings block styles */
+.tui-settings-item {
+  border-bottom: 1px solid var(--border-color);
+  padding: 1.25rem 0;
+}
+
+.tui-settings-item:last-child {
+  border-bottom: none;
+}
+
+.tui-status-box {
+  margin: 1rem 0;
+  padding: 0.75rem 1.5ch;
+  border-left: 3px solid var(--highlight-blue);
+  background: var(--bg-canvas);
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.tui-error-box {
+  margin: 1rem 0;
+  padding: 0.75rem 1.5ch;
+  border-left: 3px solid var(--syntax-error);
+  background: var(--bg-canvas);
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--syntax-error);
+}
+
+/* Custom file uploader */
+.tui-file-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.tui-file-btn input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Vim active row cursor */
+.vim-cursor {
+  display: inline-block;
+  background-color: var(--fg-default);
+  color: var(--bg-canvas);
+  padding: 0 4px;
+  margin-right: 0.5ch;
+  font-weight: bold;
+}
+
+/* Helpers */
+.tui-muted {
+  color: var(--fg-muted);
+}
+
+.tui-empty {
+  text-align: center;
+  padding: 2rem 0;
+  color: var(--fg-muted);
+  border: 1px dashed var(--border-color);
+}
+
+.tui-row-actions {
+  display: flex;
+  gap: 1ch;
+  margin-top: 1rem;
+}
+
+/* Mobile responsive touch padding updates */
+@media (max-width: 768px) {
+  .tui-tabline {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tui-brand {
+    padding: 0.75rem 1.5ch;
+    justify-content: space-between;
+  }
+
+  .tui-nav {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .tui-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tui-nav-item {
+    flex: 1;
+    justify-content: center;
+    padding: 0 1.5ch;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .tui-search {
+    width: 100%;
+    margin-left: 0;
+    border-left: none;
+    border-bottom: 2px solid var(--border-color);
+    padding: 0.5rem 1.5ch;
+  }
+
+  .tui-search input {
+    width: 100% !important;
+  }
+
+  .tui-content {
+    padding: 1.5rem 1.5ch;
+  }
+
+  .tui-btn {
+    width: 100%;
+  }
+
+  .tui-row-actions {
+    flex-direction: column;
+  }
+}

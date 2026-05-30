@@ -1,0 +1,32 @@
+services:
+  mark:
+    build:
+      context: .
+      dockerfile: apps/mark/Dockerfile
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    volumes:
+      - mark-storage:/app/storage
+    restart: unless-stopped
+
+  do:
+    profiles:
+      - apps
+    build:
+      context: .
+      dockerfile: apps/do/Dockerfile
+    ports:
+      - "${DO_APP_PORT:-3001}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    volumes:
+      - do-storage:/app/storage
+    restart: unless-stopped
+
+volumes:
+  mark-storage:
+  do-storage:

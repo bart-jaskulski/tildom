@@ -1,0 +1,27 @@
+{
+  "name": "tildom",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev:do": "pnpm --filter do.tildom dev",
+    "dev:kin": "pnpm --filter kin.tildom dev",
+    "dev:mark": "pnpm --filter mark.tildom dev",
+    "build": "pnpm --filter './apps/*' build",
+    "build:do": "pnpm --filter do.tildom build",
+    "build:kin": "pnpm --filter kin.tildom build",
+    "build:mark": "pnpm --filter mark.tildom build",
+    "start:do": "pnpm --filter do.tildom start",
+    "start:mark": "pnpm --filter mark.tildom start",
+    "test": "pnpm --filter './apps/*' test",
+    "test:do": "pnpm --filter do.tildom test",
+    "test:kin": "pnpm --filter kin.tildom test",
+    "test:mark": "pnpm --filter mark.tildom test",
+    "typecheck": "pnpm --filter './apps/*' typecheck",
+    "typecheck:do": "pnpm --filter do.tildom typecheck",
+    "typecheck:kin": "pnpm --filter kin.tildom typecheck",
+    "typecheck:mark": "pnpm --filter mark.tildom typecheck"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

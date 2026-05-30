@@ -1,0 +1,361 @@
+@import "tailwindcss";
+
+:root {
+  --bg-canvas: #fafafa;
+  --bg-surface: #ffffff;
+  --fg-default: #24292e;
+  --fg-muted: #6a737d;
+  --syntax-keyword: #d73a49;
+  --syntax-string: #032f62;
+  --syntax-comment: #6a737d;
+  --syntax-error: #d73a49;
+  --syntax-bg-active: #dbedff;
+  --border-color: #e1e4e8;
+  --border-focus: #24292e;
+
+  /* Accent highlights */
+  --highlight-blue: #005cc5;
+  --highlight-green: #22863a;
+  --highlight-orange: #e36209;
+}
+
+* {
+  box-sizing: border-box;
+  border-radius: 0px !important; /* Strict border-radius: 0px across all apps. No rounded corners. */
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+html {
+  background: var(--bg-canvas);
+}
+
+body {
+  margin: 0;
+  color: var(--fg-default);
+  background: var(--bg-canvas);
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-canvas);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 0px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fg-muted);
+}
+
+a {
+  color: var(--highlight-blue);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+a:hover {
+  text-decoration: underline;
+  color: var(--syntax-keyword);
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit !important;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* Layout Rails & Guides */
+.tui-container {
+  max-width: 120ch;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2.5rem 3ch;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom utility for monospace gutters & numbering */
+.tui-gutter {
+  width: 3ch;
+  text-align: right;
+  color: var(--fg-muted);
+  user-select: none;
+  font-size: 12px;
+}
+
+/* Custom list items with guide rails */
+.tui-item-row {
+  border-left: 2px solid var(--border-color);
+  padding: 0.75rem 0 0.75rem 2.5ch;
+  position: relative;
+  transition: all 0.1s ease-out;
+}
+
+.tui-item-row:hover,
+.tui-item-row.active-row {
+  border-left-color: var(--syntax-keyword);
+  background: var(--syntax-bg-active);
+}
+
+/* Navigation (The Tabline) */
+.tui-topbar {
+  display: flex;
+  align-items: stretch;
+  background: var(--bg-canvas);
+  border-bottom: 2px solid var(--border-color);
+  min-height: 44px; /* Ensure vertical touch target */
+  max-width: 120ch;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.tui-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 2ch;
+  background: var(--fg-default);
+  color: var(--bg-canvas);
+  font-weight: bold;
+}
+
+.tui-brand a {
+  color: inherit;
+}
+.tui-brand a:hover {
+  text-decoration: none;
+}
+
+.tui-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--syntax-keyword);
+  color: var(--bg-surface) !important;
+  width: 24px;
+  height: 24px;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.tui-title {
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Tabs */
+.tui-nav {
+  display: flex;
+  align-items: stretch;
+}
+
+.tui-nav a {
+  display: flex;
+  align-items: center;
+  padding: 0 2.5ch;
+  color: var(--fg-muted);
+  border-right: 1px solid var(--border-color);
+  min-height: 44px;
+  font-weight: 500;
+  transition: all 0.1s ease-out;
+}
+
+.tui-nav a:hover {
+  background: var(--syntax-bg-active);
+  color: var(--fg-default);
+  text-decoration: none;
+}
+
+.tui-nav a[aria-current="page"] {
+  background: var(--bg-surface);
+  color: var(--fg-default);
+  border-bottom: 2px solid var(--syntax-keyword);
+  font-weight: bold;
+}
+
+/* Standard TUI inputs & textarea */
+.tui-input,
+.tui-textarea {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--fg-default);
+  padding: 0.75rem 1.5ch;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.1s ease-out;
+}
+
+.tui-input:focus,
+.tui-textarea:focus {
+  border: 2px solid var(--fg-default);
+  padding: calc(0.75rem - 1px) calc(1.5ch - 1px);
+}
+
+.tui-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* Button Aesthetic */
+.tui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 3ch;
+  border: 2px solid var(--fg-default);
+  background: var(--bg-surface);
+  color: var(--fg-default);
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.1s ease-out;
+}
+
+.tui-button:hover:not(:disabled) {
+  background: var(--fg-default);
+  color: var(--bg-surface);
+  text-decoration: none;
+}
+
+.tui-button:active:not(:disabled) {
+  background: var(--syntax-bg-active);
+  color: var(--fg-default);
+}
+
+.tui-button:disabled {
+  border-color: var(--border-color);
+  color: var(--fg-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.tui-link-button {
+  border: 0;
+  background: transparent;
+  color: var(--syntax-keyword);
+  font-weight: bold;
+  padding: 0.5rem 0.5ch;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.tui-link-button:hover:not(:disabled) {
+  text-decoration: underline;
+  color: var(--highlight-blue);
+}
+
+.tui-heading {
+  margin: 0 0 1rem;
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--fg-default);
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+}
+
+.tui-heading::before {
+  content: "■";
+  color: var(--syntax-keyword);
+  font-size: 10px;
+}
+
+/* Custom Checkbox as Brackets */
+.tui-checkbox-container {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  min-height: 44px; /* touch target */
+}
+
+.tui-checkbox-container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.tui-checkbox-box {
+  font-family: inherit;
+  font-weight: bold;
+  color: var(--fg-default);
+  margin-right: 1.5ch;
+}
+
+.tui-checkbox-container:hover .tui-checkbox-box {
+  color: var(--syntax-keyword);
+}
+
+/* Offline Banner */
+.offline-banner {
+  border-bottom: 2px solid var(--syntax-error);
+  background: var(--syntax-bg-active);
+  color: var(--syntax-error);
+  padding: 10px 16px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .tui-container {
+    padding: 1.5rem 1.5ch;
+  }
+  .tui-topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .tui-brand {
+    padding: 0.75rem 1.5ch;
+    justify-content: space-between;
+  }
+  .tui-nav {
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tui-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .tui-nav a {
+    flex: 1;
+    justify-content: center;
+    padding: 0 1.5ch;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .tui-button {
+    width: 100%;
+  }
+}

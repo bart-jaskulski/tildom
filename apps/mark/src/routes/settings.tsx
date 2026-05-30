@@ -1,0 +1,204 @@
+import { Title } from "@solidjs/meta";
+import { useNavigate } from "@solidjs/router";
+import { Show, createSignal, onMount, onCleanup } from "solid-js";
+import AppNav from "~/components/AppNav";
+import { exportDatabase, importDatabase } from "~/lib/db";
+
+const createBackupFilename = () => {
+  const date = new Date().toISOString().slice(0, 10);
+  return `mark-tildom-${date}.sqlite3`;
+};
+
+export default function Settings() {
+  const [status, setStatus] = createSignal<string | null>(null);
+  const [error, setError] = createSignal<string | null>(null);
+  const [isExporting, setIsExporting] = createSignal(false);
+  const [isImporting, setIsImporting] = createSignal(false);
+  const [vimEnabled, setVimEnabled] = createSignal(localStorage.getItem("vim-keybinds") !== "false");
+  const navigate = useNavigate();
+  let fileInput!: HTMLInputElement;
+
+  onMount(() => {
+    let lastKey = "";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isDesktop = !('ontouchstart' in window) && window.innerWidth > 768;
+      const isVimEnabled = localStorage.getItem("vim-keybinds") !== "false";
+      if (!isDesktop || !isVimEnabled) return;
+
+      const activeEl = document.activeElement;
+      const isTyping = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
+
+      if (isTyping) {
+        if (event.key === "Escape") {
+          (activeEl as HTMLElement).blur();
+          event.preventDefault();
+        }
+        return;
+      }
+
+      const key = event.key;
+
+      if (key === "Escape") {
+        lastKey = "";
+        event.preventDefault();
+        navigate("/");
+        return;
+      }
+
+      if (key === "/") {
+        const searchInput = document.querySelector('.hn-search input') as HTMLInputElement;
+        if (searchInput) {
+          event.preventDefault();
+          searchInput.focus();
+          searchInput.select();
+        }
+        return;
+      }
+
+      if (lastKey === "g" && (key === "t" || key === "T")) {
+        event.preventDefault();
+        lastKey = "";
+        navigate("/");
+        return;
+      }
+      if (key === "g") {
+        lastKey = "g";
+        setTimeout(() => { if (lastKey === "g") lastKey = ""; }, 1000);
+        return;
+      }
+
+      if (key === "h") {
+        event.preventDefault();
+        window.history.back();
+        return;
+      }
+      if (key === "l") {
+        event.preventDefault();
+        window.history.forward();
+        return;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    onCleanup(() => {
+      window.removeEventListener("keydown", handleKeyDown);
+    });
+  });
+
+  const toggleVim = () => {
+    const next = !vimEnabled();
+    setVimEnabled(next);
+    localStorage.setItem("vim-keybinds", String(next));
+  };
+
+  const handleExport = async () => {
+    setStatus(null);
+    setError(null);
+    setIsExporting(true);
+
+    try {
+      const bytes = await exportDatabase();
+      const backup = new Uint8Array(bytes);
+      const url = URL.createObjectURL(new Blob([backup.buffer], { type: "application/vnd.sqlite3" }));
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = createBackupFilename();
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setStatus("Database export started.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to export database");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImport = async (event: Event) => {
+    const file = (event.currentTarget as HTMLInputElement).files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const shouldImport = window.confirm(
+      "Import this database backup? It will replace the current local database.",
+    );
+    if (!shouldImport) {
+      if (fileInput) {
+        fileInput.value = "";
+      }
+      return;
+    }
+
+    setStatus(null);
+    setError(null);
+    setIsImporting(true);
+
+    try {
+      await importDatabase(new Uint8Array(await file.arrayBuffer()));
+      setStatus("Database imported.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to import database");
+    } finally {
+      setIsImporting(false);
+      if (fileInput) {
+        fileInput.value = "";
+      }
+    }
+  };
+
+  return (
+    <main class="hn-page">
+      <Title>Settings | mark.tildom</Title>
+      <AppNav active="settings" />
+
+      <section class="hn-content hn-stack">
+        <div class="hn-panel hn-stack settings-panel">
+          <div>
+            <h1 class="hn-heading">Settings</h1>
+            <p class="hn-muted">Import or export the local SQLite database.</p>
+          </div>
+
+          <div class="hn-form-row">
+            <label class="hn-label" style="display: flex; align-items: center; gap: 1ch; cursor: pointer; user-select: none;">
+              <input
+                type="checkbox"
+                checked={vimEnabled()}
+                onChange={toggleVim}
+                style="display: none;"
+              />
+              <span style="font-family: inherit; font-size: 14px; font-weight: bold; color: var(--fg-default);">
+                {vimEnabled() ? "[x]" : "[ ]"} ENABLE VIM KEYBINDINGS (DESKTOP ONLY)
+              </span>
+            </label>
+          </div>
+
+          <div class="settings-actions">
+            <button type="button" class="hn-button" onClick={handleExport} disabled={isExporting() || isImporting()}>
+              {isExporting() ? "exporting..." : "export database"}
+            </button>
+
+            <label class="hn-button settings-file-button">
+              <input
+                ref={fileInput}
+                type="file"
+                accept=".sqlite,.sqlite3,.db,application/vnd.sqlite3,application/x-sqlite3"
+                disabled={isExporting() || isImporting()}
+                onChange={handleImport}
+              />
+              {isImporting() ? "importing..." : "import database"}
+            </label>
+          </div>
+
+          <Show when={status()}>
+            <p class="hn-status" role="status">{status()}</p>
+          </Show>
+
+          <Show when={error()}>
+            <p class="hn-error" role="alert">{error()}</p>
+          </Show>
+        </div>
+      </section>
+    </main>
+  );
+}
