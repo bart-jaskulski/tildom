@@ -12,12 +12,14 @@
     "@solidjs/meta": "^0.29.4",
     "@solidjs/router": "^0.15.4",
     "@sqlite.org/sqlite-wasm": "3.53.0-build1",
+    "@tildom/ui": "workspace:*",
     "lucide-solid": "^1.17.0",
     "solid-js": "^1.9.13",
     "vite": "^8.0.14"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
+    "@tildom/config": "workspace:*",
     "@types/node": "^22.19.19",
     "jsdom": "^27.4.0",
     "typescript": "^6.0.3",

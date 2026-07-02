@@ -1,0 +1,79 @@
+:root {
+  --bg-canvas: #fafafa;
+  --bg-surface: #ffffff;
+  --fg-default: #24292e;
+  --fg-muted: #6a737d;
+  --syntax-keyword: #d73a49;
+  --syntax-string: #032f62;
+  --syntax-comment: #6a737d;
+  --syntax-error: #d73a49;
+  --syntax-bg-active: #dbedff;
+  --border-color: #e1e4e8;
+  --border-focus: #24292e;
+
+  /* Accent highlights */
+  --highlight-blue: #005cc5;
+  --highlight-green: #22863a;
+  --highlight-orange: #e36209;
+}
+
+* {
+  box-sizing: border-box;
+  border-radius: 0px !important; /* Strict border-radius: 0px across all apps. No rounded corners. */
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+html {
+  background: var(--bg-canvas);
+}
+
+body {
+  margin: 0;
+  color: var(--fg-default);
+  background: var(--bg-canvas);
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom Monospace Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-canvas);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 0px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fg-muted);
+}
+
+a {
+  color: var(--highlight-blue);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+a:hover {
+  text-decoration: underline;
+  color: var(--syntax-keyword);
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit !important;
+  font-size: inherit;
+  color: inherit;
+}

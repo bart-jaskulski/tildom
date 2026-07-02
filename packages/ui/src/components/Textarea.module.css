@@ -1,0 +1,18 @@
+.tuiTextarea {
+  width: 100%;
+  border: 1px solid var(--border-color, #e1e4e8);
+  background: var(--bg-surface, #ffffff);
+  color: var(--fg-default, #24292e);
+  padding: 10px 1.5ch;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+  resize: vertical;
+  transition: border-color 0.12s ease;
+
+  &:focus {
+    border: 2px solid var(--fg-default, #24292e);
+    padding: 9px calc(1.5ch - 1px);
+  }
+}

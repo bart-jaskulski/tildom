@@ -1,6 +1,7 @@
 import { Show, For, createSignal, createEffect, onMount, onCleanup } from "solid-js";
 import { useSearchParams, useNavigate } from "@solidjs/router";
 import AppNav from "~/components/AppNav";
+import { getSharedPreferences } from "@tildom/ui";
 import {
   contacts,
   isContactStoreReady,
@@ -38,7 +39,7 @@ export default function Home() {
   // Vim keyboard navigation for the directory list
   onMount(() => {
     let lastKey = "";
-    const isVimEnabled = localStorage.getItem("vim-keybinds") !== "false";
+    const isVimEnabled = getSharedPreferences().vimKeys;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       const isDesktop = !("ontouchstart" in window) && window.innerWidth > 768;
@@ -172,7 +173,7 @@ export default function Home() {
     }
   };
 
-  const isVimEnabled = () => localStorage.getItem("vim-keybinds") !== "false";
+  const isVimEnabled = () => getSharedPreferences().vimKeys;
 
   return (
     <div class="tui-page">

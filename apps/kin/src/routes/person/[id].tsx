@@ -1,6 +1,7 @@
 import { Show, For, createSignal, createEffect, onMount, onCleanup } from "solid-js";
 import { useParams, useNavigate } from "@solidjs/router";
 import AppNav from "~/components/AppNav";
+import { getSharedPreferences } from "@tildom/ui";
 import {
   fetchContact,
   fetchNotes,
@@ -111,7 +112,7 @@ export default function PersonDetail() {
   // Page Vim key bindings
   onMount(() => {
     let lastKey = "";
-    const isVimEnabled = localStorage.getItem("vim-keybinds") !== "false";
+    const isVimEnabled = getSharedPreferences().vimKeys;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       const isDesktop = !("ontouchstart" in window) && window.innerWidth > 768;

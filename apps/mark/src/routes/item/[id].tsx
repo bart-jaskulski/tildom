@@ -2,6 +2,7 @@ import { Title } from "@solidjs/meta";
 import { useNavigate, useParams } from "@solidjs/router";
 import { For, Show, createEffect, createResource, createSignal, onMount, onCleanup } from "solid-js";
 import { isServer } from "solid-js/web";
+import { createVimNavigation } from "@tildom/ui";
 import AppNav from "~/components/AppNav";
 import { dbVersion } from "~/lib/db";
 import { formatRelativeTimestamp } from "~/lib/entries";
@@ -36,92 +37,45 @@ export default function ItemPage() {
   const entry = () => detail()?.entry ?? null;
 
   onMount(() => {
-    let lastKey = "";
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const isDesktop = !('ontouchstart' in window) && window.innerWidth > 768;
-      const isVimEnabled = localStorage.getItem("vim-keybinds") !== "false";
-      if (!isDesktop || !isVimEnabled) return;
-
-      const activeEl = document.activeElement;
-      const isTyping = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
-
-      if (isTyping) {
-        if (event.key === "Escape") {
-          (activeEl as HTMLElement).blur();
-          event.preventDefault();
-        }
-        return;
-      }
-
-      const key = event.key;
-
-      if (key === "Escape") {
-        lastKey = "";
-        event.preventDefault();
+    createVimNavigation({
+      onEscape: () => {
         navigate("/");
-        return;
-      }
-
-      if (key === "/") {
+      },
+      onSearch: () => {
         const searchInput = document.querySelector('.hn-search input') as HTMLInputElement;
         if (searchInput) {
-          event.preventDefault();
           searchInput.focus();
           searchInput.select();
         }
-        return;
-      }
-
-      if (key === "i") {
-        event.preventDefault();
+      },
+      onFocusInput: () => {
         startEditing();
-        return;
-      }
-
-      if (lastKey === "g" && (key === "t" || key === "T")) {
-        event.preventDefault();
-        lastKey = "";
-        navigate("/settings");
-        return;
-      }
-      if (lastKey === "g" && key === "x") {
-        event.preventDefault();
-        lastKey = "";
-        const currentEntry = entry();
-        if (currentEntry && currentEntry.canonicalUrl) {
-          window.open(currentEntry.canonicalUrl, "_blank", "noreferrer");
+      },
+      customCommands: {
+        t: (lastKey) => {
+          if (lastKey === "g") navigate("/settings");
+        },
+        T: (lastKey) => {
+          if (lastKey === "g") navigate("/settings");
+        },
+        x: (lastKey) => {
+          if (lastKey === "g") {
+            const currentEntry = entry();
+            if (currentEntry && currentEntry.canonicalUrl) {
+              window.open(currentEntry.canonicalUrl, "_blank", "noreferrer");
+            }
+          }
+        },
+        h: () => {
+          window.history.back();
+        },
+        l: () => {
+          window.history.forward();
+        },
+        d: () => {
+          void handleDelete();
         }
-        return;
       }
-      if (key === "g") {
-        lastKey = "g";
-        setTimeout(() => { if (lastKey === "g") lastKey = ""; }, 1000);
-        return;
-      }
-
-      // History back/forth: h / l
-      if (key === "h") {
-        event.preventDefault();
-        window.history.back();
-        return;
-      }
-      if (key === "l") {
-        event.preventDefault();
-        window.history.forward();
-        return;
-      }
-
-      if (key === "d") {
-        event.preventDefault();
-        void handleDelete();
-        return;
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    onCleanup(() => {
-      window.removeEventListener("keydown", handleKeyDown);
     });
   });
 

@@ -1,0 +1,9 @@
+{
+  "extends": "@tildom/config/tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "~/*": ["./src/*"]
+    }
+  },
+  "include": ["src"]
+}

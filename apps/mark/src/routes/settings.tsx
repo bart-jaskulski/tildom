@@ -1,6 +1,7 @@
 import { Title } from "@solidjs/meta";
 import { useNavigate } from "@solidjs/router";
-import { Show, createSignal, onMount, onCleanup } from "solid-js";
+import { Show, createSignal, onMount } from "solid-js";
+import { createVimNavigation, createPreferences } from "@tildom/ui";
 import AppNav from "~/components/AppNav";
 import { exportDatabase, importDatabase } from "~/lib/db";
 
@@ -14,82 +15,41 @@ export default function Settings() {
   const [error, setError] = createSignal<string | null>(null);
   const [isExporting, setIsExporting] = createSignal(false);
   const [isImporting, setIsImporting] = createSignal(false);
-  const [vimEnabled, setVimEnabled] = createSignal(localStorage.getItem("vim-keybinds") !== "false");
+  const [prefs, setPrefs] = createPreferences();
   const navigate = useNavigate();
   let fileInput!: HTMLInputElement;
 
   onMount(() => {
-    let lastKey = "";
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const isDesktop = !('ontouchstart' in window) && window.innerWidth > 768;
-      const isVimEnabled = localStorage.getItem("vim-keybinds") !== "false";
-      if (!isDesktop || !isVimEnabled) return;
-
-      const activeEl = document.activeElement;
-      const isTyping = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
-
-      if (isTyping) {
-        if (event.key === "Escape") {
-          (activeEl as HTMLElement).blur();
-          event.preventDefault();
-        }
-        return;
-      }
-
-      const key = event.key;
-
-      if (key === "Escape") {
-        lastKey = "";
-        event.preventDefault();
+    createVimNavigation({
+      onEscape: () => {
         navigate("/");
-        return;
-      }
-
-      if (key === "/") {
+      },
+      onSearch: () => {
         const searchInput = document.querySelector('.hn-search input') as HTMLInputElement;
         if (searchInput) {
-          event.preventDefault();
           searchInput.focus();
           searchInput.select();
         }
-        return;
+      },
+      customCommands: {
+        t: (lastKey) => {
+          if (lastKey === "g") navigate("/");
+        },
+        T: (lastKey) => {
+          if (lastKey === "g") navigate("/");
+        },
+        h: () => {
+          window.history.back();
+        },
+        l: () => {
+          window.history.forward();
+        }
       }
-
-      if (lastKey === "g" && (key === "t" || key === "T")) {
-        event.preventDefault();
-        lastKey = "";
-        navigate("/");
-        return;
-      }
-      if (key === "g") {
-        lastKey = "g";
-        setTimeout(() => { if (lastKey === "g") lastKey = ""; }, 1000);
-        return;
-      }
-
-      if (key === "h") {
-        event.preventDefault();
-        window.history.back();
-        return;
-      }
-      if (key === "l") {
-        event.preventDefault();
-        window.history.forward();
-        return;
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    onCleanup(() => {
-      window.removeEventListener("keydown", handleKeyDown);
     });
   });
 
   const toggleVim = () => {
-    const next = !vimEnabled();
-    setVimEnabled(next);
-    localStorage.setItem("vim-keybinds", String(next));
+    setPrefs(prev => ({ ...prev, vimKeys: !prev.vimKeys }));
   };
 
   const handleExport = async () => {
@@ -163,12 +123,12 @@ export default function Settings() {
             <label class="hn-label" style="display: flex; align-items: center; gap: 1ch; cursor: pointer; user-select: none;">
               <input
                 type="checkbox"
-                checked={vimEnabled()}
+                checked={prefs().vimKeys}
                 onChange={toggleVim}
                 style="display: none;"
               />
               <span style="font-family: inherit; font-size: 14px; font-weight: bold; color: var(--fg-default);">
-                {vimEnabled() ? "[x]" : "[ ]"} ENABLE VIM KEYBINDINGS (DESKTOP ONLY)
+                {prefs().vimKeys ? "[x]" : "[ ]"} ENABLE VIM KEYBINDINGS (DESKTOP ONLY)
               </span>
             </label>
           </div>

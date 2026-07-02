@@ -1,5 +1,6 @@
 import { Show, createEffect, createSignal, on, onCleanup } from "solid-js";
 import { Portal } from "solid-js/web";
+import { Checkbox } from "@tildom/ui";
 import { formatDateInputValue, formatDueDateLabel, normalizeDateOnlyInput } from "~/lib/dates";
 import { deleteTask, updateTask, addTask, setTaskExpanded, isTaskExpanded } from "~/stores/taskStore";
 import type { Task, TreeNode } from "~/stores/taskStore";
@@ -158,17 +159,10 @@ export default function TaskItem(props: TaskItemProps) {
       >
         {/* Monospace Checkbox [ ] or [x] with collapse toggle [-] / [+] */}
         <div class="pt-0.5 shrink-0 select-none flex items-center gap-1.5">
-          <label class="tui-checkbox-container cursor-pointer">
-            <input 
-              type="checkbox" 
-              class="sr-only"
-              checked={props.completed}
-              onChange={(event) => updateTask(props.id, { completed: event.currentTarget.checked })}
-            />
-            <span class="tui-checkbox-box font-mono text-base">
-              {props.completed ? "[x]" : "[ ]"}
-            </span>
-          </label>
+          <Checkbox
+            checked={props.completed}
+            onChange={(checked) => updateTask(props.id, { completed: checked })}
+          />
 
           <Show when={hasChildren()}>
             <button

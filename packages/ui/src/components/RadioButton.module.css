@@ -1,0 +1,45 @@
+.container {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  min-height: 44px;
+  font-family: inherit;
+  font-size: 14px;
+  gap: 1ch;
+
+  &:has(input:focus-visible) .circle {
+    outline: 2px solid var(--border-focus, #24292e);
+    outline-offset: 2px;
+  }
+
+  &:hover:not(:has(input:disabled)) .circle {
+    color: var(--syntax-keyword, #d73a49);
+  }
+
+  &:has(input:disabled) {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.circle {
+  font-weight: bold;
+  color: var(--fg-default, #24292e);
+  transition: color 0.15s ease;
+}
+
+.label {
+  color: var(--fg-default, #24292e);
+}

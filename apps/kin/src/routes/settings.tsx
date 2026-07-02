@@ -3,6 +3,7 @@ import { useNavigate } from "@solidjs/router";
 import AppNav from "~/components/AppNav";
 import { exportDatabase, importDatabase } from "~/lib/db";
 import { Download, Upload } from "lucide-solid";
+import { createPreferences, getSharedPreferences } from "@tildom/ui";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -11,14 +12,14 @@ export default function Settings() {
   const [error, setError] = createSignal<string | null>(null);
   const [isExporting, setIsExporting] = createSignal(false);
   const [isImporting, setIsImporting] = createSignal(false);
-  const [vimEnabled, setVimEnabled] = createSignal(localStorage.getItem("vim-keybinds") !== "false");
+  const [prefs, setPrefs] = createPreferences();
   
   let fileInputRef!: HTMLInputElement;
 
   // Settings-specific Vim hotkeys
   onMount(() => {
     let lastKey = "";
-    const isVimEnabled = localStorage.getItem("vim-keybinds") !== "false";
+    const isVimEnabled = getSharedPreferences().vimKeys;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       const isDesktop = !("ontouchstart" in window) && window.innerWidth > 768;
@@ -111,9 +112,7 @@ export default function Settings() {
   };
 
   const toggleVim = () => {
-    const next = !vimEnabled();
-    setVimEnabled(next);
-    localStorage.setItem("vim-keybinds", String(next));
+    setPrefs(prev => ({ ...prev, vimKeys: !prev.vimKeys }));
   };
 
   return (
@@ -140,11 +139,11 @@ export default function Settings() {
             <label style="display: inline-flex; align-items: center; gap: 1ch; cursor: pointer; user-select: none; font-weight: bold; font-size: 14px;">
               <input
                 type="checkbox"
-                checked={vimEnabled()}
+                checked={prefs().vimKeys}
                 onChange={toggleVim}
                 style="display: none;"
               />
-              <span>{vimEnabled() ? "[x]" : "[ ]"} ENABLE VIM KEYBINDINGS (DESKTOP)</span>
+              <span>{prefs().vimKeys ? "[x]" : "[ ]"} ENABLE VIM KEYBINDINGS (DESKTOP)</span>
             </label>
           </div>
 

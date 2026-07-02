@@ -1,7 +1,8 @@
 import { Title } from "@solidjs/meta";
 import { useNavigate, useSearchParams } from "@solidjs/router";
-import { For, Show, createEffect, createMemo, createResource, createSignal, onMount, onCleanup } from "solid-js";
+import { For, Show, createEffect, createMemo, createResource, createSignal, onMount } from "solid-js";
 import { isServer } from "solid-js/web";
+import { createVimNavigation } from "@tildom/ui";
 import AppNav from "~/components/AppNav";
 import EntryCard from "~/components/EntryCard";
 import { dbVersion } from "~/lib/db";
@@ -49,8 +50,6 @@ export default function Home() {
   });
 
   onMount(() => {
-    let lastKey = "";
-
     const scrollActiveIntoView = () => {
       requestAnimationFrame(() => {
         const activeRowEl = document.querySelector('.entry-row.active-row');
@@ -60,197 +59,109 @@ export default function Home() {
       });
     };
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const isDesktop = !('ontouchstart' in window) && window.innerWidth > 768;
-      const isVimEnabled = localStorage.getItem("vim-keybinds") !== "false";
-      if (!isDesktop || !isVimEnabled) return;
-
-      const activeEl = document.activeElement;
-      const isTyping = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
-
-      if (isTyping) {
-        if (event.key === "Escape") {
-          (activeEl as HTMLElement).blur();
-          event.preventDefault();
-        }
-        return;
-      }
-
-      const key = event.key;
-
-      if (key === "Escape") {
-        lastKey = "";
-        event.preventDefault();
-        return;
-      }
-
-      // Search trigger: /
-      if (key === "/") {
+    createVimNavigation({
+      onDown: () => {
+        setActiveIndex(prev => Math.min(prev + 1, paginatedEntries().length - 1));
+        scrollActiveIntoView();
+      },
+      onUp: () => {
+        setActiveIndex(prev => Math.max(prev - 1, 0));
+        scrollActiveIntoView();
+      },
+      onSearch: () => {
         const searchInput = document.querySelector('.hn-search input') as HTMLInputElement;
         if (searchInput) {
-          event.preventDefault();
           searchInput.focus();
           searchInput.select();
         }
-        return;
-      }
-
-      // Insert mode: i
-      if (key === "i") {
-        event.preventDefault();
+      },
+      onFocusInput: () => {
         if (entryBodyTextarea) {
           entryBodyTextarea.focus();
         }
-        return;
-      }
-
-      // Paste action: p
-      if (key === "p") {
-        event.preventDefault();
-        if (entryBodyTextarea) {
-          entryBodyTextarea.focus();
-          navigator.clipboard.readText().then((text) => {
-            if (text) {
-              setEntryBody(prev => prev + text);
-            }
-          }).catch(() => {});
-        }
-        return;
-      }
-
-      // Tab navigation: gt / gT (goes to settings from main)
-      if (lastKey === "g" && (key === "t" || key === "T")) {
-        event.preventDefault();
-        lastKey = "";
-        navigate("/settings");
-        return;
-      }
-
-      // Open URL sequence: gx
-      if (lastKey === "g" && key === "x") {
-        event.preventDefault();
-        lastKey = "";
-        const selected = paginatedEntries()[activeIndex()];
-        if (selected && selected.canonicalUrl) {
-          window.open(selected.canonicalUrl, "_blank", "noreferrer");
-        }
-        return;
-      }
-
-      // First line jump sequence: gg
-      if (lastKey === "g" && key === "g") {
-        event.preventDefault();
-        lastKey = "";
-        setActiveIndex(0);
-        scrollActiveIntoView();
-        return;
-      }
-
-      // g prefix detection
-      if (key === "g") {
-        lastKey = "g";
-        setTimeout(() => { if (lastKey === "g") lastKey = ""; }, 1000);
-        return;
-      }
-
-      // Save command: :w
-      if (lastKey === ":" && key === "w") {
-        event.preventDefault();
-        lastKey = "";
+      },
+      onSave: () => {
         if (entryBody()) {
           void handleSubmit(new Event("submit") as any);
         }
-        return;
-      }
-
-      // : prefix detection
-      if (key === ":") {
-        lastKey = ":";
-        setTimeout(() => { if (lastKey === ":") lastKey = ""; }, 1000);
-        return;
-      }
-
-      // History back/forth: h / l
-      if (key === "h") {
-        event.preventDefault();
-        window.history.back();
-        return;
-      }
-      if (key === "l") {
-        event.preventDefault();
-        window.history.forward();
-        return;
-      }
-
-      // List navigation: j / ArrowDown
-      if (key === "j" || key === "ArrowDown") {
-        event.preventDefault();
-        setActiveIndex(prev => Math.min(prev + 1, paginatedEntries().length - 1));
-        scrollActiveIntoView();
-        return;
-      }
-
-      // List navigation: k / ArrowUp
-      if (key === "k" || key === "ArrowUp") {
-        event.preventDefault();
-        setActiveIndex(prev => Math.max(prev - 1, 0));
-        scrollActiveIntoView();
-        return;
-      }
-
-      // Last line jump: G
-      if (key === "G") {
-        event.preventDefault();
-        setActiveIndex(paginatedEntries().length - 1);
-        scrollActiveIntoView();
-        return;
-      }
-
-      // Number selections (1-9) to jump to line numbers!
-      if (/^[1-9]$/.test(key)) {
-        const index = Number(key) - 1;
-        if (index < paginatedEntries().length) {
-          event.preventDefault();
-          setActiveIndex(index);
+      },
+      customCommands: {
+        t: (lastKey) => {
+          if (lastKey === "g") navigate("/settings");
+        },
+        T: (lastKey) => {
+          if (lastKey === "g") navigate("/settings");
+        },
+        x: (lastKey) => {
+          if (lastKey === "g") {
+            const selected = paginatedEntries()[activeIndex()];
+            if (selected && selected.canonicalUrl) {
+              window.open(selected.canonicalUrl, "_blank", "noreferrer");
+            }
+          }
+        },
+        g: (lastKey) => {
+          if (lastKey === "g") {
+            setActiveIndex(0);
+            scrollActiveIntoView();
+          }
+        },
+        G: () => {
+          setActiveIndex(paginatedEntries().length - 1);
           scrollActiveIntoView();
-        }
-        return;
+        },
+        h: () => {
+          window.history.back();
+        },
+        l: () => {
+          window.history.forward();
+        },
+        e: () => {
+          const selected = paginatedEntries()[activeIndex()];
+          if (selected) {
+            navigate(`/item/${selected.id}`);
+          }
+        },
+        Enter: () => {
+          const selected = paginatedEntries()[activeIndex()];
+          if (selected) {
+            navigate(`/item/${selected.id}`);
+          }
+        },
+        o: () => {
+          const selected = paginatedEntries()[activeIndex()];
+          if (selected && selected.canonicalUrl) {
+            window.open(selected.canonicalUrl, "_blank", "noreferrer");
+          }
+        },
+        d: () => {
+          const selected = paginatedEntries()[activeIndex()];
+          if (selected) {
+            void handleDelete(selected.id);
+          }
+        },
+        p: () => {
+          if (entryBodyTextarea) {
+            entryBodyTextarea.focus();
+            navigator.clipboard.readText().then((text) => {
+              if (text) {
+                setEntryBody(prev => prev + text);
+              }
+            }).catch(() => {});
+          }
+        },
+        ...Object.fromEntries(
+          Array.from({ length: 9 }, (_, i) => [
+            String(i + 1),
+            () => {
+              if (i < paginatedEntries().length) {
+                setActiveIndex(i);
+                scrollActiveIntoView();
+              }
+            }
+          ])
+        )
       }
-
-      // Open selected item: e or Enter
-      if (key === "e" || key === "Enter") {
-        const selected = paginatedEntries()[activeIndex()];
-        if (selected) {
-          event.preventDefault();
-          navigate(`/item/${selected.id}`);
-        }
-        return;
-      }
-
-      // Open canonical URL: o
-      if (key === "o") {
-        const selected = paginatedEntries()[activeIndex()];
-        if (selected && selected.canonicalUrl) {
-          event.preventDefault();
-          window.open(selected.canonicalUrl, "_blank", "noreferrer");
-        }
-        return;
-      }
-
-      // Delete selected item: d
-      if (key === "d") {
-        const selected = paginatedEntries()[activeIndex()];
-        if (selected) {
-          event.preventDefault();
-          void handleDelete(selected.id);
-        }
-        return;
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    onCleanup(() => {
-      window.removeEventListener("keydown", handleKeyDown);
     });
   });
 

@@ -1,6 +1,6 @@
 # do.tildom
 
-do.tildom is the Tildom task manager. It is a Solid/Vite app with local-first task storage in browser SQLite through `@vlcn.io/crsqlite-wasm`.
+do.tildom is the Tildom task manager. It is a Solid/Vite app with local-first task storage in browser SQLite through `@tildom/browser-db`.
 
 The app includes a small Node/Hono server for AI task breakdown. It also contains an older sync route prototype under `src/routes/api/sync`; keep that code as reference until the dedicated `services/sync` architecture replaces it.
 

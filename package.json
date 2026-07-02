@@ -12,11 +12,11 @@
     "build:mark": "pnpm --filter mark.tildom build",
     "start:do": "pnpm --filter do.tildom start",
     "start:mark": "pnpm --filter mark.tildom start",
-    "test": "pnpm --filter './apps/*' test",
+    "test": "pnpm --filter './apps/*' --filter './packages/*' test",
     "test:do": "pnpm --filter do.tildom test",
     "test:kin": "pnpm --filter kin.tildom test",
     "test:mark": "pnpm --filter mark.tildom test",
-    "typecheck": "pnpm --filter './apps/*' typecheck",
+    "typecheck": "pnpm --filter './apps/*' --filter './packages/*' typecheck",
     "typecheck:do": "pnpm --filter do.tildom typecheck",
     "typecheck:kin": "pnpm --filter kin.tildom typecheck",
     "typecheck:mark": "pnpm --filter mark.tildom typecheck"

@@ -41,7 +41,7 @@ export default defineConfig(() => {
       },
     },
     optimizeDeps: {
-      exclude: ["@vlcn.io/crsqlite-wasm"],
+      exclude: ["@sqlite.org/sqlite-wasm"],
     },
     assetsInclude: ["**/*.wasm"],
     test: {
