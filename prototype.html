@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>tildom : kin.db</title>
+  <style>
+    /* --- 1. CORE PHILOSOPHY & DESIGN TOKENS --- */
+    :root {
+      --bg-canvas: #f6f8fa;
+      --bg-surface: #ffffff;
+      --fg-default: #24292e;
+      --fg-muted: #6a737d;
+      
+      --syntax-keyword: #d73a49;     /* Red/Pink accent */
+      --syntax-string: #032f62;      /* Dark Blue */
+      --syntax-comment: #6a737d;     /* Medium Gray */
+      --syntax-error: #d73a49;       /* Red action */
+      --syntax-bg-active: #dbedff;   /* Soft Blue block */
+      --border-color: #e1e4e8;       /* Layout divides */
+    }
+
+    /* --- 2. GRID & TYPOGRAPHY --- */
+    * {
+      box-sizing: border-box;
+      border-radius: 0px !important; /* Strict design system rule: no rounded corners */
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-canvas);
+      color: var(--fg-default);
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a, .btn-link {
+      color: var(--fg-default);
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    /* --- 3. LAYOUT STRUCTURE --- */
+    #app-container {
+      max-width: 120ch;
+      width: 100%;
+      margin: 0 auto;
+      background-color: var(--bg-canvas);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+
+
+    /* --- HEADER / NAVIGATION (TABLINE) --- */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+      padding: 0 0 0 1.5rem;
+      height: 48px;
+      background-color: var(--bg-canvas);
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      height: 100%;
+    }
+
+    .logo {
+      color: var(--syntax-keyword);
+      font-weight: bold;
+      font-size: 16px;
+      letter-spacing: -0.5px;
+    }
+
+    .tabs-container {
+      display: flex;
+      gap: 0.25rem;
+      height: 100%;
+      align-items: stretch;
+    }
+
+    .tab {
+      padding: 0 12px;
+      font-size: 12px;
+      color: var(--fg-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      height: 100%;
+      white-space: nowrap;
+    }
+
+    .tab.active {
+      background-color: var(--bg-surface);
+      color: var(--fg-default);
+      border-bottom: 2px solid var(--syntax-keyword);
+      font-weight: bold;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: stretch;
+      height: 100%;
+    }
+
+    .search-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      height: 100%;
+    }
+
+    .search-chevron {
+      position: absolute;
+      left: 10px;
+      color: var(--syntax-keyword);
+      font-weight: bold;
+      font-size: 12px;
+      pointer-events: none;
+    }
+
+    .search-box {
+      border: none;
+      border-left: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      padding: 0 12px 0 24px;
+      font-family: inherit;
+      font-size: 12px;
+      width: 140px;
+      height: 100%;
+      outline: none;
+      transition: width 0.20s ease-in-out;
+    }
+
+    .search-box:focus {
+      width: 240px;
+      border-left: 1px solid var(--syntax-keyword);
+    }
+
+    /* --- MAIN BODY WORKSPACE --- */
+    main {
+      flex: 1;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      max-width: 120ch;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* --- VIEW 1: DIRECTORY --- */
+    .directory-view {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .directory-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .directory-title {
+      font-size: 18px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .records-count {
+      color: var(--fg-muted);
+      font-size: 11px;
+    }
+
+    .directory-list {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .directory-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 8px;
+      border-bottom: 1px dashed var(--border-color);
+      cursor: pointer;
+    }
+
+    .directory-row:hover {
+      background-color: var(--syntax-bg-active);
+    }
+
+    .directory-row-left {
+      display: flex;
+      gap: 2rem;
+    }
+
+    .row-index {
+      color: var(--fg-muted);
+      width: 24px;
+    }
+
+    .row-name {
+      font-weight: bold;
+    }
+
+    .row-role {
+      color: var(--fg-muted);
+    }
+
+    .action-btn-container {
+      margin-top: 1.5rem;
+    }
+
+    .btn-solid {
+      background-color: var(--syntax-keyword);
+      color: #ffffff !important;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      display: inline-block;
+    }
+
+    .btn-solid:hover {
+      opacity: 0.9;
+    }
+
+    /* --- VIEW 2: PROFILE DETAIL VIEW --- */
+    .detail-view {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 2rem;
+    }
+
+    /* Left Pane - Parameters & Meta */
+    .profile-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .sidebar-block {
+      border: 1px solid var(--border-color);
+      padding: 1rem;
+      background-color: var(--bg-surface);
+    }
+
+    .profile-header-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border: 1px solid var(--border-color);
+      padding: 1rem;
+    }
+
+    .profile-name-area {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .profile-name {
+      font-size: 18px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .cursor-block {
+      display: inline-block;
+      width: 10px;
+      height: 18px;
+      background-color: #0d1117;
+    }
+
+    .uid-tag {
+      font-size: 11px;
+      color: var(--fg-muted);
+      margin-top: 4px;
+    }
+
+    .block-header {
+      font-size: 11px;
+      font-weight: bold;
+      color: var(--fg-muted);
+      margin-bottom: 0.75rem;
+      letter-spacing: 0.5px;
+    }
+
+    .parameter-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .parameter-table td {
+      padding: 4px 0;
+      vertical-align: top;
+    }
+
+    .param-label {
+      color: var(--fg-muted);
+      width: 90px;
+    }
+
+    .param-value {
+      word-break: break-all;
+    }
+
+    .param-value a {
+      text-decoration: underline;
+    }
+
+    .edit-input {
+      width: 100%;
+      font-family: inherit;
+      font-size: 12px;
+      border: 1px solid var(--syntax-keyword);
+      padding: 2px 4px;
+      background: var(--bg-canvas);
+      outline: none;
+    }
+
+    .relationship-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .tags-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .tag-link {
+      color: var(--syntax-keyword);
+      font-size: 12px;
+    }
+
+    /* Right Pane - Append Log & Timeline */
+    .profile-content {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .log-input-wrapper {
+      margin-bottom: 1.5rem;
+    }
+
+    .log-textarea {
+      width: 100%;
+      height: 64px;
+      border: 1px solid var(--border-color);
+      font-family: inherit;
+      font-size: 13px;
+      padding: 8px;
+      resize: none;
+      outline: none;
+    }
+
+    .log-textarea:focus {
+      border-color: var(--syntax-keyword);
+    }
+
+
+
+    /* Timeline Gutter Integration (Single Continuous Line) */
+    .timeline-container {
+      position: relative;
+      padding-left: 24px; /* Space for the continuous margin line */
+      display: flex;
+      flex-direction: column;
+      gap: 1.75rem;
+    }
+
+    /* The Continuous Vertical Line Gutter */
+    .timeline-container::before {
+      content: '';
+      position: absolute;
+      left: 7px; /* Perfectly aligns under the center of marker squares */
+      top: 6px;
+      bottom: 24px; /* Stop just above EOF */
+      width: 2px;
+      background-color: var(--border-color);
+      z-index: 1;
+    }
+
+    .timeline-item {
+      position: relative;
+    }
+
+    /* Solid square nodes plotted directly onto the continuous timeline line */
+    .timeline-marker {
+      position: absolute;
+      left: -21px; /* Align precisely centered over the timeline gutter border line */
+      top: 4px;
+      width: 8px;
+      height: 8px;
+      z-index: 2; /* Sits cleanly on top of the continuous thread line */
+    }
+
+    .timeline-marker.marker-red {
+      background-color: var(--syntax-keyword);
+    }
+
+    .timeline-marker.marker-gray {
+      background-color: var(--fg-muted);
+    }
+
+    .timeline-body {
+      flex: 1;
+    }
+
+    .timeline-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--fg-muted);
+      margin-bottom: 6px;
+    }
+
+    .timeline-text {
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+
+    .timeline-subaction {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--fg-muted);
+      padding-left: 8px;
+    }
+
+    .timeline-eof {
+      color: var(--fg-muted);
+      font-size: 12px;
+      margin-top: 0.5rem;
+    }
+
+    /* Modal / Form styling */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0,0,0,0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-box {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--fg-default);
+      width: 400px;
+      padding: 1.5rem;
+    }
+
+    .modal-header {
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 4px;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 11px;
+      color: var(--fg-muted);
+      margin-bottom: 4px;
+    }
+
+    .form-control {
+      width: 100%;
+      font-family: inherit;
+      border: 1px solid var(--border-color);
+      padding: 6px;
+      font-size: 12px;
+    }
+
+    .form-control:focus {
+      border-color: var(--syntax-keyword);
+      outline: none;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 1.5rem;
+    }
+
+    /* --- 5. RESPONSIVE MOBILE ADAPTATIONS --- */
+    
+    /* Mobile toggle bar for details (desktop: hidden) */
+    .mobile-details-toggle-bar {
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      /* Main layouts */
+      main {
+        padding: 0.75rem;
+      }
+      
+      header {
+        padding-left: 0.75rem;
+      }
+
+      /* Adjust header items to not overflow on small viewports */
+      .logo {
+        font-size: 14px;
+      }
+      .brand-section {
+        gap: 0.75rem;
+      }
+      .tab {
+        padding: 0 8px;
+        font-size: 11px;
+      }
+      .search-box {
+        width: 80px;
+      }
+      .search-box:focus {
+        width: 130px;
+      }
+
+      /* Directory layout adaptations */
+      .directory-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+      .directory-title {
+        border-bottom: 1px dashed var(--border-color);
+        padding-bottom: 4px;
+      }
+      .directory-row {
+        padding: 14px 10px; /* Tap targets >= 44px */
+      }
+      
+      /* Detail view layout adaptations */
+      .detail-view {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+
+      /* Feed re-ordering on mobile (timeline first, input box floating at the bottom) */
+      .profile-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+      }
+      .timeline-container {
+        order: 1;
+        margin-bottom: 140px; /* Let items scroll fully past the floating input */
+      }
+      .log-input-wrapper {
+        order: 2;
+        position: sticky;
+        bottom: 0;
+        background-color: var(--bg-canvas);
+        padding-top: 12px;
+        padding-bottom: 12px;
+        border-top: 1px dashed var(--border-color);
+        z-index: 100;
+        margin-bottom: 0;
+        margin-top: 0;
+      }
+
+      /* Mobile Details Toggle Bar: plain text link layout, no card-like borders/backgrounds */
+      .mobile-details-toggle-bar {
+        display: block;
+        padding: 12px 0 16px 0; /* large tap target */
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: bold;
+        color: var(--syntax-keyword);
+        cursor: pointer;
+        user-select: none;
+        text-transform: uppercase;
+      }
+
+      /* Profile sidebar is hidden on mobile by default unless show-mobile is added */
+      .profile-sidebar {
+        display: none;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+      }
+      
+      .profile-sidebar.show-mobile {
+        display: flex;
+      }
+
+      /* Mobile touch target padding expansion */
+      .btn-solid {
+        padding: 12px 20px; /* Touch target size >= 44px */
+      }
+      .btn-link {
+        padding: 8px 12px;
+        margin: -8px -12px;
+        display: inline-block;
+      }
+      .timeline-meta .btn-link {
+        margin-left: 12px;
+      }
+    }
+
+    /* Search Highlight & Grouped Results styles */
+    .search-highlight {
+      background-color: var(--syntax-bg-active);
+      font-weight: bold;
+      border-bottom: 1px solid var(--syntax-keyword);
+    }
+
+    .search-result-group {
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+    }
+
+    .search-group-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 1px dashed var(--border-color);
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .search-group-name {
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .search-group-meta {
+      font-size: 11px;
+      color: var(--fg-muted);
+    }
+
+    .search-match-item {
+      padding: 8px;
+      cursor: pointer;
+      border-bottom: 1px dashed var(--border-color);
+    }
+
+    .search-match-item:last-child {
+      border-bottom: none;
+    }
+
+    .search-match-item:hover {
+      background-color: var(--syntax-bg-active);
+    }
+
+    .match-meta {
+      font-size: 10px;
+      color: var(--fg-muted);
+      text-transform: uppercase;
+      font-family: monospace;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .match-snippet {
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+
+    /* Highlighted timeline item in detail view */
+    .highlighted-timeline-item {
+      background-color: var(--syntax-bg-active);
+      border-left: 2px solid var(--syntax-keyword);
+      padding-left: 6px;
+      margin-left: -8px;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div id="app-container">
+    
+    <!-- HEADER BAR -->
+    <header>
+      <div class="brand-section">
+        <span class="logo">tildom</span>
+        <div class="tabs-container">
+          <div class="tab active" id="people-tab" onclick="switchBuffer('people')">[ people.db ]</div>
+          <div class="tab" id="settings-tab" onclick="switchBuffer('settings')">[ settings.conf ]</div>
+        </div>
+      </div>
+      
+      <div class="header-right">
+        <div class="search-wrapper">
+          <span class="search-chevron">❯</span>
+          <input type="text" id="global-search" class="search-box" placeholder="search" oninput="handleSearch(this.value)">
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN INTERACTIVE WORKSPACE -->
+    <main id="workspace">
+      <!-- Dynamic Content Loaded Here -->
+    </main>
+
+
+  </div>
+
+  <!-- ADD PERSON DIALOG MODAL -->
+  <div class="modal-overlay" id="add-person-modal">
+    <div class="modal-box">
+      <div class="modal-header">ADD RECORD TO PEOPLE.DB</div>
+      <div class="form-group">
+        <label>FULL NAME</label>
+        <input type="text" id="new-name" class="form-control" placeholder="e.g. John Doe">
+      </div>
+      <div class="form-group">
+        <label>RELATIONSHIP TYPE</label>
+        <input type="text" id="new-relationship" class="form-control" placeholder="e.g. colleague / friend / family">
+      </div>
+      <div class="form-group">
+        <label>LOCATION</label>
+        <input type="text" id="new-location" class="form-control" placeholder="e.g. Berlin, DE">
+      </div>
+      <div class="modal-footer">
+        <button class="btn-solid" style="background-color: var(--border-color); color: var(--fg-default) !important;" onclick="closeAddModal()">[ CANCEL ]</button>
+        <button class="btn-solid" onclick="saveNewPerson()">[ ADD RECORD ]</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT IMPLEMENTING DATA PERSISTENCE & TIMELINE CONNECTORS -->
+  <script>
+    // --- 1. LOCAL DATA STORE ---
+    let peopleDatabase = [
+      {
+        uid: "0x8F9A2B",
+        name: "Magda",
+        relationshipClass: "family",
+        location: "Berlin, DE",
+        email: "magda@example.sys",
+        phone: "+49 151 2345 6789",
+        birthday: "1992-10-14",
+        relationships: [
+          { type: "Friend", target: "Dyzio" },
+          { type: "Travel Buddy", target: "Klaudia" }
+        ],
+        tags: ["#food", "#gift-ideas", "#travel", "#birthday", "#friends"],
+        timeline: [
+          {
+            timestamp: "2023-09-28 16:45:00 UTC",
+            pinned: true,
+            text: "Magda mentioned she's gluten-free and loves authentic Thai food. Good to remember for next dinner #food."
+          },
+          {
+            timestamp: "2023-10-24 14:30:00 UTC",
+            pinned: false,
+            text: "Met for coffee; talked about her recent trip to Japan. She highly recommends the hiking trails in Hakone #travel.",
+            subactions: [
+              "Action: Look up those pottery shops she mentioned.",
+              "Note: Borrow her guide book next time."
+            ]
+          },
+          {
+            timestamp: "2023-10-15 09:15:00 UTC",
+            pinned: false,
+            text: "Sent a birthday text; she's planning a small gathering next week. #birthday #gift-ideas"
+          },
+          {
+            timestamp: "2023-09-28 16:45:00 UTC",
+            pinned: false,
+            text: "Magda mentioned she's looking for a new book club. Suggested the one meeting at the local library #friends."
+          }
+        ]
+      },
+      {
+        uid: "0x1A2B3C",
+        name: "Dyzio",
+        relationshipClass: "colleague",
+        location: "Warsaw, PL",
+        email: "dyzio@example.sys",
+        phone: "+48 501 987 654",
+        birthday: "1989-04-12",
+        relationships: [{ type: "Friend", target: "Magda" }],
+        tags: ["#work", "#colleague", "#tech"],
+        timeline: [
+          {
+            timestamp: "2023-11-02 10:00:00 UTC",
+            pinned: false,
+            text: "Finished project review sprint. Dyzio suggested refactoring the layout rules to strict borderless modules."
+          }
+        ]
+      },
+      {
+        uid: "0x4E5F6A",
+        name: "Elias Vance",
+        relationshipClass: "client",
+        location: "London, UK",
+        email: "elias@vance.sys",
+        phone: "+44 20 7946 0192",
+        birthday: "1981-08-30",
+        relationships: [],
+        tags: ["#client", "#design", "#retro"],
+        timeline: [
+          {
+            timestamp: "2023-10-30 11:15:00 UTC",
+            pinned: false,
+            text: "Discussed system wireframes. Emphasized the importance of light-mode terminal layout styles."
+          }
+        ]
+      },
+      {
+        uid: "0x7B8C9D",
+        name: "Sarah Chen",
+        relationshipClass: "friend",
+        location: "San Francisco, CA",
+        email: "schen@domain.sys",
+        phone: "+1 415 555 2671",
+        birthday: "1994-11-05",
+        relationships: [{ type: "Travel Buddy", target: "Klaudia" }],
+        tags: ["#travel", "#hikes", "#friends"],
+        timeline: [
+          {
+            timestamp: "2023-10-12 18:00:00 UTC",
+            pinned: false,
+            text: "Exchanged recommendations for local coffee places in SF. Mentions wanting to join a running team."
+          }
+        ]
+      }
+    ];
+
+    // Navigation State
+    let currentBuffer = "people"; 
+    let selectedPersonUid = null; 
+    let isEditingProfile = false;
+    let isAddingRelationship = false;
+    let currentSearchTerm = "";
+    let sortDirection = "asc";
+    let isMobileDetailsExpanded = false;
+    let currentTagFilter = null;
+    let highlightedEventIndex = null;
+
+    // Initialize View
+    window.onload = function() {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get('q');
+      if (q) {
+        currentSearchTerm = q;
+        const searchInput = document.getElementById("global-search");
+        if (searchInput) searchInput.value = q;
+      }
+      const uid = params.get('uid');
+      const indexStr = params.get('index');
+      if (uid) {
+        selectedPersonUid = uid;
+        if (indexStr !== null) {
+          highlightedEventIndex = parseInt(indexStr, 10);
+        }
+      }
+      renderWorkspace();
+    };
+
+    // --- 2. WORKSPACE RENDERING LOGIC ---
+    function renderWorkspace() {
+      const workspace = document.getElementById("workspace");
+      
+      // Update Tab selection visuals
+      const peopleTab = document.getElementById("people-tab");
+      const settingsTab = document.getElementById("settings-tab");
+
+      if (peopleTab) {
+        if (currentBuffer === "people") {
+          peopleTab.classList.add("active");
+        } else {
+          peopleTab.classList.remove("active");
+        }
+      }
+
+      if (settingsTab) {
+        if (currentBuffer === "settings") {
+          settingsTab.classList.add("active");
+        } else {
+          settingsTab.classList.remove("active");
+        }
+      }
+
+      if (currentBuffer === "settings") {
+        renderSettingsView(workspace);
+      } else if (selectedPersonUid) {
+        renderDetailView(workspace);
+      } else {
+        renderDirectoryView(workspace);
+      }
+    }
+
+    // A. DIRECTORY VIEW
+    function renderDirectoryView(container) {
+      if (currentSearchTerm) {
+        const term = currentSearchTerm.toLowerCase();
+        let resultsHTML = "";
+        let totalMatchesCount = 0;
+
+        peopleDatabase.forEach(person => {
+          let personMatches = [];
+
+          // Check timeline events
+          person.timeline.forEach((event, index) => {
+            if (event.text.toLowerCase().includes(term)) {
+              personMatches.push({
+                type: "timeline",
+                timestamp: event.timestamp,
+                index: index,
+                displayText: event.text
+              });
+            }
+          });
+
+          // Check other fields
+          if (person.name.toLowerCase().includes(term)) {
+            personMatches.push({
+              type: "field",
+              field: "Name",
+              displayText: person.name
+            });
+          }
+          if (person.relationshipClass.toLowerCase().includes(term)) {
+            personMatches.push({
+              type: "field",
+              field: "Relationship",
+              displayText: person.relationshipClass
+            });
+          }
+          if (person.location.toLowerCase().includes(term)) {
+            personMatches.push({
+              type: "field",
+              field: "Location",
+              displayText: person.location
+            });
+          }
+          if (person.email.toLowerCase().includes(term)) {
+            personMatches.push({
+              type: "field",
+              field: "Email",
+              displayText: person.email
+            });
+          }
+          if (person.phone.toLowerCase().includes(term)) {
+            personMatches.push({
+              type: "field",
+              field: "Phone",
+              displayText: person.phone
+            });
+          }
+          if (person.birthday.toLowerCase().includes(term)) {
+            personMatches.push({
+              type: "field",
+              field: "Birthday",
+              displayText: person.birthday
+            });
+          }
+
+          if (personMatches.length > 0) {
+            totalMatchesCount += personMatches.length;
+            
+            // Build matches markup for this person
+            let matchesMarkup = "";
+            personMatches.forEach(match => {
+              if (match.type === "timeline") {
+                matchesMarkup += `
+                  <div class="search-match-item" onclick="viewPerson('${person.uid}', ${match.index})">
+                    <span class="match-meta">[ timeline ] ${match.timestamp}</span>
+                    <div class="match-snippet">${highlightText(match.displayText, currentSearchTerm)}</div>
+                  </div>
+                `;
+              } else {
+                matchesMarkup += `
+                  <div class="search-match-item" onclick="viewPerson('${person.uid}')">
+                    <span class="match-meta">[ profile ] ${match.field}</span>
+                    <div class="match-snippet">${highlightText(match.displayText, currentSearchTerm)}</div>
+                  </div>
+                `;
+              }
+            });
+
+            resultsHTML += `
+              <div class="search-result-group">
+                <div class="search-group-header" onclick="viewPerson('${person.uid}')">
+                  <span class="search-group-name">${highlightText(person.name, currentSearchTerm)}</span>
+                  <span class="search-group-meta">[ ${person.relationshipClass} ] - ${person.location}</span>
+                </div>
+                <div class="search-group-body">
+                  ${matchesMarkup}
+                </div>
+              </div>
+            `;
+          }
+        });
+
+        if (totalMatchesCount === 0) {
+          resultsHTML = `<div style="padding: 20px; color: var(--fg-muted);">No records or log entries match "${currentSearchTerm}".</div>`;
+        }
+
+        container.innerHTML = `
+          <div class="directory-view">
+            <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+              <span class="block-header" style="margin: 0;">SEARCH RESULTS: ${totalMatchesCount} MATCHES</span>
+              <button class="btn-solid" style="background-color: transparent; border: 1px solid var(--border-color); color: var(--fg-default) !important; padding: 4px 8px;" onclick="clearSearch()">
+                [ CLEAR SEARCH ]
+              </button>
+            </div>
+            <div class="search-results-list">
+              ${resultsHTML}
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // Default directory listing:
+      const filtered = [...peopleDatabase];
+
+      // Sort by name
+      filtered.sort((a, b) => {
+        const nameA = a.name.toLowerCase();
+        const nameB = b.name.toLowerCase();
+        if (nameA < nameB) return sortDirection === 'asc' ? -1 : 1;
+        if (nameA > nameB) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      let listHTML = "";
+      filtered.forEach((person) => {
+        listHTML += `
+          <div class="directory-row" onclick="viewPerson('${person.uid}')">
+            <div class="directory-row-left">
+              <span class="row-name">${person.name}</span>
+            </div>
+            <span class="row-role">[ ${person.relationshipClass} ]</span>
+          </div>
+        `;
+      });
+
+      if (filtered.length === 0) {
+        listHTML = `<div style="padding: 20px; color: var(--fg-muted);">No records.</div>`;
+      }
+
+      container.innerHTML = `
+        <div class="directory-view">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+            <button class="btn-solid" style="background-color: transparent; border: 1px solid var(--border-color); color: var(--fg-default) !important; padding: 4px 8px;" onclick="toggleSort()">
+              [ Sort: Name ${sortDirection === 'asc' ? '▲' : '▼'} ]
+            </button>
+            <button class="btn-solid" onclick="openAddModal()">Add Person</button>
+          </div>
+
+          <div class="directory-list">
+            ${listHTML}
+          </div>
+        </div>
+      `;
+    }
+
+    // C. SETTINGS VIEW
+    function renderSettingsView(container) {
+      container.innerHTML = `
+        <div class="sidebar-block" style="max-width: 600px; margin: 0 auto; background-color: var(--bg-surface);">
+          <div class="block-header">SETTINGS / CONFIGURATION</div>
+          <table class="parameter-table" style="margin-top: 1rem;">
+            <tr>
+              <td class="param-label" style="width: 150px;">Theme</td>
+              <td class="param-value">Default Light Mode</td>
+            </tr>
+            <tr>
+              <td class="param-label">Max Width</td>
+              <td class="param-value">120ch (Centered)</td>
+            </tr>
+            <tr>
+              <td class="param-label">Local Storage</td>
+              <td class="param-value">Enabled [x]</td>
+            </tr>
+            <tr>
+              <td class="param-label">Offline Sync</td>
+              <td class="param-value">Disabled [ ]</td>
+            </tr>
+          </table>
+        </div>
+      `;
+    }
+
+    function toggleSort() {
+      sortDirection = sortDirection === "asc" ? "desc" : "asc";
+      renderWorkspace();
+    }
+
+    // B. DETAIL VIEW
+    function renderDetailView(container) {
+      const person = peopleDatabase.find(p => p.uid === selectedPersonUid);
+      if (!person) {
+        selectedPersonUid = null;
+        renderDirectoryView(container);
+        return;
+      }
+
+      if (isEditingProfile || isAddingRelationship) {
+        isMobileDetailsExpanded = true;
+      }
+
+      // Format Relationships (without emoji)
+      let relsHTML = "";
+      if (person.relationships.length > 0) {
+        person.relationships.forEach(r => {
+          relsHTML += `
+            <div class="relationship-item">
+              <span>${r.type}:</span>
+              <a href="#" style="text-decoration: underline;" onclick="navigateToName('${r.target}')">${r.target}</a>
+            </div>
+          `;
+        });
+      } else {
+        relsHTML = `<div style="color: var(--fg-muted); font-size: 11px; margin-bottom: 4px;">No relationships mapped.</div>`;
+      }
+
+      // Populate dropdown for target relationships
+      let otherPeopleOptions = peopleDatabase
+        .filter(p => p.uid !== person.uid)
+        .map(p => `<option value="${p.name}">${p.name}</option>`)
+        .join("");
+
+      // Relationship Add layout section inside block if active
+      let addRelContent = "";
+      if (isAddingRelationship) {
+        addRelContent = `
+          <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border-color); display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+              <select id="add-rel-target" class="edit-input" style="width: 100px; font-size: 11px; padding: 2px;">
+                <option value="">-- target --</option>
+                ${otherPeopleOptions}
+              </select>
+              <input type="text" id="add-rel-type" class="edit-input" placeholder="type" style="width: 80px; font-size: 11px; padding: 2px;">
+            </div>
+            <div style="display: flex; gap: 6px; justify-content: flex-end;">
+              <button class="btn-solid" style="padding: 2px 8px; font-size: 11px; background-color: var(--border-color); color: var(--fg-default) !important;" onclick="cancelRelationshipAdd()">[ CANCEL ]</button>
+              <button class="btn-solid" style="padding: 2px 8px; font-size: 11px;" onclick="saveNewRelationship()">[ SAVE ]</button>
+            </div>
+          </div>
+        `;
+      }
+
+      // Format Inferred Tags dynamically from timeline log entries
+      const inferredTags = new Set();
+      person.timeline.forEach(event => {
+        const tagRegex = /(#[a-zA-Z0-9_-]+)/g;
+        const matches = event.text.match(tagRegex);
+        if (matches) {
+          matches.forEach(tag => inferredTags.add(tag));
+        }
+      });
+      const sortedTags = Array.from(inferredTags).sort();
+
+      let tagsHTML = "";
+      if (sortedTags.length > 0) {
+        sortedTags.forEach(t => {
+          const isActive = (t === currentTagFilter);
+          tagsHTML += `<a href="#" class="tag-link" onclick="applyTagFilter('${t}')" style="${isActive ? 'background-color: var(--syntax-bg-active); font-weight: bold; text-decoration: none; padding: 1px 4px;' : ''}">${isActive ? `[ ${t} ]` : t}</a> `;
+        });
+      } else {
+        tagsHTML = `<div style="color: var(--fg-muted); font-size: 11px;">No tags found in timeline logs.</div>`;
+      }
+
+      // Format Timeline (Sorted so pinned items float to the top)
+      const sortedEvents = person.timeline.map((event, index) => ({
+        ...event,
+        originalIndex: index
+      })).sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        if (a.timestamp === "Just Now" && b.timestamp !== "Just Now") return -1;
+        if (a.timestamp !== "Just Now" && b.timestamp === "Just Now") return 1;
+        return b.timestamp.localeCompare(a.timestamp);
+      });
+
+      // Filter events by tag if filter active
+      const filteredEvents = currentTagFilter
+        ? sortedEvents.filter(e => e.text.includes(currentTagFilter))
+        : sortedEvents;
+
+      let timelineHTML = "";
+      if (filteredEvents.length > 0) {
+        filteredEvents.forEach(event => {
+          const markerClass = event.pinned ? "marker-red" : "marker-gray";
+          const isHighlighted = (event.originalIndex === highlightedEventIndex);
+
+          // Color tag mentions and search term inside text safely
+          let coloredText = highlightSearchAndTags(event.text, currentSearchTerm);
+
+          // Append subactions if present
+          let subactionsHTML = "";
+          if (event.subactions && event.subactions.length > 0) {
+            event.subactions.forEach(act => {
+              subactionsHTML += `<div class="timeline-subaction">> ${act}</div>`;
+            });
+          }
+
+          timelineHTML += `
+            <div class="timeline-item ${isHighlighted ? 'highlighted-timeline-item' : ''}" id="${isHighlighted ? 'highlighted-event' : ''}">
+              <!-- Node Marker directly on top of the continuous vertical line -->
+              <div class="timeline-marker ${markerClass}"></div>
+              <div class="timeline-body">
+                <div class="timeline-meta">
+                  <span>${event.timestamp}</span>
+                  <span class="btn-link" style="font-size: 11px; margin-left: 8px;" onclick="togglePinEvent('${person.uid}', ${event.originalIndex})">
+                    ${event.pinned ? '[ unpin ]' : '[ pin ]'}
+                  </span>
+                </div>
+                <div class="timeline-text">${coloredText}</div>
+                ${subactionsHTML}
+              </div>
+            </div>
+          `;
+        });
+      } else {
+        timelineHTML = `
+          <div class="timeline-item" style="padding-left: 8px;">
+            <div style="color: var(--fg-muted); font-size: 13px;">No entries match tag "${currentTagFilter}".</div>
+          </div>
+        `;
+      }
+
+      // Switch Left panel layout based on editing mode
+      let leftPanelContent = "";
+      if (isEditingProfile) {
+        leftPanelContent = `
+          <table class="parameter-table">
+            <tr>
+              <td class="param-label">Name</td>
+              <td><input type="text" id="edit-name" class="edit-input" value="${person.name}"></td>
+            </tr>
+            <tr>
+              <td class="param-label">Location</td>
+              <td><input type="text" id="edit-loc" class="edit-input" value="${person.location}"></td>
+            </tr>
+            <tr>
+              <td class="param-label">Email</td>
+              <td><input type="text" id="edit-email" class="edit-input" value="${person.email}"></td>
+            </tr>
+            <tr>
+              <td class="param-label">Phone</td>
+              <td><input type="text" id="edit-phone" class="edit-input" value="${person.phone}"></td>
+            </tr>
+            <tr>
+              <td class="param-label">Birthday</td>
+              <td><input type="text" id="edit-bday" class="edit-input" value="${person.birthday}"></td>
+            </tr>
+          </table>
+          <div style="margin-top: 1rem; display: flex; gap: 8px;">
+            <button class="btn-solid" style="padding: 4px 8px;" onclick="saveProfileEdit()">[ SAVE ]</button>
+            <button class="btn-solid" style="padding: 4px 8px; background-color: var(--border-color); color: var(--fg-default) !important;" onclick="cancelProfileEdit()">[ CANCEL ]</button>
+          </div>
+        `;
+      } else {
+        leftPanelContent = `
+          <table class="parameter-table">
+            <tr>
+              <td class="param-label">Location</td>
+              <td class="param-value">${highlightText(person.location, currentSearchTerm)}</td>
+            </tr>
+            <tr>
+              <td class="param-label">Email</td>
+              <td class="param-value"><a href="mailto:${person.email}">${highlightText(person.email, currentSearchTerm)}</a></td>
+            </tr>
+            <tr>
+              <td class="param-label">Phone</td>
+              <td class="param-value">${highlightText(person.phone, currentSearchTerm)}</td>
+            </tr>
+            <tr>
+              <td class="param-label">Birthday</td>
+              <td class="param-value">${highlightText(person.birthday, currentSearchTerm)}</td>
+            </tr>
+          </table>
+        `;
+      }
+
+      container.innerHTML = `
+        <div class="detail-view">
+          
+          <!-- MOBILE DETAILS TOGGLE BAR -->
+          <div class="mobile-details-toggle-bar" onclick="toggleMobileDetails()">
+            ${isMobileDetailsExpanded ? '[-] HIDE PERSONAL DETAILS' : '[+] SHOW PERSONAL DETAILS'}
+          </div>
+
+          <!-- LEFT SIDEBAR -->
+          <div class="profile-sidebar ${isMobileDetailsExpanded ? 'show-mobile' : ''}">
+            <div class="sidebar-block">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 12px;">
+                <span style="font-size: 16px; font-weight: bold; color: var(--fg-default);">${isEditingProfile ? 'EDIT PROFILE' : highlightText(person.name, currentSearchTerm)}</span>
+                ${!isEditingProfile ? `
+                  <div style="display: flex; gap: 8px;">
+                    <span class="btn-link" style="font-size: 11px;" onclick="enableProfileEdit()">[ EDIT ]</span>
+                    <span class="btn-link" style="font-size: 11px; color: var(--syntax-error);" onclick="deletePerson('${person.uid}')">[ DELETE ]</span>
+                  </div>
+                ` : ''}
+              </div>
+              ${leftPanelContent}
+            </div>
+
+            <div class="sidebar-block">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem;">
+                <span class="block-header" style="margin: 0;">RELATIONSHIPS</span>
+                ${!isAddingRelationship ? `<span class="btn-link" style="font-size: 11px;" onclick="enableRelationshipAdd()">[ ADD ]</span>` : ''}
+              </div>
+              ${relsHTML}
+              ${addRelContent}
+            </div>
+
+            <div class="sidebar-block">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem;">
+                <span class="block-header" style="margin: 0;">TAGS INDEX</span>
+                ${currentTagFilter ? `<span class="btn-link" style="font-size: 11px;" onclick="clearTagFilter()">[ CLEAR ]</span>` : ''}
+              </div>
+              <div class="tags-container">
+                ${tagsHTML}
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT TIMELINE & LOG INPUT -->
+          <div class="profile-content">
+            
+            <div class="log-input-wrapper" style="display: flex; flex-direction: column; gap: 8px;">
+              <textarea id="log-input" class="log-textarea" placeholder="Enter interaction notes, observations, or updates here (use #tags to index)..."></textarea>
+              <div style="display: flex; justify-content: flex-end;">
+                <button class="btn-solid" onclick="submitLog()">[ Add ]</button>
+              </div>
+            </div>
+
+            <!-- Continuous Timeline Stream Wrapper -->
+            <div class="timeline-container">
+              ${timelineHTML}
+              <div class="timeline-eof">~ EOF</div>
+            </div>
+
+          </div>
+
+        </div>
+      `;
+
+      if (highlightedEventIndex !== null) {
+        setTimeout(() => {
+          const elem = document.getElementById('highlighted-event');
+          if (elem) {
+            elem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+      }
+    }
+
+    // --- 3. INTERACTIVE ACTIONS / EVENT HANDLERS ---
+
+    function switchBuffer(bufferName) {
+      currentBuffer = bufferName;
+      selectedPersonUid = null;
+      isEditingProfile = false;
+      isAddingRelationship = false;
+      currentTagFilter = null;
+      highlightedEventIndex = null;
+      if (bufferName === "people") {
+        currentSearchTerm = "";
+        const searchInput = document.getElementById("global-search");
+        if (searchInput) searchInput.value = "";
+      }
+      
+      const tabs = document.querySelectorAll(".tabs-container .tab");
+      tabs.forEach(tab => {
+        tab.classList.remove("active");
+        if (tab.innerText.includes(bufferName)) {
+          tab.classList.add("active");
+        }
+      });
+
+      renderWorkspace();
+    }
+
+    function viewPerson(uid, eventIndex = null) {
+      selectedPersonUid = uid;
+      isEditingProfile = false;
+      isAddingRelationship = false;
+      isMobileDetailsExpanded = false;
+      currentTagFilter = null;
+      highlightedEventIndex = eventIndex;
+      renderWorkspace();
+    }
+
+    function toggleMobileDetails() {
+      isMobileDetailsExpanded = !isMobileDetailsExpanded;
+      renderWorkspace();
+    }
+
+    function goBackToList() {
+      selectedPersonUid = null;
+      isEditingProfile = false;
+      isAddingRelationship = false;
+      renderWorkspace();
+    }
+
+    function deletePerson(uid) {
+      const idx = peopleDatabase.findIndex(p => p.uid === uid);
+      if (idx !== -1) {
+        if (confirm(`Are you sure you want to delete this record?`)) {
+          peopleDatabase.splice(idx, 1);
+          selectedPersonUid = null;
+          renderWorkspace();
+        }
+      }
+    }
+
+    function togglePinEvent(personUid, originalIndex) {
+      const person = peopleDatabase.find(p => p.uid === personUid);
+      if (person && person.timeline[originalIndex] !== undefined) {
+        person.timeline[originalIndex].pinned = !person.timeline[originalIndex].pinned;
+        renderWorkspace();
+      }
+    }
+
+    function enableProfileEdit() {
+      isEditingProfile = true;
+      renderWorkspace();
+    }
+
+    function cancelProfileEdit() {
+      isEditingProfile = false;
+      renderWorkspace();
+    }
+
+    function saveProfileEdit() {
+      const person = peopleDatabase.find(p => p.uid === selectedPersonUid);
+      if (person) {
+        const newName = document.getElementById("edit-name").value.trim();
+        if (newName) {
+          person.name = newName;
+        }
+        person.location = document.getElementById("edit-loc").value;
+        person.email = document.getElementById("edit-email").value;
+        person.phone = document.getElementById("edit-phone").value;
+        person.birthday = document.getElementById("edit-bday").value;
+      }
+      isEditingProfile = false;
+      renderWorkspace();
+    }
+
+    function navigateToName(name) {
+      const found = peopleDatabase.find(p => p.name.toLowerCase() === name.toLowerCase());
+      if (found) {
+        viewPerson(found.uid);
+      } else {
+        alert(`Record for "${name}" not found in current local database.`);
+      }
+    }
+
+    function submitLog() {
+      const logText = document.getElementById("log-input").value.trim();
+      if (!logText) return;
+
+      const person = peopleDatabase.find(p => p.uid === selectedPersonUid);
+      if (person) {
+        const tagRegex = /(#[a-zA-Z0-9_-]+)/g;
+        const matches = logText.match(tagRegex);
+        if (matches) {
+          matches.forEach(tag => {
+            if (!person.tags.includes(tag)) {
+              person.tags.push(tag);
+            }
+          });
+        }
+
+        const now = new Date();
+        const year = now.getUTCFullYear();
+        const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(now.getUTCDate()).padStart(2, '0');
+        const hours = String(now.getUTCHours()).padStart(2, '0');
+        const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+        const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+        const timestampStr = `${year}-${month}-${day} ${hours}:${minutes}:${seconds} UTC`;
+
+        person.timeline.unshift({
+          timestamp: timestampStr,
+          pinned: false,
+          text: logText
+        });
+
+        renderWorkspace();
+      }
+    }
+
+    function openAddModal() {
+      document.getElementById("add-person-modal").style.display = "flex";
+    }
+
+    function closeAddModal() {
+      document.getElementById("add-person-modal").style.display = "none";
+    }
+
+    function saveNewPerson() {
+      const name = document.getElementById("new-name").value.trim();
+      const relationship = document.getElementById("new-relationship").value.trim();
+      const location = document.getElementById("new-location").value.trim() || "Unknown";
+
+      if (!name || !relationship) {
+        alert("Please enter Name and Relationship properties.");
+        return;
+      }
+
+      const randomHex = Math.floor(Math.random() * 16777215).toString(16).toUpperCase();
+      const simulatedUid = `0x${randomHex}`;
+
+      peopleDatabase.push({
+        uid: simulatedUid,
+        name: name,
+        relationshipClass: relationship.toLowerCase(),
+        location: location,
+        email: `${name.toLowerCase().replace(/\s+/g, '')}@example.sys`,
+        phone: "+00 000 0000 0000",
+        birthday: "YYYY-MM-DD",
+        relationships: [],
+        tags: [`#${relationship.toLowerCase()}`],
+        timeline: [
+          {
+            timestamp: "Just Now",
+            pinned: false,
+            text: `Added ${name} to people.db registry.`
+          }
+        ]
+      });
+
+      document.getElementById("new-name").value = "";
+      document.getElementById("new-relationship").value = "";
+      document.getElementById("new-location").value = "";
+      
+      closeAddModal();
+      renderWorkspace();
+    }
+
+    function handleSearch(term) {
+      currentSearchTerm = term;
+      selectedPersonUid = null;
+      renderWorkspace();
+    }
+
+    function applyTagFilter(tag) {
+      if (currentTagFilter === tag) {
+        currentTagFilter = null;
+      } else {
+        currentTagFilter = tag;
+      }
+      renderWorkspace();
+    }
+
+    function clearTagFilter() {
+      currentTagFilter = null;
+      renderWorkspace();
+    }
+
+    function clearSearch() {
+      currentSearchTerm = "";
+      document.getElementById("global-search").value = "";
+      renderWorkspace();
+    }
+
+    function highlightText(text, term) {
+      if (!term) return text;
+      const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(${escaped})`, 'gi');
+      return text.replace(regex, '<span class="search-highlight">$1</span>');
+    }
+
+    function highlightSearchAndTags(text, searchTerm) {
+      // Escape HTML characters to prevent rendering problems
+      let escaped = text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+      
+      if (!searchTerm) {
+        return escaped.replace(/(#[a-zA-Z0-9_-]+)/g, '<span style="color: var(--syntax-keyword);">$1</span>');
+      }
+      
+      const escapedTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(#[a-zA-Z0-9_-]+)|(${escapedTerm})`, 'gi');
+      
+      return escaped.replace(regex, (match, p1, p2) => {
+        if (p1) {
+          return `<span style="color: var(--syntax-keyword);">${p1}</span>`;
+        } else if (p2) {
+          return `<span class="search-highlight">${p2}</span>`;
+        }
+        return match;
+      });
+    }
+
+    function enableRelationshipAdd() {
+      isAddingRelationship = true;
+      renderWorkspace();
+    }
+
+    function cancelRelationshipAdd() {
+      isAddingRelationship = false;
+      renderWorkspace();
+    }
+
+    function saveNewRelationship() {
+      const target = document.getElementById("add-rel-target").value;
+      const type = document.getElementById("add-rel-type").value.trim();
+      if (!target || !type) {
+        alert("Please select a target person and enter a relationship type.");
+        return;
+      }
+      const person = peopleDatabase.find(p => p.uid === selectedPersonUid);
+      if (person) {
+        person.relationships.push({ type: type, target: target });
+      }
+      isAddingRelationship = false;
+      renderWorkspace();
+    }
+
+    // Escape listener to pop out of detail cards
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "Escape") {
+        const activeElem = document.activeElement;
+        if (activeElem && (activeElem.tagName === "INPUT" || activeElem.tagName === "TEXTAREA")) {
+          activeElem.blur();
+        } else {
+          goBackToList();
+        }
+      }
+    });
+  </script>
+</body>
+</html>
