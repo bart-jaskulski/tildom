@@ -1,5 +1,5 @@
 import { Title } from "@solidjs/meta";
-import { useNavigate, useParams } from "@solidjs/router";
+import { A, useNavigate, useParams } from "@solidjs/router";
 import { For, Show, createEffect, createResource, createSignal, onMount, onCleanup } from "solid-js";
 import { isServer } from "solid-js/web";
 import { createVimNavigation } from "@tildom/ui";
@@ -16,6 +16,7 @@ export default function ItemPage() {
   const [commentBody, setCommentBody] = createSignal("");
   const [editTitle, setEditTitle] = createSignal("");
   const [editContent, setEditContent] = createSignal("");
+  const [editTags, setEditTags] = createSignal("");
   const [actionError, setActionError] = createSignal<string | null>(null);
   const [commentError, setCommentError] = createSignal<string | null>(null);
   const [commentActionError, setCommentActionError] = createSignal<string | null>(null);
@@ -108,6 +109,7 @@ export default function ItemPage() {
 
     setEditTitle(currentEntry.title);
     setEditContent(currentEntry.sourceUrl ?? currentEntry.canonicalUrl ?? currentEntry.body);
+    setEditTags(currentEntry.tags.join(" "));
     setActionError(null);
     setIsEditing(true);
   };
@@ -131,6 +133,7 @@ export default function ItemPage() {
       await updateEntry(currentEntry.id, {
         title: editTitle(),
         content: editContent(),
+        tags: editTags(),
       });
       setIsEditing(false);
       await refetch();
@@ -291,6 +294,14 @@ export default function ItemPage() {
                       class="hn-textarea"
                     />
 
+                    <label class="hn-label" for="edit-tags">tags</label>
+                    <input
+                      id="edit-tags"
+                      value={editTags()}
+                      onInput={(event) => setEditTags(event.currentTarget.value)}
+                      class="hn-input"
+                    />
+
                     <Show when={actionError()}>
                       <p class="hn-error">{actionError()}</p>
                     </Show>
@@ -315,6 +326,18 @@ export default function ItemPage() {
 
                   <Show when={currentEntry().excerpt}>
                     <p class="entry-preview">{currentEntry().excerpt}</p>
+                  </Show>
+
+                  <Show when={currentEntry().tags.length > 0}>
+                    <p class="entry-tags item-tags">
+                      <For each={currentEntry().tags}>
+                        {(tag) => (
+                          <A href={`/?q=${encodeURIComponent(`#${tag}`)}`} class="entry-tag">
+                            #{tag}
+                          </A>
+                        )}
+                      </For>
+                    </p>
                   </Show>
 
                   <Show when={currentEntry().body}>

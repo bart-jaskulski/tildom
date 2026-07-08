@@ -1,5 +1,6 @@
 import { query } from "~/lib/db";
 import type { SearchResult } from "~/lib/entries";
+import { normalizeTagName } from "~/lib/tags";
 
 type SearchDocumentRow = {
   entry_id: string;
@@ -9,6 +10,7 @@ type SearchDocumentRow = {
   domain: string;
   excerpt: string;
   comments_text: string;
+  tag_text: string | null;
   comment_count: number;
   updated_at: number;
   created_at: number;
@@ -64,6 +66,7 @@ const computeScore = (row: SearchDocumentRow, terms: string[]) => {
   const body = row.body.toLowerCase();
   const excerpt = row.excerpt.toLowerCase();
   const comments = row.comments_text.toLowerCase();
+  const tags = (row.tag_text ?? "").toLowerCase();
   const normalizedQuery = terms.join(" ");
 
   let score = 0;
@@ -104,6 +107,10 @@ const computeScore = (row: SearchDocumentRow, terms: string[]) => {
     score += 90 + countMatchingTerms(comments, terms) * 5;
   }
 
+  if (includesAllTerms(tags, terms)) {
+    score += 70 + countMatchingTerms(tags, terms) * 4;
+  }
+
   const recency = row.last_commented_at ?? row.created_at;
   score += Math.max(0, Math.floor(recency / 1_000_000_000_000));
 
@@ -118,6 +125,7 @@ const resolveMatchContext = (row: SearchDocumentRow, terms: string[]) => {
     { label: "Note", value: row.body },
     { label: "Excerpt", value: row.excerpt },
     { label: "Comment", value: row.comments_text },
+    { label: "Tags", value: row.tag_text ?? "" },
   ];
 
   const exactField = fields.find((field) => includesAllTerms(field.value, terms));
@@ -130,10 +138,86 @@ const resolveMatchContext = (row: SearchDocumentRow, terms: string[]) => {
   };
 };
 
+const mapSearchRow = (row: SearchDocumentRow, terms: string[], forcedContext?: { label: string; text: string }) => {
+  const score = computeScore(row, terms);
+  const context = forcedContext
+    ? { matchLabel: forcedContext.label, matchText: forcedContext.text }
+    : resolveMatchContext(row, terms);
+
+  return {
+    id: row.entry_id,
+    sourceUrl: row.url || null,
+    canonicalUrl: row.url || null,
+    domain: row.domain || null,
+    title: row.title,
+    body: row.body,
+    excerpt: row.excerpt || null,
+    excerptStatus: row.excerpt ? "ready" : "idle",
+    excerptError: null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    lastCommentedAt: row.last_commented_at,
+    commentCount: row.comment_count,
+    tags: row.tag_text ? row.tag_text.split(" ").filter(Boolean) : [],
+    score,
+    matchLabel: context.matchLabel,
+    matchText: context.matchText,
+  } satisfies SearchResult;
+};
+
+const tagTotalsJoin = `
+  LEFT JOIN (
+    SELECT entry_tags.entry_id, group_concat(tags.name, ' ') AS tag_text
+    FROM entry_tags
+    JOIN tags ON tags.id = entry_tags.tag_id
+    GROUP BY entry_tags.entry_id
+  ) tag_totals ON tag_totals.entry_id = e.id
+`;
+
+const searchStrictTag = async (rawQuery: string): Promise<SearchResult[]> => {
+  const tag = normalizeTagName(rawQuery.slice(1));
+  if (!tag) {
+    return [];
+  }
+
+  const rows = await query<SearchDocumentRow>(
+    `
+      SELECT
+        search_documents.entry_id,
+        search_documents.title,
+        search_documents.body,
+        search_documents.url,
+        search_documents.domain,
+        search_documents.excerpt,
+        search_documents.comments_text,
+        COALESCE(tag_totals.tag_text, '') AS tag_text,
+        search_documents.comment_count,
+        search_documents.updated_at,
+        e.created_at,
+        e.last_commented_at
+      FROM search_documents
+      JOIN entries e ON e.id = search_documents.entry_id
+      JOIN entry_tags ON entry_tags.entry_id = e.id
+      JOIN tags ON tags.id = entry_tags.tag_id
+      ${tagTotalsJoin}
+      WHERE tags.name = ?
+      ORDER BY COALESCE(e.last_commented_at, e.created_at) DESC
+      LIMIT 200
+    `,
+    [tag],
+  );
+
+  return rows.map((row) => mapSearchRow(row, [tag], { label: "Tag", text: `#${tag}` }));
+};
+
 export const searchLocalEntries = async (rawQuery: string): Promise<SearchResult[]> => {
   const normalizedQuery = normalizeSearchInput(rawQuery);
   if (!normalizedQuery) {
     return [];
+  }
+
+  if (normalizedQuery.startsWith("#")) {
+    return searchStrictTag(normalizedQuery);
   }
 
   const terms = extractSearchTerms(normalizedQuery);
@@ -153,12 +237,14 @@ export const searchLocalEntries = async (rawQuery: string): Promise<SearchResult
         search_documents_fts.domain,
         search_documents_fts.excerpt,
         search_documents_fts.comments_text,
+        COALESCE(tag_totals.tag_text, '') AS tag_text,
         search_documents_fts.comment_count,
         search_documents_fts.updated_at,
         e.created_at,
         e.last_commented_at
       FROM search_documents_fts
       JOIN entries e ON e.id = search_documents_fts.entry_id
+      ${tagTotalsJoin}
       WHERE search_documents_fts MATCH ?
       ORDER BY
         bm25(search_documents_fts, 0.0, 8.0, 5.0, 2.0, 2.0, 3.0, 1.0, 0.0, 0.0) ASC,
@@ -178,13 +264,40 @@ export const searchLocalEntries = async (rawQuery: string): Promise<SearchResult
         search_documents.domain,
         search_documents.excerpt,
         search_documents.comments_text,
+        COALESCE(tag_totals.tag_text, '') AS tag_text,
         search_documents.comment_count,
         search_documents.updated_at,
         e.created_at,
         e.last_commented_at
       FROM search_documents
       JOIN entries e ON e.id = search_documents.entry_id
+      ${tagTotalsJoin}
       WHERE ${buildContainsClause(terms)}
+      ORDER BY COALESCE(e.last_commented_at, e.created_at) DESC
+      LIMIT 200
+    `,
+    buildContainsParams(terms),
+  );
+
+  const tagRows = await query<SearchDocumentRow>(
+    `
+      SELECT
+        search_documents.entry_id,
+        search_documents.title,
+        search_documents.body,
+        search_documents.url,
+        search_documents.domain,
+        search_documents.excerpt,
+        search_documents.comments_text,
+        COALESCE(tag_totals.tag_text, '') AS tag_text,
+        search_documents.comment_count,
+        search_documents.updated_at,
+        e.created_at,
+        e.last_commented_at
+      FROM search_documents
+      JOIN entries e ON e.id = search_documents.entry_id
+      ${tagTotalsJoin}
+      WHERE ${terms.map(() => "tag_totals.tag_text LIKE ?").join(" AND ")}
       ORDER BY COALESCE(e.last_commented_at, e.created_at) DESC
       LIMIT 200
     `,
@@ -202,32 +315,18 @@ export const searchLocalEntries = async (rawQuery: string): Promise<SearchResult
       seenEntryIds.add(row.entry_id);
       return true;
     }),
+    ...tagRows.filter((row) => {
+      if (seenEntryIds.has(row.entry_id)) {
+        return false;
+      }
+
+      seenEntryIds.add(row.entry_id);
+      return true;
+    }),
   ];
 
   return rows
-    .map((row) => {
-      const score = computeScore(row, terms);
-      const context = resolveMatchContext(row, terms);
-
-      return {
-        id: row.entry_id,
-        sourceUrl: row.url || null,
-        canonicalUrl: row.url || null,
-        domain: row.domain || null,
-        title: row.title,
-        body: row.body,
-        excerpt: row.excerpt || null,
-        excerptStatus: row.excerpt ? "ready" : "idle",
-        excerptError: null,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        lastCommentedAt: row.last_commented_at,
-        commentCount: row.comment_count,
-        score,
-        matchLabel: context.matchLabel,
-        matchText: context.matchText,
-      } satisfies SearchResult;
-    })
+    .map((row) => mapSearchRow(row, terms))
     .sort((left, right) => {
       if (right.score !== left.score) {
         return right.score - left.score;

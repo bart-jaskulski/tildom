@@ -22,6 +22,24 @@ CREATE TABLE IF NOT EXISTS comments (
   updated_at INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS tags (
+  id TEXT NOT NULL PRIMARY KEY DEFAULT '',
+  name TEXT NOT NULL UNIQUE DEFAULT '',
+  created_at INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS entry_tags (
+  entry_id TEXT NOT NULL DEFAULT '',
+  tag_id TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (entry_id, tag_id),
+  FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE,
+  FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS entry_tags_tag_id_idx ON entry_tags(tag_id);
+CREATE INDEX IF NOT EXISTS entry_tags_entry_id_idx ON entry_tags(entry_id);
+
 CREATE TABLE IF NOT EXISTS search_documents (
   entry_id TEXT NOT NULL PRIMARY KEY,
   title TEXT NOT NULL DEFAULT '',

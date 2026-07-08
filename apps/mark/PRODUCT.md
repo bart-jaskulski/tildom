@@ -17,11 +17,13 @@ Structured, terminal-inspired, minimal, crisp, and high-readability.
 - Standard SaaS card-based dashboards with massive rounded corners and huge padding.
 - Hard-to-read neon dark terminals (e.g., hacker-themed sites).
 - Slow, bloated animations and heavy illustrations.
+- Verbose utility panels, instructional hints, and technical status copy that do not help the current bookmark, search, reading, or backup task.
 
 ## Design Principles
 - **Terminal Aesthetics, Modern Web Usability**: Monospaced type and block layout combined with standard, accessible HTML forms and mobile-friendly tap targets.
 - **Guides over Boxes**: Organize structured data and comments using vertical guide rails and thin borders instead of nested cards or shadows.
 - **Text-Centric Clarity**: Prioritize content, comments, and links, respecting readable line widths (max-width containers) and high-contrast light theme rules.
+- **Minimal Surface Area**: Keep the interface visually quiet. A control, label, or metadata line should be present only when it helps the current action.
 - **Instantaneous Feedback**: Interactions must be instant, matching the local-first nature of browser SQLite.
 
 ## Accessibility & Inclusion

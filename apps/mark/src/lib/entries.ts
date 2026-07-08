@@ -14,6 +14,7 @@ export type Entry = {
   updatedAt: number;
   lastCommentedAt: number | null;
   commentCount: number;
+  tags: string[];
 };
 
 export type EntryComment = {

@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { app } from "./app";
 import * as metadata from "./metadata";
+import { resetRateLimitStore } from "./rateLimit";
+import * as tags from "./tags";
 
 describe("metadata API", () => {
   afterEach(() => {
+    resetRateLimitStore();
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
   it("returns metadata for valid metadata requests", async () => {
@@ -47,5 +51,51 @@ describe("metadata API", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Invalid JSON body" });
+  });
+
+  it("returns AI tag suggestions", async () => {
+    const suggestTags = vi.spyOn(tags, "suggestTags").mockResolvedValue(["ai", "sqlite"]);
+
+    const response = await app.request("/api/tags", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title: "SQLite in the browser",
+        url: "https://example.com/sqlite",
+        excerpt: "Using SQLite with OPFS",
+        existingTags: ["ai", "sqlite"],
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ tags: ["ai", "sqlite"] });
+    expect(suggestTags).toHaveBeenCalledWith({
+      title: "SQLite in the browser",
+      url: "https://example.com/sqlite",
+      excerpt: "Using SQLite with OPFS",
+      existingTags: ["ai", "sqlite"],
+    });
+  });
+
+  it("returns a 503 when AI tagging is not configured", async () => {
+    vi.stubEnv("GOOGLE_API_KEY", "");
+
+    const response = await app.request("/api/tags", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title: "SQLite in the browser",
+        url: "https://example.com/sqlite",
+        excerpt: null,
+        existingTags: [],
+      }),
+    });
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "AI tagging is not configured" });
   });
 });

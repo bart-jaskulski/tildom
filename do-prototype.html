@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>tildom : do.db</title>
+  <style>
+    :root {
+      --bg-canvas: #f6f8fa;
+      --bg-surface: #ffffff;
+      --fg-default: #24292e;
+      --fg-muted: #6a737d;
+      --syntax-keyword: #d73a49;
+      --syntax-string: #032f62;
+      --syntax-error: #d73a49;
+      --syntax-bg-active: #dbedff;
+      --border-color: #e1e4e8;
+      --highlight-blue: #005cc5;
+      --highlight-green: #22863a;
+    }
+
+    * {
+      box-sizing: border-box;
+      border-radius: 0 !important;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg-canvas);
+      color: var(--fg-default);
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    #app-container {
+      max-width: 120ch;
+      min-height: 100vh;
+      margin: 0 auto;
+      padding-bottom: 88px;
+    }
+
+    header {
+      height: 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: stretch;
+      border-bottom: 1px solid var(--border-color);
+      padding-left: 1.5rem;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      height: 100%;
+      min-width: 0;
+    }
+
+    .logo {
+      color: var(--syntax-keyword);
+      font-weight: 900;
+      font-size: 16px;
+      letter-spacing: -0.5px;
+      white-space: nowrap;
+    }
+
+    .tabs {
+      display: flex;
+      align-items: stretch;
+      height: 100%;
+      min-width: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tab {
+      min-height: 48px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      border: 0;
+      background: transparent;
+      color: var(--fg-muted);
+      white-space: nowrap;
+      font-size: 12px;
+    }
+
+    .tab:hover,
+    .tab.active {
+      background: var(--bg-surface);
+      color: var(--fg-default);
+    }
+
+    .tab.active {
+      border-bottom: 2px solid var(--syntax-keyword);
+      font-weight: bold;
+    }
+
+    main {
+      padding: 1.5rem 3ch 2.5rem;
+    }
+
+    h1,
+    h2,
+    p {
+      margin-top: 0;
+    }
+
+    h2 {
+      margin-bottom: 0.75rem;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .view {
+      display: none;
+    }
+
+    .view.active {
+      display: block;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .stack {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .panel {
+      border-top: 1px solid var(--border-color);
+      padding-top: 1.25rem;
+    }
+
+    .panel:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .switches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 2ch;
+      margin-bottom: 1.25rem;
+    }
+
+    .switch {
+      min-height: 44px;
+      border: 0;
+      background: transparent;
+      color: var(--fg-muted);
+      padding: 0;
+      font-weight: bold;
+    }
+
+    .switch.active,
+    .switch:hover {
+      color: var(--fg-default);
+    }
+
+    .task-list {
+      list-style: none;
+      counter-reset: task-counter;
+      margin: 0;
+      padding: 0;
+    }
+
+    .task-item {
+      counter-increment: task-counter;
+      margin-bottom: 1rem;
+    }
+
+    .task {
+      position: relative;
+      margin-left: 2ch;
+      padding: 0.75rem 1.5ch 0.75rem 2.5ch;
+      border-left: 2px solid var(--border-color);
+      background: transparent;
+    }
+
+    .task::before {
+      content: counter(task-counter);
+      position: absolute;
+      top: 0.85rem;
+      right: calc(100% + 1.5ch);
+      width: 3ch;
+      color: var(--fg-muted);
+      text-align: right;
+    }
+
+    .task:hover,
+    .task.active {
+      border-left-color: var(--syntax-keyword);
+      background: var(--syntax-bg-active);
+    }
+
+    .task-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 1.5ch;
+    }
+
+    .checkbox {
+      min-width: 4ch;
+      border: 0;
+      background: transparent;
+      color: var(--fg-default);
+      padding: 0;
+      font-weight: bold;
+      text-align: left;
+    }
+
+    .task-body {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .task-title {
+      font-weight: bold;
+      overflow-wrap: anywhere;
+    }
+
+    .task-title.done {
+      color: var(--fg-muted);
+      text-decoration: line-through;
+    }
+
+    .subtext {
+      margin-top: 0.35rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1ch;
+      color: var(--fg-muted);
+      font-size: 12px;
+    }
+
+    .link-button {
+      min-height: 44px;
+      border: 0;
+      background: transparent;
+      color: var(--fg-default);
+      padding: 0 0.5ch;
+      font-weight: bold;
+    }
+
+    .link-button:hover {
+      color: var(--syntax-keyword);
+      text-decoration: underline;
+    }
+
+    .children {
+      margin: 0.75rem 0 0 2ch;
+      padding-left: 2ch;
+      border-left: 2px solid var(--border-color);
+    }
+
+    .child {
+      padding: 0.5rem 0 0.5rem 1ch;
+      color: var(--fg-default);
+    }
+
+    .child.done {
+      color: var(--fg-muted);
+      text-decoration: line-through;
+    }
+
+    .input,
+    .textarea {
+      width: 100%;
+      border: 1px solid var(--border-color);
+      background: var(--bg-surface);
+      color: var(--fg-default);
+      padding: 0.75rem 1.5ch;
+      outline: 0;
+    }
+
+    .textarea {
+      min-height: 96px;
+      resize: vertical;
+    }
+
+    .input:focus,
+    .textarea:focus {
+      border: 2px solid var(--fg-default);
+      padding: calc(0.75rem - 1px) calc(1.5ch - 1px);
+    }
+
+    .button {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--fg-default);
+      background: var(--bg-surface);
+      color: var(--fg-default);
+      padding: 0 3ch;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 12px;
+    }
+
+    .button:hover {
+      background: var(--fg-default);
+      color: var(--bg-surface);
+    }
+
+    .row-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5ch;
+      align-items: center;
+      margin-top: 0.75rem;
+    }
+
+    .composer-bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border-top: 2px solid var(--border-color);
+      background: var(--bg-canvas);
+      z-index: 20;
+    }
+
+    .composer-inner {
+      max-width: 120ch;
+      margin: 0 auto;
+      padding: 1rem 3ch;
+    }
+
+    .composer-inner .button {
+      width: 100%;
+    }
+
+    .dialog-backdrop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.28);
+      z-index: 30;
+    }
+
+    .dialog-backdrop.open {
+      display: flex;
+    }
+
+    .dialog {
+      width: min(72ch, 100%);
+      border: 2px solid var(--fg-default);
+      background: var(--bg-surface);
+      padding: 1.25rem;
+    }
+
+    .setting-row {
+      display: grid;
+      grid-template-columns: 24ch minmax(0, 1fr);
+      gap: 2ch;
+      padding: 1rem 0;
+      border-bottom: 1px dashed var(--border-color);
+    }
+
+    .setting-key {
+      font-weight: bold;
+    }
+
+    .pair-box {
+      max-width: 72ch;
+      border-left: 2px solid var(--border-color);
+      padding-left: 2ch;
+    }
+
+    .qr {
+      width: 180px;
+      height: 180px;
+      display: grid;
+      place-items: center;
+      border: 2px solid var(--fg-default);
+      background:
+        linear-gradient(90deg, var(--fg-default) 10px, transparent 10px) 0 0 / 30px 30px,
+        linear-gradient(var(--fg-default) 10px, transparent 10px) 0 0 / 30px 30px,
+        var(--bg-surface);
+      color: var(--bg-surface);
+      font-weight: bold;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    @media (max-width: 768px) {
+      #app-container {
+        max-width: none;
+      }
+
+      header {
+        display: block;
+        height: auto;
+        padding-left: 0.75rem;
+      }
+
+      .brand-section {
+        display: flex;
+        gap: 0.75rem;
+        height: 48px;
+      }
+
+      .tab {
+        flex: 1 0 auto;
+        justify-content: center;
+        padding: 0 1.5ch;
+      }
+
+      main {
+        padding: 1.25rem 1.5ch 2rem;
+      }
+
+      .setting-row {
+        display: block;
+      }
+
+      .button {
+        width: 100%;
+      }
+
+      .task {
+        margin-left: 1.25ch;
+        padding-left: 1.5ch;
+      }
+
+      .task::before {
+        width: 2ch;
+        right: calc(100% + 0.75ch);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app-container">
+    <header>
+      <div class="brand-section">
+        <span class="logo">tildom</span>
+        <nav class="tabs" aria-label="Prototype buffers">
+          <button class="tab active" id="tasks-tab" type="button" onclick="switchBuffer('tasks')">[ tasks.db ]</button>
+          <button class="tab" id="settings-tab" type="button" onclick="switchBuffer('settings')">[ settings.json ]</button>
+          <button class="tab" id="pair-tab" type="button" onclick="switchBuffer('pair')">[ pair.conf ]</button>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="view active" id="tasks-view" aria-labelledby="tasks-title">
+        <h1 id="tasks-title" class="sr-only">tasks.db</h1>
+
+        <div class="switches" aria-label="Workspaces">
+          <button class="switch active" type="button">(*) today</button>
+          <button class="switch" type="button">( ) house</button>
+          <button class="switch" type="button">( ) writing</button>
+        </div>
+
+        <div class="switches" aria-label="Filters">
+          <button class="switch active" type="button">[x] ACTIVE</button>
+          <button class="switch" type="button">[ ] STALLED</button>
+          <button class="switch" type="button">[ ] COMPLETED</button>
+          <button class="switch" type="button">[ ] ALL</button>
+        </div>
+
+        <ol class="task-list">
+          <li class="task-item">
+            <article class="task active">
+              <div class="task-row">
+                <button class="checkbox" type="button">[ ]</button>
+                <div class="task-body">
+                  <div id="task-read">
+                    <div class="task-title">Prepare the Mark redesign implementation pass</div>
+                    <div class="subtext">
+                      <button class="link-button" type="button">due: today</button><span>|</span>
+                      <button class="link-button" type="button" onclick="toggleTaskEdit()">edit</button><span>|</span>
+                      <button class="link-button" type="button">+ subtask</button><span>|</span>
+                      <button class="link-button" type="button">delete</button>
+                    </div>
+                  </div>
+                  <form id="task-edit" hidden>
+                    <textarea class="textarea" rows="2">Prepare the Mark redesign implementation pass</textarea>
+                    <div class="row-actions">
+                      <button class="button" type="button" onclick="toggleTaskEdit()">save</button>
+                      <button class="button" type="button" onclick="toggleTaskEdit()">cancel</button>
+                    </div>
+                  </form>
+                  <div class="children">
+                    <div class="child">[x] remove duplicate page headings</div>
+                    <div class="child">[ ] port tabline/header styling into Solid components</div>
+                    <div class="child">[ ] run mobile screenshot pass</div>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </li>
+
+          <li class="task-item">
+            <article class="task">
+              <div class="task-row">
+                <button class="checkbox" type="button">[ ]</button>
+                <div class="task-body">
+                  <div class="task-title">Review sync pairing copy before exposing it in settings</div>
+                  <div class="subtext">
+                    <button class="link-button" type="button">set date</button><span>|</span>
+                    <button class="link-button" type="button">edit</button><span>|</span>
+                    <button class="link-button" type="button">+ subtask</button><span>|</span>
+                    <button class="link-button" type="button">delete</button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </li>
+
+          <li class="task-item">
+            <article class="task">
+              <div class="task-row">
+                <button class="checkbox" type="button">[x]</button>
+                <div class="task-body">
+                  <div class="task-title done">Write first draft of task priority comparator tests</div>
+                  <div class="subtext">
+                    <button class="link-button" type="button">due: yesterday</button><span>|</span>
+                    <button class="link-button" type="button">edit</button><span>|</span>
+                    <button class="link-button" type="button">delete</button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </li>
+        </ol>
+      </section>
+
+      <section class="view" id="settings-view" aria-labelledby="settings-title">
+        <h1 id="settings-title" class="sr-only">settings.json</h1>
+
+        <div class="stack">
+          <section class="panel">
+            <h2>workspaces</h2>
+            <div class="setting-row">
+              <div class="setting-key">today</div>
+              <div><button class="link-button" type="button">active</button><span>|</span><button class="link-button" type="button">rename</button></div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-key">house</div>
+              <div><button class="link-button" type="button">use</button><span>|</span><button class="link-button" type="button">rename</button></div>
+            </div>
+            <div class="row-actions">
+              <button class="button" type="button">+ new</button>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h2>task breakdown</h2>
+            <div class="switches">
+              <button class="switch" type="button">( ) SMALL</button>
+              <button class="switch active" type="button">(*) MEDIUM</button>
+              <button class="switch" type="button">( ) LARGE</button>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h2>sync</h2>
+            <div class="setting-row">
+              <div class="setting-key">pairing</div>
+              <div><button class="link-button" type="button" onclick="switchBuffer('pair')">manage</button></div>
+            </div>
+            <div class="setting-row">
+              <div class="setting-key">storage</div>
+              <div><button class="link-button" type="button">request persistence</button></div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="pair-view" aria-labelledby="pair-title">
+        <h1 id="pair-title" class="sr-only">pair.conf</h1>
+
+        <div class="pair-box stack">
+          <section>
+            <h2>vault</h2>
+            <div class="row-actions">
+              <button class="button" type="button">create vault</button>
+              <button class="button" type="button">copy link</button>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h2>share</h2>
+            <div class="qr" aria-label="Pairing QR preview">QR</div>
+            <input class="input" readonly value="https://do.tildom.app/pair#vault-key">
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <div class="composer-bar">
+      <div class="composer-inner">
+        <button class="button" type="button" onclick="openComposer()">+ add task</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dialog-backdrop" id="composer-backdrop" onclick="closeComposer()">
+    <div class="dialog stack" role="dialog" aria-modal="true" aria-labelledby="composer-title" onclick="event.stopPropagation()">
+      <h2 id="composer-title">add task</h2>
+      <textarea class="textarea" rows="3" placeholder="What needs to be done?">Plan the Do app redesign pass</textarea>
+      <div class="row-actions">
+        <button class="link-button" type="button">[ 2026-07-09 ]</button>
+        <button class="link-button" type="button">[x] AI breakdown</button>
+      </div>
+      <div class="row-actions">
+        <button class="button" type="button" onclick="closeComposer()">submit</button>
+        <button class="button" type="button" onclick="closeComposer()">cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const buffers = ["tasks", "settings", "pair"];
+
+    function switchBuffer(name) {
+      buffers.forEach((buffer) => {
+        document.getElementById(`${buffer}-view`).classList.toggle("active", buffer === name);
+        document.getElementById(`${buffer}-tab`).classList.toggle("active", buffer === name);
+      });
+    }
+
+    function toggleTaskEdit() {
+      const read = document.getElementById("task-read");
+      const edit = document.getElementById("task-edit");
+      const nextEditing = edit.hidden;
+      edit.hidden = !nextEditing;
+      read.hidden = nextEditing;
+    }
+
+    function openComposer() {
+      document.getElementById("composer-backdrop").classList.add("open");
+    }
+
+    function closeComposer() {
+      document.getElementById("composer-backdrop").classList.remove("open");
+    }
+  </script>
+</body>
+</html>

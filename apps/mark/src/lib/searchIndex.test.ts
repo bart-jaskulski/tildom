@@ -14,6 +14,7 @@ const baseRow = {
   domain: "",
   excerpt: "",
   comments_text: "",
+  tag_text: "",
   comment_count: 0,
   updated_at: 1,
   created_at: 1,
@@ -72,6 +73,7 @@ describe("searchIndex", () => {
 
     expect(queryMock).toHaveBeenNthCalledWith(1, expect.any(String), ["\"disc\"*"]);
     expect(queryMock).toHaveBeenNthCalledWith(2, expect.any(String), ["%disc%"]);
+    expect(queryMock).toHaveBeenNthCalledWith(3, expect.any(String), ["%disc%"]);
   });
 
   it("tokenizes punctuation before building the FTS query", async () => {
@@ -80,5 +82,16 @@ describe("searchIndex", () => {
     await searchLocalEntries("example.com sqlite");
 
     expect(queryMock).toHaveBeenCalledWith(expect.any(String), ["\"example\"* AND \"com\"* AND \"sqlite\"*"]);
+  });
+
+  it("uses strict tag filtering for hashtag queries", async () => {
+    queryMock.mockResolvedValue([{ ...baseRow, entry_id: "tagged", title: "Tagged", tag_text: "ai sqlite" }]);
+
+    const results = await searchLocalEntries("#AI");
+
+    expect(queryMock).toHaveBeenCalledOnce();
+    expect(queryMock).toHaveBeenCalledWith(expect.stringContaining("WHERE tags.name = ?"), ["ai"]);
+    expect(results[0]?.tags).toEqual(["ai", "sqlite"]);
+    expect(results[0]?.matchLabel).toBe("Tag");
   });
 });

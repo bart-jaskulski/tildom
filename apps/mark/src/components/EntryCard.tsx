@@ -1,5 +1,5 @@
 import { A } from "@solidjs/router";
-import { Show } from "solid-js";
+import { For, Show } from "solid-js";
 import { formatRelativeTimestamp, hasEntryLink, type Entry, type SearchResult } from "~/lib/entries";
 
 type EntryCardProps = {
@@ -27,10 +27,10 @@ export default function EntryCard(props: EntryCardProps) {
     <article class={`entry-row ${props.isActive ? "active-row" : ""}`}>
         <div class="entry-titleline">
           <A href={`/item/${entry().id}`} class="entry-title">{title()}</A>
+          <Show when={entry().domain}>
+            <span class="entry-domain">({entry().domain})</span>
+          </Show>
         </div>
-        <Show when={entry().domain}>
-          <div class="entry-domain">({entry().domain})</div>
-        </Show>
 
         <div class="entry-subtext">
           <span>{formatRelativeTimestamp(timestamp())}</span>
@@ -60,6 +60,18 @@ export default function EntryCard(props: EntryCardProps) {
 
         <Show when={previewText(entry())}>
           <p class="entry-preview">{previewText(entry())}</p>
+        </Show>
+
+        <Show when={entry().tags.length > 0}>
+          <p class="entry-tags">
+            <For each={entry().tags}>
+              {(tag) => (
+                <A href={`/?q=${encodeURIComponent(`#${tag}`)}`} class="entry-tag">
+                  #{tag}
+                </A>
+              )}
+            </For>
+          </p>
         </Show>
 
         <Show when={props.matchText}>

@@ -1,9 +1,11 @@
 import { Title } from "@solidjs/meta";
-import { useNavigate } from "@solidjs/router";
+import { A, useNavigate } from "@solidjs/router";
 import { Show, createSignal, onMount } from "solid-js";
 import { createVimNavigation, createPreferences } from "@tildom/ui";
 import AppNav from "~/components/AppNav";
 import { exportDatabase, importDatabase } from "~/lib/db";
+import { syncSignals } from "~/lib/syncClient";
+import { markSyncDirty } from "~/lib/syncState";
 
 const createBackupFilename = () => {
   const date = new Date().toISOString().slice(0, 10);
@@ -96,6 +98,7 @@ export default function Settings() {
 
     try {
       await importDatabase(new Uint8Array(await file.arrayBuffer()));
+      await markSyncDirty();
       setStatus("Database imported.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to import database");
@@ -120,14 +123,13 @@ export default function Settings() {
           </div>
 
           <div class="hn-form-row">
-            <label class="hn-label" style="display: flex; align-items: center; gap: 1ch; cursor: pointer; user-select: none;">
+            <label class="settings-checkbox">
               <input
                 type="checkbox"
                 checked={prefs().vimKeys}
                 onChange={toggleVim}
-                style="display: none;"
               />
-              <span style="font-family: inherit; font-size: 14px; font-weight: bold; color: var(--fg-default);">
+              <span>
                 {prefs().vimKeys ? "[x]" : "[ ]"} ENABLE VIM KEYBINDINGS (DESKTOP ONLY)
               </span>
             </label>
@@ -157,6 +159,34 @@ export default function Settings() {
           <Show when={error()}>
             <p class="hn-error" role="alert">{error()}</p>
           </Show>
+        </div>
+
+        <div class="hn-panel hn-stack settings-panel">
+          <div>
+            <h2 class="hn-heading">Sync</h2>
+            <p class="hn-muted">Encrypted snapshot sync for this database.</p>
+          </div>
+
+          <dl class="sync-status">
+            <div>
+              <dt>state</dt>
+              <dd>{syncSignals.isPaired() ? syncSignals.statusText() : "unpaired"}</dd>
+            </div>
+            <div>
+              <dt>revision</dt>
+              <dd>{syncSignals.lastSeenRevision() ?? "none"}</dd>
+            </div>
+            <div>
+              <dt>local</dt>
+              <dd>{syncSignals.hasLocalChanges() ? "pending changes" : "clean"}</dd>
+            </div>
+          </dl>
+
+          <div class="settings-actions">
+            <A href="/pair" class="hn-button">
+              open sync
+            </A>
+          </div>
         </div>
       </section>
     </main>

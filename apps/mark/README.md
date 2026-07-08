@@ -4,6 +4,10 @@ mark.tildom is the Tildom bookmark and note manager. It is a Solid/Vite app that
 
 The app has a small Node/Hono server for network-required helpers, currently bookmark metadata fetching. Bookmark data itself remains local-first in the browser.
 
+## Optional AI Feature
+
+AI bookmark tagging uses `GOOGLE_API_KEY` when the `/api/tags` endpoint is called after saving a link. Missing keys, offline state, rate limits, and AI failures do not block saving; tags simply are not applied.
+
 ## Developing
 
 From the repository root:

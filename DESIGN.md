@@ -6,6 +6,7 @@ This document defines the visual standards and interactive behaviors for our sui
 
 * **Light Mode by Default:** Crisp, high-contrast, paper-like readability inspired by the "One Light" and "GitHub Light" color schemes.
 * **Terminal-Inspired structure, Not Terminal-Emulated:** The layout looks structured and blocky like a terminal, but behaves like a modern web application. We use standard HTML input forms instead of rigid command lines.
+* **Minimal Visual Taste:** Prefer the fewest visible elements that let the user complete the task. Do not add status panels, sidebars, hints, instructional copy, or metadata just because the system knows it; show those only when they are actionable or required for the current decision.
 * **Progressive Enhancement:** Fully accessible on mobile via touch targets. Advanced desktop interactions (such as custom hotkeys or modes) are layered on top as progressive enhancements.
 * **Dense but Readable:** High information density without visual clutter. 
 
@@ -72,6 +73,7 @@ To prevent layouts from looking claustrophobic, we use subtle layout lines inste
 1. **Vertical Guide Rails (`border-left`):** For lists (bookmarks, tasks) and threaded discussions (comments), use a single left border (`border-left: 2px solid var(--border-color)`) instead of enclosing card containers. This visually anchors groups of text.
 2. **Dividers:** Horizontal separation is handled with thin `1px solid var(--border-color)` lines.
 3. **Double / Bold Borders for Focus:** Inputs or active focus areas switch to a thicker outline or highlight color to clearly guide user attention.
+4. **No Decorative Sidebars:** Secondary columns must contain controls or content the user is likely to act on in the current flow. Avoid sidebars that only repeat technical status, shortcuts, or explanatory notes.
 
 ---
 

@@ -56,6 +56,13 @@ export default defineConfig(({ mode }) => {
         "Cross-Origin-Opener-Policy": "same-origin",
         "Cross-Origin-Embedder-Policy": "require-corp",
       },
+      proxy: {
+        "/sync": {
+          target: process.env.SYNC_PROXY_TARGET ?? "http://127.0.0.1:8787",
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/sync/, ""),
+        },
+      },
       ...(https ? { https } : {}),
     },
     optimizeDeps: {

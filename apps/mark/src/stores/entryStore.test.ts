@@ -10,7 +10,7 @@ vi.mock("~/lib/db", () => ({
   query: queryMock,
 }));
 
-import { addCommentToEntry, createEntry, deleteComment, deleteEntry, fetchEntryDetail, updateComment, updateEntry } from "./entryStore";
+import { addCommentToEntry, createEntry, deleteComment, deleteEntry, fetchEntryDetail, replaceEntryTags, updateComment, updateEntry } from "./entryStore";
 
 describe("entryStore mutations", () => {
   beforeEach(() => {
@@ -116,7 +116,8 @@ describe("entryStore mutations", () => {
     await deleteEntry("entry-1");
 
     expect(execMock).toHaveBeenNthCalledWith(1, "DELETE FROM comments WHERE entry_id = ?", ["entry-1"]);
-    expect(execMock).toHaveBeenNthCalledWith(2, "DELETE FROM entries WHERE id = ?", ["entry-1"]);
+    expect(execMock).toHaveBeenNthCalledWith(2, "DELETE FROM entry_tags WHERE entry_id = ?", ["entry-1"]);
+    expect(execMock).toHaveBeenNthCalledWith(3, "DELETE FROM entries WHERE id = ?", ["entry-1"]);
   });
 
   it("updates comments", async () => {
@@ -152,6 +153,7 @@ describe("entryStore mutations", () => {
             updated_at: 11,
             last_commented_at: 12,
             comment_count: 1,
+            tag_names: "ai sqlite",
           },
         ]);
       }
@@ -175,6 +177,7 @@ describe("entryStore mutations", () => {
 
     expect(detail.entry?.title).toBe("Example");
     expect(detail.entry?.commentCount).toBe(1);
+    expect(detail.entry?.tags).toEqual(["ai", "sqlite"]);
     expect(detail.comments).toEqual([
       {
         id: "comment-1",
@@ -184,5 +187,9 @@ describe("entryStore mutations", () => {
         updatedAt: 21,
       },
     ]);
+  });
+
+  it("rejects manual tag edits over the per-entry limit", async () => {
+    await expect(replaceEntryTags("entry-1", "one two three four five six")).rejects.toThrow("Use 5 tags or fewer");
   });
 });

@@ -43,13 +43,12 @@ export default function AppNav(props: AppNavProps) {
   return (
     <header class="hn-topbar">
       <div class="hn-brand">
-        <A href="/" class="hn-logo">m</A>
-        <A href="/" class="hn-title">mark.tildom</A>
+        <A href="/" class="hn-title">tildom</A>
       </div>
 
       <nav class="hn-nav" aria-label="Primary">
-        <A href="/" aria-current={props.active !== "settings" ? "page" : undefined}>bookmarks.db</A>
-        <A href="/settings" aria-current={props.active === "settings" ? "page" : undefined}>settings.json</A>
+        <A href="/" aria-current={!props.active ? "page" : undefined}>[ bookmarks.db ]</A>
+        <A href="/settings" aria-current={props.active === "settings" ? "page" : undefined}>[ settings.json ]</A>
       </nav>
 
       <div class="hn-search" role="search">

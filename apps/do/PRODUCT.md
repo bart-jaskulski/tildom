@@ -15,11 +15,13 @@ Modern, light-mode, text-editor TUI inspired. High density, clean, structured, m
 
 ## Anti-references
 SaaS cream-colored, over-rounded ghost cards with heavy drop shadows, over-animated, complex and bloated workflows.
+Verbose utility panels, instructional hints, and technical status copy that do not help the current task, workspace, sync, or pairing decision.
 
 ## Design Principles
 1. Dense but Readable: Mono spacing and high information density.
 2. Structured simplicity: Using clear guide rails and borders rather than nested boxes.
 3. Accessible TUI: Desktop vim bindings combined with solid mobile-friendly touch targets (min 44px hit-box).
+4. Minimal Surface Area: Keep visible labels, metadata, and controls limited to what helps the current action.
 
 ## Accessibility & Inclusion
 Full keyboard navigability, clear contrast (light mode GitHub/One Light theme), and minimal motion.
