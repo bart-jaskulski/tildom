@@ -3,13 +3,29 @@ services:
     build:
       context: .
       dockerfile: apps/mark/Dockerfile
+      args:
+        VITE_SYNC_BASE_URL: ${MARK_SYNC_BASE_URL:-http://localhost:8787}
     ports:
       - "${APP_PORT:-3000}:3000"
     environment:
       NODE_ENV: production
       PORT: 3000
+    restart: unless-stopped
+
+  sync:
+    build:
+      context: .
+      dockerfile: services/sync/Dockerfile
+    ports:
+      - "${SYNC_PORT:-8787}:8787"
+    environment:
+      NODE_ENV: production
+      PORT: 8787
+      SYNC_STORAGE_ROOT: /app/storage/vaults
+      SYNC_APP_IDS: mark
+      SYNC_HOSTED_ORIGINS: ${SYNC_HOSTED_ORIGINS:-http://localhost:3000}
     volumes:
-      - mark-storage:/app/storage
+      - sync-storage:/app/storage
     restart: unless-stopped
 
   do:
@@ -28,5 +44,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  mark-storage:
+  sync-storage:
   do-storage:

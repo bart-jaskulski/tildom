@@ -26,7 +26,7 @@ services/
 ## Requirements
 
 - Node.js 22+
-- pnpm 10.33+
+- pnpm 11.10+
 - Docker, optional for container deployment
 
 ## Install
@@ -67,13 +67,13 @@ pnpm build:kin
 
 ## Docker
 
-The root Compose file currently runs Mark by default:
+The root Compose file currently runs Mark and the sync service by default:
 
 ```bash
 docker compose up --build
 ```
 
-Mark is exposed on `http://localhost:3000`.
+Mark is exposed on `http://localhost:3000`. Sync is exposed on `http://localhost:8787`.
 
 `do` is available through the optional `apps` profile:
 

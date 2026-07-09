@@ -173,7 +173,16 @@ sync.tildom.app     -> services/sync
 api.tildom.app      -> services/api, optional
 ```
 
-For self-hosting, provide a root `compose.yaml` that can run the useful default stack. Initially it runs only Mark. Later it should grow to include the home app, the other apps, sync, and a reverse proxy.
+For self-hosting, provide a root `compose.yaml` that can run the useful default stack. The default stack currently runs Mark and sync. Later it should grow to include the home app and the other apps.
+
+Published images should use stable, per-deployable GHCR names:
+
+```txt
+ghcr.io/bart-jaskulski/tildom/mark -> apps/mark
+ghcr.io/bart-jaskulski/tildom/sync -> services/sync
+```
+
+Keep image construction boring and small: multi-stage Dockerfiles, pnpm 11, production-only deploy output, and nonroot runtime images. Deployment topology is an operator concern, but the repository-provided image-only Compose file assumes services join an external `cloudflared` Docker network and exposes no host ports.
 
 Required deployment properties:
 

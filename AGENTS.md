@@ -12,7 +12,7 @@ Refer to the primary documentation files for complete specifications:
 ## 1. Technical Stack & Architecture
 
 - **Core Framework**: [SolidJS](https://www.solidjs.com/) with [Vite](https://vite.dev/) as the build tool.
-- **Runtime & Package Manager**: **Node.js 22+** and **pnpm 10.33+**.
+- **Runtime & Package Manager**: **Node.js 22+** and **pnpm 11.10+**.
 - **Data Layer (Local-First)**: Product data is stored locally in the browser using **SQLite + OPFS (Origin Private File System)**. 
   - *Offline is product behavior, not an enhancement.*
   - Local database schemas, contacts, bookmarks, and tasks are owned strictly by each respective application and are not shared directly.
@@ -53,7 +53,7 @@ Always run these scripts from the **repository root**:
   - `pnpm test` / `pnpm test:do`
   - `pnpm build` / `pnpm build:kin`
 - **Docker Compose (Deployment)**:
-  - `docker compose up --build` — Boots default Mark deployment (`http://localhost:3000`)
+  - `docker compose up --build` — Boots default Mark + sync deployment (`http://localhost:3000`, sync on `http://localhost:8787`)
   - `docker compose --profile apps up --build` — Boots optional applications including Do (`http://localhost:3001`)
 
 ---
@@ -113,3 +113,13 @@ When building or refactoring code, you must respect these guidelines:
 3. **Local-First Precedence**: Ensure that SQLite/OPFS browser-side storage works completely offline. Any backend or sync features must degrade gracefully when offline or unconfigured.
 4. **Self-Hosting Portability**: Do not couple features to third-party proprietary SaaS. Self-hostability using the root Docker Compose file must remain a first-class feature.
 5. **Billing Isolation**: Billing, plans, and licensing restrictions live solely in hosted environment servers (`sync.tildom.app`), not inside local app execution logic.
+
+## 5. Container Image Rules
+
+When changing Dockerfiles, Compose files, or image publishing:
+
+1. **One Deployable, One Image**: Do not build a single omnibus image. Mark and sync publish separately as `ghcr.io/bart-jaskulski/tildom/mark` and `ghcr.io/bart-jaskulski/tildom/sync`.
+2. **Small Runtime Images**: Keep Dockerfiles multi-stage. Use pnpm 11, BuildKit cache mounts, `pnpm deploy --prod --legacy`, and a nonroot distroless Node 22 runtime unless a concrete dependency requires a fuller runtime.
+3. **Workspace-Aware Builds**: Copy package manifests first for cacheable installs, then copy only the app/service and workspace packages required by that image.
+4. **Runtime Storage**: Persist server-side data only for services that own server data. Mark product data is browser-local; sync storage belongs in a Docker volume.
+5. **Cloudflared Shape**: The image-only VPS Compose file should expose no host ports and should join an external `cloudflared` Docker network. Keep host-specific tunnel configuration outside this repository.

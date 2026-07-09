@@ -1,7 +1,7 @@
 {
   "name": "tildom",
   "private": true,
-  "packageManager": "pnpm@10.33.0",
+  "packageManager": "pnpm@11.10.0",
   "scripts": {
     "dev:do": "pnpm --filter do.tildom dev",
     "dev:kin": "pnpm --filter kin.tildom dev",
