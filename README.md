@@ -83,6 +83,17 @@ docker compose --profile apps up --build
 
 With that profile, `do` is exposed on `http://localhost:3001`.
 
+## Published Images
+
+GitHub Actions publishes Mark and sync images to GHCR on pushes to `main`, version tags, and manual runs:
+
+```txt
+ghcr.io/bart-jaskulski/tildom/mark
+ghcr.io/bart-jaskulski/tildom/sync
+```
+
+Deployment compose files are intentionally kept outside this application repo. The current homelab deployment lives at `../homelab/tildom/compose.yaml`. Set `MARK_SYNC_BASE_URL` as a GitHub Actions repository variable before building Mark if sync is not served from `https://sync.tildom.app`.
+
 ## Workspace Packages
 
 pnpm workspaces are configured in [pnpm-workspace.yaml](./pnpm-workspace.yaml). Future local packages should be consumed with the workspace protocol:

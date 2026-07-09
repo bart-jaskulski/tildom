@@ -13,6 +13,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/mark/package.json apps/mark/package.json
 COPY packages/browser-db/package.json packages/browser-db/package.json
 COPY packages/config/package.json packages/config/package.json
+COPY packages/config/tsconfig.base.json packages/config/tsconfig.base.json
 COPY packages/ui/package.json packages/ui/package.json
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter mark.tildom
 

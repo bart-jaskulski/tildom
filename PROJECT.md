@@ -182,7 +182,7 @@ ghcr.io/bart-jaskulski/tildom/mark -> apps/mark
 ghcr.io/bart-jaskulski/tildom/sync -> services/sync
 ```
 
-Keep image construction boring and small: multi-stage Dockerfiles, pnpm 11, production-only deploy output, and nonroot runtime images. Deployment topology is an operator concern, but the repository-provided image-only Compose file assumes services join an external `cloudflared` Docker network and exposes no host ports.
+Keep image construction boring and small: multi-stage Dockerfiles, pnpm 11, production-only deploy output, and nonroot runtime images. Deployment topology is an operator concern and should live outside this application repository.
 
 Required deployment properties:
 

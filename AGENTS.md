@@ -122,4 +122,4 @@ When changing Dockerfiles, Compose files, or image publishing:
 2. **Small Runtime Images**: Keep Dockerfiles multi-stage. Use pnpm 11, BuildKit cache mounts, `pnpm deploy --prod --legacy`, and a nonroot distroless Node 22 runtime unless a concrete dependency requires a fuller runtime.
 3. **Workspace-Aware Builds**: Copy package manifests first for cacheable installs, then copy only the app/service and workspace packages required by that image.
 4. **Runtime Storage**: Persist server-side data only for services that own server data. Mark product data is browser-local; sync storage belongs in a Docker volume.
-5. **Cloudflared Shape**: The image-only VPS Compose file should expose no host ports and should join an external `cloudflared` Docker network. Keep host-specific tunnel configuration outside this repository.
+5. **Deployment Separation**: Keep host-specific deployment compose files outside this application repository. This repo publishes images and local development compose only.
