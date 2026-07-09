@@ -1,5 +1,5 @@
 {
-  "extends": "@tildom/config/tsconfig.base.json",
+  "extends": "../../packages/config/tsconfig.base.json",
   "compilerOptions": {
     "types": ["vitest/globals", "@testing-library/jest-dom/vitest", "vite/client", "node"],
     "paths": {
