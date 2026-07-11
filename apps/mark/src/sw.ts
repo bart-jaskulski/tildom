@@ -1,9 +1,7 @@
 /// <reference lib="webworker" />
 
 import {
-  OFFLINE_DOCUMENT_PATHS,
   shouldHandleOfflineNavigation,
-  toNavigationCacheKey,
 } from "~/lib/serviceWorkerRouting";
 import {
   SYNC_APP_ID,
@@ -26,42 +24,16 @@ const STATIC_PWA_ASSET_PATHS = ["/favicon.ico", "/icon-192.png", "/icon-512.png"
 
 const toScopedDocumentUrl = (path: string) => new URL(path, self.registration.scope).toString();
 
-const cacheOfflineDocuments = async () => {
+const cacheAppShell = async () => {
   const cache = await caches.open(NAVIGATION_CACHE_NAME);
+  const url = toScopedDocumentUrl(ROOT_DOCUMENT_PATH);
+  const response = await fetch(new Request(url, { cache: "no-cache" }));
 
-  await Promise.all(
-    OFFLINE_DOCUMENT_PATHS.map(async (path) => {
-      try {
-        const url = toScopedDocumentUrl(path);
-        const response = await fetch(new Request(url, { cache: "reload" }));
+  if (response.ok && response.headers.get("content-type")?.includes("text/html")) {
+    await cache.put(url, response.clone());
+  }
 
-        if (response.ok) {
-          await cache.put(url, response.clone());
-        }
-      } catch {
-        // Keep the install alive even if one document cannot be refreshed yet.
-      }
-    }),
-  );
-};
-
-const cacheStaticAssets = async () => {
-  const cache = await caches.open(STATIC_CACHE_NAME);
-
-  await Promise.all(
-    STATIC_PWA_ASSET_PATHS.map(async (path) => {
-      try {
-        const url = toScopedDocumentUrl(path);
-        const response = await fetch(new Request(url, { cache: "reload" }));
-
-        if (response.ok) {
-          await cache.put(url, response.clone());
-        }
-      } catch {
-        // Icons and manifest are optional for offline data access.
-      }
-    }),
-  );
+  return response;
 };
 
 const shouldHandleStaticAsset = (url: URL) =>
@@ -89,31 +61,19 @@ const handleStaticAsset = async (request: Request) => {
   }
 };
 
-const handleNavigation = async (request: Request) => {
-  const url = new URL(request.url);
+const handleNavigation = async (event: FetchEvent) => {
   const cache = await caches.open(NAVIGATION_CACHE_NAME);
-  const cacheKey = toScopedDocumentUrl(toNavigationCacheKey(url));
-  const rootFallbackKey = toScopedDocumentUrl(ROOT_DOCUMENT_PATH);
+  const appShellKey = toScopedDocumentUrl(ROOT_DOCUMENT_PATH);
+  const cachedResponse = await cache.match(appShellKey);
+
+  if (cachedResponse) {
+    event.waitUntil(cacheAppShell().catch(() => undefined));
+    return cachedResponse;
+  }
 
   try {
-    const response = await fetch(request);
-
-    if (response.ok && response.headers.get("content-type")?.includes("text/html")) {
-      await cache.put(cacheKey, response.clone());
-    }
-
-    return response;
+    return await cacheAppShell();
   } catch {
-    const cachedResponse = await cache.match(cacheKey);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-
-    const rootFallback = await cache.match(rootFallbackKey);
-    if (rootFallback) {
-      return rootFallback;
-    }
-
     return errorResponse();
   }
 };
@@ -232,7 +192,7 @@ const runBackgroundSync = async () => {
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
-  event.waitUntil(Promise.all([cacheOfflineDocuments(), cacheStaticAssets()]));
+  event.waitUntil(cacheAppShell().catch(() => undefined));
 });
 
 self.addEventListener("activate", (event) => {
@@ -251,7 +211,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  event.respondWith(handleNavigation(request));
+  event.respondWith(handleNavigation(event));
 });
 
 self.addEventListener("message", (event) => {

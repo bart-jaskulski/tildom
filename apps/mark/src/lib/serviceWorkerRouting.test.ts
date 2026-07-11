@@ -1,15 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  OFFLINE_DOCUMENT_PATHS,
-  shouldHandleOfflineNavigation,
-  toNavigationCacheKey,
-} from "./serviceWorkerRouting";
+import { shouldHandleOfflineNavigation } from "./serviceWorkerRouting";
 
 describe("serviceWorkerRouting", () => {
-  it("tracks the known offline-capable document routes", () => {
-    expect(OFFLINE_DOCUMENT_PATHS).toEqual(["/", "/search", "/share-target", "/settings"]);
-  });
-
   it("allows same-origin navigation requests for app routes", () => {
     expect(
       shouldHandleOfflineNavigation(
@@ -44,9 +36,5 @@ describe("serviceWorkerRouting", () => {
         "https://app.test",
       ),
     ).toBe(false);
-  });
-
-  it("normalizes navigation cache keys to pathname only", () => {
-    expect(toNavigationCacheKey(new URL("https://app.test/share-target?tab=storage"))).toBe("/share-target");
   });
 });

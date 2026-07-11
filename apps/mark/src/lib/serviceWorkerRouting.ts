@@ -1,5 +1,3 @@
-export const OFFLINE_DOCUMENT_PATHS = ["/", "/search", "/pair", "/share-target", "/settings"] as const;
-
 const STATIC_FILE_PATTERN = /\/[^/?]+\.[^/]+$/;
 
 export const shouldHandleOfflineNavigation = (requestMode: string, url: URL, scopeOrigin: string) => {
@@ -25,5 +23,3 @@ export const shouldHandleOfflineNavigation = (requestMode: string, url: URL, sco
 
   return !STATIC_FILE_PATTERN.test(url.pathname);
 };
-
-export const toNavigationCacheKey = (url: URL) => url.pathname || "/";

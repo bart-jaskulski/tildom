@@ -4,10 +4,20 @@ import { formatRelativeTimestamp, hasEntryLink, type Entry, type SearchResult } 
 
 type EntryCardProps = {
   entry: Entry | SearchResult;
-  matchLabel?: string;
   matchText?: string;
+  searchQuery?: string;
   onDelete?: (entryId: string) => void;
   isActive?: boolean;
+};
+
+const searchTerms = (query: string) => query.toLowerCase().match(/[\p{L}\p{N}_]+/gu) ?? [];
+
+const highlightText = (value: string, query: string) => {
+  const terms = searchTerms(query).sort((left, right) => right.length - left.length);
+  if (!terms.length) return [value];
+
+  const pattern = terms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  return value.split(new RegExp(`(${pattern})`, "gi"));
 };
 
 const previewText = (entry: Entry | SearchResult) => {
@@ -22,11 +32,23 @@ export default function EntryCard(props: EntryCardProps) {
   const entry = () => props.entry;
   const title = () => entry().title || entry().domain || "Untitled";
   const timestamp = () => entry().lastCommentedAt ?? entry().createdAt;
+  const hasVisibleMatch = () => searchTerms(props.searchQuery ?? "").every((term) => [
+    title(),
+    previewText(entry()),
+    ...entry().tags,
+  ].some((value) => value.toLowerCase().includes(term)));
+  const highlighted = (value: string) => (
+    <For each={highlightText(value, props.searchQuery ?? "")}>
+      {(part) => searchTerms(props.searchQuery ?? "").includes(part.toLowerCase())
+        ? <mark class="search-highlight">{part}</mark>
+        : part}
+    </For>
+  );
 
   return (
     <article class={`entry-row ${props.isActive ? "active-row" : ""}`}>
         <div class="entry-titleline">
-          <A href={`/item/${entry().id}`} class="entry-title">{title()}</A>
+          <A href={`/item/${entry().id}`} class="entry-title">{highlighted(title())}</A>
           <Show when={entry().domain}>
             <span class="entry-domain">({entry().domain})</span>
           </Show>
@@ -59,7 +81,7 @@ export default function EntryCard(props: EntryCardProps) {
         </div>
 
         <Show when={previewText(entry())}>
-          <p class="entry-preview">{previewText(entry())}</p>
+          <p class="entry-preview">{highlighted(previewText(entry()))}</p>
         </Show>
 
         <Show when={entry().tags.length > 0}>
@@ -67,18 +89,15 @@ export default function EntryCard(props: EntryCardProps) {
             <For each={entry().tags}>
               {(tag) => (
                 <A href={`/?q=${encodeURIComponent(`#${tag}`)}`} class="entry-tag">
-                  #{tag}
+                  #{highlighted(tag)}
                 </A>
               )}
             </For>
           </p>
         </Show>
 
-        <Show when={props.matchText}>
-          <p class="entry-match">
-            <span>{props.matchLabel ?? "Match"}:</span>{" "}
-            {props.matchText}
-          </p>
+        <Show when={props.matchText && !hasVisibleMatch()}>
+          <p class="entry-preview">{highlighted(props.matchText!)}</p>
         </Show>
     </article>
   );

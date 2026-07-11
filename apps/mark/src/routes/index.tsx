@@ -13,7 +13,7 @@ import { createEntry, deleteEntry, entries, isEntryStoreReady } from "~/stores/e
 
 const PAGE_SIZE = 20;
 
-const isSearchResult = (entry: Entry | SearchResult): entry is SearchResult => "matchLabel" in entry;
+const isSearchResult = (entry: Entry | SearchResult): entry is SearchResult => "matchText" in entry;
 
 const parsePage = (value: unknown) => {
   const page = Number(value);
@@ -269,8 +269,8 @@ export default function Home() {
                   <li class="entry-item">
                     <EntryCard
                       entry={entry}
-                      matchLabel={isSearchResult(entry) ? entry.matchLabel : undefined}
                       matchText={isSearchResult(entry) ? entry.matchText : undefined}
+                      searchQuery={searchQuery()}
                       onDelete={handleDelete}
                       isActive={index() === activeIndex()}
                     />

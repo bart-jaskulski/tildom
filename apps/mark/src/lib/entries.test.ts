@@ -4,9 +4,16 @@ import { deriveNoteTitle, isUrlOnlyInput, normalizeUrlInput, splitNoteIntoTitleA
 describe("entry helpers", () => {
   it("normalizes URLs for capture and search", () => {
     expect(normalizeUrlInput("www.example.com/path/#section")).toEqual({
-      sourceUrl: "www.example.com/path/#section",
+      sourceUrl: "https://www.example.com/path",
       canonicalUrl: "https://www.example.com/path",
       domain: "example.com",
+    });
+  });
+
+  it("strips advertising and tracking query parameters before saving", () => {
+    expect(normalizeUrlInput("https://example.com/article?utm_source=newsletter&gclid=ad-click&page=2&fbclid=social")).toMatchObject({
+      sourceUrl: "https://example.com/article?page=2",
+      canonicalUrl: "https://example.com/article?page=2",
     });
   });
 

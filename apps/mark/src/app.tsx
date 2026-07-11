@@ -1,6 +1,6 @@
 import { Link, Meta, MetaProvider, Title } from "@solidjs/meta";
 import { Route, Router } from "@solidjs/router";
-import { Show, Suspense, onMount } from "solid-js";
+import { Suspense, onMount } from "solid-js";
 import NotFound from "~/routes/[...404]";
 import Home from "~/routes/index";
 import ItemPage from "~/routes/item/[id]";
@@ -10,14 +10,14 @@ import ShareTarget from "~/routes/share-target";
 import { requestPersistentStorage } from "~/lib/persistentStorage";
 import { initializeSync } from "~/lib/syncClient";
 import { initializeEntryStore } from "~/stores/entryStore";
-import { isOnline } from "~/stores/networkStore";
 import "./app.css";
 
 export default function App() {
   onMount(async () => {
     void requestPersistentStorage();
     await initializeEntryStore();
-    await initializeSync();
+
+    window.setTimeout(() => void initializeSync(), 1_000);
   });
 
   return (
@@ -28,11 +28,6 @@ export default function App() {
           <Meta name="theme-color" content="#d73a49" />
           <Link rel="icon" href="/icon.svg" type="image/svg+xml" />
           <Link rel="manifest" href="/manifest.json" />
-          <Show when={!isOnline()}>
-            <div class="offline-banner" role="status">
-              Offline. Local capture, comments, and search still work.
-            </div>
-          </Show>
           <Suspense>{props.children}</Suspense>
         </MetaProvider>
       )}

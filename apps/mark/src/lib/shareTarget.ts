@@ -1,3 +1,5 @@
+import { isUrlOnlyInput } from "./entries";
+
 export type ShareTargetPayload = {
   title: string | null;
   text: string | null;
@@ -24,9 +26,15 @@ export const buildSharedEntryBody = (payload: ShareTargetPayload) => {
     return payload.url;
   }
 
-  if (payload.text && payload.title && payload.text !== payload.title) {
-    return `${payload.title}\n\n${payload.text}`;
+  const body = payload.text && payload.title && payload.text !== payload.title
+    ? `${payload.title}\n\n${payload.text}`
+    : payload.text ?? payload.title;
+  const lines = body?.split(/\r?\n/);
+  const url = lines?.at(-1)?.trim();
+
+  if (lines && !lines.at(-2)?.trim() && url && isUrlOnlyInput(url)) {
+    return url;
   }
 
-  return payload.text ?? payload.title;
+  return body;
 };

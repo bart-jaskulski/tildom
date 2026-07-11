@@ -32,7 +32,6 @@ export type EntryDetail = {
 
 export type SearchResult = Entry & {
   score: number;
-  matchLabel: string;
   matchText: string;
 };
 
@@ -46,6 +45,7 @@ const URL_SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*:\/\//i;
 const URL_PROTOCOL_PATTERN = /^[a-z][a-z0-9+.-]*:/i;
 const URL_ONLY_PATTERN = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+(?:\:\d{1,5})?(?:[/?#][^\s]*)?$/i;
 const NOTE_TITLE_FALLBACK = "Untitled note";
+const TRACKING_QUERY_PARAM = /^(?:utm_|fbclid$|gclid$|dclid$|msclkid$|_ga$|_gl$|mc_(?:cid|eid)$|igshid$)/i;
 
 const trimTrailingSlash = (pathname: string) => {
   if (pathname === "/") {
@@ -58,14 +58,14 @@ const trimTrailingSlash = (pathname: string) => {
 export const normalizeDomain = (hostname: string) => hostname.trim().toLowerCase().replace(/^www\./, "");
 
 export const normalizeUrlInput = (input: string): NormalizedUrl => {
-  const sourceUrl = input.trim();
-  if (!sourceUrl) {
+  const inputUrl = input.trim();
+  if (!inputUrl) {
     throw new Error("URL is required");
   }
 
-  const candidate = URL_SCHEME_PATTERN.test(sourceUrl) || URL_PROTOCOL_PATTERN.test(sourceUrl)
-    ? sourceUrl
-    : `https://${sourceUrl}`;
+  const candidate = URL_SCHEME_PATTERN.test(inputUrl) || URL_PROTOCOL_PATTERN.test(inputUrl)
+    ? inputUrl
+    : `https://${inputUrl}`;
   const url = new URL(candidate);
 
   if (url.protocol !== "http:" && url.protocol !== "https:") {
@@ -73,16 +73,22 @@ export const normalizeUrlInput = (input: string): NormalizedUrl => {
   }
 
   url.hash = "";
+  for (const name of [...url.searchParams.keys()]) {
+    if (TRACKING_QUERY_PARAM.test(name)) {
+      url.searchParams.delete(name);
+    }
+  }
 
   if ((url.protocol === "http:" && url.port === "80") || (url.protocol === "https:" && url.port === "443")) {
     url.port = "";
   }
 
   url.pathname = trimTrailingSlash(url.pathname);
+  const canonicalUrl = url.toString();
 
   return {
-    sourceUrl,
-    canonicalUrl: url.toString(),
+    sourceUrl: canonicalUrl,
+    canonicalUrl,
     domain: normalizeDomain(url.hostname),
   };
 };

@@ -92,6 +92,6 @@ describe("searchIndex", () => {
     expect(queryMock).toHaveBeenCalledOnce();
     expect(queryMock).toHaveBeenCalledWith(expect.stringContaining("WHERE tags.name = ?"), ["ai"]);
     expect(results[0]?.tags).toEqual(["ai", "sqlite"]);
-    expect(results[0]?.matchLabel).toBe("Tag");
+    expect(results[0]?.matchText).toBe("#ai");
   });
 });

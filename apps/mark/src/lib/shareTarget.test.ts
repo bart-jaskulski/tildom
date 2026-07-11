@@ -21,6 +21,21 @@ describe("shareTarget", () => {
     expect(buildSharedEntryBody(payload)).toBe("Example title\n\nA clipped quote");
   });
 
+  it("keeps a title-separated shared URL as a link input", () => {
+    const payload = readShareTargetPayload({
+      title: "Example title",
+      text: " https://example.com/story ",
+    });
+
+    expect(buildSharedEntryBody(payload)).toBe("https://example.com/story");
+  });
+
+  it("keeps a title-and-URL share text as a link input", () => {
+    const payload = readShareTargetPayload({ text: "Example title\n \nhttps://example.com/story" });
+
+    expect(buildSharedEntryBody(payload)).toBe("https://example.com/story");
+  });
+
   it("returns null when the share target payload is empty", () => {
     const payload = readShareTargetPayload({
       title: "   ",

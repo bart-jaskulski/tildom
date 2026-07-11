@@ -12,7 +12,9 @@ export default function AppNav(props: AppNavProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = createSignal(String(params.q ?? ""));
+  const [mobileSearchOpen, setMobileSearchOpen] = createSignal(false);
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
+  let searchInput: HTMLInputElement | undefined;
 
   createEffect(() => {
     setSearchQuery(String(params.q ?? ""));
@@ -40,6 +42,11 @@ export default function AppNav(props: AppNavProps) {
     }, SEARCH_DEBOUNCE_MS);
   };
 
+  const openMobileSearch = () => {
+    setMobileSearchOpen(true);
+    queueMicrotask(() => searchInput?.focus());
+  };
+
   return (
     <header class="hn-topbar">
       <div class="hn-brand">
@@ -51,8 +58,21 @@ export default function AppNav(props: AppNavProps) {
         <A href="/settings" aria-current={props.active === "settings" ? "page" : undefined}>[ settings.json ]</A>
       </nav>
 
-      <div class="hn-search" role="search">
+      <div class="hn-search" classList={{ "is-open": mobileSearchOpen() }} role="search">
+        <button
+          type="button"
+          class="hn-search-toggle"
+          aria-label={mobileSearchOpen() ? "Close search" : "Search saved links"}
+          aria-expanded={mobileSearchOpen()}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => mobileSearchOpen() ? setMobileSearchOpen(false) : openMobileSearch()}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d={mobileSearchOpen() ? "M6 6l12 12M18 6 6 18" : "m21 21-4.35-4.35m2.35-5.15a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"} />
+          </svg>
+        </button>
         <input
+          ref={searchInput}
           type="search"
           value={searchQuery()}
           placeholder="search"
@@ -61,6 +81,9 @@ export default function AppNav(props: AppNavProps) {
             const query = event.currentTarget.value;
             setSearchQuery(query);
             scheduleSearch(query);
+          }}
+          onBlur={() => {
+            if (!searchQuery()) setMobileSearchOpen(false);
           }}
         />
       </div>

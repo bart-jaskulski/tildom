@@ -118,31 +118,26 @@ const computeScore = (row: SearchDocumentRow, terms: string[]) => {
 };
 
 const resolveMatchContext = (row: SearchDocumentRow, terms: string[]) => {
-  const fields: Array<{ label: string; value: string }> = [
-    { label: "Title", value: row.title },
-    { label: "URL", value: row.url },
-    { label: "Domain", value: row.domain },
-    { label: "Note", value: row.body },
-    { label: "Excerpt", value: row.excerpt },
-    { label: "Comment", value: row.comments_text },
-    { label: "Tags", value: row.tag_text ?? "" },
+  const fields = [
+    row.title,
+    row.url,
+    row.domain,
+    row.body,
+    row.excerpt,
+    row.comments_text,
+    row.tag_text ?? "",
   ];
 
-  const exactField = fields.find((field) => includesAllTerms(field.value, terms));
-  const fallbackField = exactField ?? fields.find((field) => countMatchingTerms(field.value, terms) > 0) ?? fields[0]!;
+  const exactField = fields.find((field) => includesAllTerms(field, terms));
+  const fallbackField = exactField ?? fields.find((field) => countMatchingTerms(field, terms) > 0) ?? fields[0]!;
   const firstTerm = terms[0] ?? "";
 
-  return {
-    matchLabel: fallbackField.label,
-    matchText: sliceSnippet(fallbackField.value, firstTerm),
-  };
+  return sliceSnippet(fallbackField, firstTerm);
 };
 
-const mapSearchRow = (row: SearchDocumentRow, terms: string[], forcedContext?: { label: string; text: string }) => {
+const mapSearchRow = (row: SearchDocumentRow, terms: string[], forcedMatchText?: string) => {
   const score = computeScore(row, terms);
-  const context = forcedContext
-    ? { matchLabel: forcedContext.label, matchText: forcedContext.text }
-    : resolveMatchContext(row, terms);
+  const matchText = forcedMatchText ?? resolveMatchContext(row, terms);
 
   return {
     id: row.entry_id,
@@ -160,8 +155,7 @@ const mapSearchRow = (row: SearchDocumentRow, terms: string[], forcedContext?: {
     commentCount: row.comment_count,
     tags: row.tag_text ? row.tag_text.split(" ").filter(Boolean) : [],
     score,
-    matchLabel: context.matchLabel,
-    matchText: context.matchText,
+    matchText,
   } satisfies SearchResult;
 };
 
@@ -207,7 +201,7 @@ const searchStrictTag = async (rawQuery: string): Promise<SearchResult[]> => {
     [tag],
   );
 
-  return rows.map((row) => mapSearchRow(row, [tag], { label: "Tag", text: `#${tag}` }));
+  return rows.map((row) => mapSearchRow(row, [tag], `#${tag}`));
 };
 
 export const searchLocalEntries = async (rawQuery: string): Promise<SearchResult[]> => {

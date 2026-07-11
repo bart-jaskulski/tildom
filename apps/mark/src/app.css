@@ -2,19 +2,6 @@
 @plugin "@tailwindcss/typography";
 @import "@tildom/ui/base.css";
 
-/* Offline Banner */
-.offline-banner {
-  border-bottom: 2px solid var(--syntax-error);
-  background: var(--syntax-bg-active);
-  color: var(--syntax-error);
-  padding: 10px 16px;
-  text-align: center;
-  font-weight: bold;
-  font-size: 13px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
 /* App Shell Grid */
 .hn-page {
   width: 100%;
@@ -112,6 +99,10 @@
   width: 24ch;
   position: relative;
   transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hn-search-toggle {
+  display: none;
 }
 
 .hn-search:focus-within {
@@ -443,8 +434,7 @@
   color: var(--syntax-keyword) !important;
 }
 
-.entry-preview,
-.entry-match {
+.entry-preview {
   color: var(--fg-muted);
   font-size: 13px;
   margin: 0.55rem 0 0;
@@ -453,6 +443,16 @@
   background: var(--bg-canvas);
   padding: 0.5rem 1.5ch;
   border-left: 1px dashed var(--border-color);
+}
+
+.search-highlight {
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--syntax-keyword);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
 }
 
 article:not(.entry-row) .entry-preview {
@@ -717,18 +717,27 @@ mark {
   }
 
   .hn-topbar {
-    display: block;
-    height: auto;
-    align-items: stretch;
-    padding-left: 0.75rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 48px;
+    grid-template-rows: 48px 48px;
+    height: 96px;
+    min-height: 96px;
+    max-width: none;
+    margin: 0;
+    padding: 0;
   }
 
   .hn-brand {
-    height: 48px;
+    grid-column: 1;
+    grid-row: 1;
+    height: auto;
     gap: 0.75rem;
+    padding-left: 1.5ch;
   }
 
   .hn-nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
     overflow-x: auto;
     white-space: nowrap;
     -webkit-overflow-scrolling: touch;
@@ -750,15 +759,65 @@ mark {
   }
 
   .hn-search {
-    width: 100%;
-    min-width: 0;
-    margin-left: 0;
-    border-left: none;
-    border-bottom: 1px solid var(--border-color);
+    grid-column: 2;
+    grid-row: 1;
+    width: 48px;
+    min-width: 48px;
+    margin: 0;
+    border-bottom: 0;
+  }
+
+  .hn-search::before {
+    display: none;
+  }
+
+  .hn-search-toggle {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    place-items: center;
+    border: 0;
+    background: transparent;
+    color: var(--fg-default);
+    cursor: pointer;
+  }
+
+  .hn-search-toggle:hover,
+  .hn-search-toggle:focus-visible {
+    background: var(--syntax-bg-active);
+    outline: none;
+  }
+
+  .hn-search-toggle svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: square;
+    stroke-width: 2;
   }
 
   .hn-search input {
-    width: 100% !important;
+    display: none;
+  }
+
+  .hn-search.is-open {
+    grid-column: 1 / -1;
+    width: 100%;
+    z-index: 1;
+    border-left: 0;
+  }
+
+  .hn-search.is-open input {
+    display: block;
+    min-height: 48px;
+    padding: 0 48px 0 1.5ch;
+  }
+
+  .hn-search.is-open .hn-search-toggle {
+    position: absolute;
+    right: 0;
+    top: 0;
   }
 
   .hn-button {

@@ -45,9 +45,15 @@ const toStaticFilePath = (distDir: string, pathname: string) => {
   return filePath.startsWith(distDir) ? filePath : null;
 };
 
-const withResponseHeaders = (contentType: string) => {
+const cacheControlForPath = (pathname: string) =>
+  pathname.startsWith("/assets/")
+    ? "public, max-age=31536000, immutable"
+    : "no-cache";
+
+const withResponseHeaders = (contentType: string, pathname: string) => {
   const headers = new Headers(RESPONSE_HEADERS);
   headers.set("Content-Type", contentType);
+  headers.set("Cache-Control", cacheControlForPath(pathname));
   return headers;
 };
 
@@ -63,7 +69,7 @@ const readStaticAsset = async (distDir: string, pathname: string) => {
     const contentType = mimeTypes[extension] ?? "application/octet-stream";
     return new Response(content, {
       status: 200,
-      headers: withResponseHeaders(contentType),
+      headers: withResponseHeaders(contentType, pathname),
     });
   } catch (error) {
     const errorCode = (error as NodeJS.ErrnoException).code;
@@ -96,7 +102,7 @@ export const createProductionAssetHandler = (
     const html = await readFile(options.indexHtmlPath, "utf8");
     return new Response(html, {
       status: 200,
-      headers: withResponseHeaders("text/html; charset=utf-8"),
+      headers: withResponseHeaders("text/html; charset=utf-8", pathname),
     });
   };
 };

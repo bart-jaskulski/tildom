@@ -41,7 +41,7 @@ describe("entryStore mutations", () => {
 
     expect(execMock).toHaveBeenCalledWith(
       expect.stringContaining("INSERT INTO entries"),
-      expect.arrayContaining(["00000000-0000-4000-8000-000000000001", "example.com/path#fragment", "https://example.com/path", "example.com"]),
+      expect.arrayContaining(["00000000-0000-4000-8000-000000000001", "https://example.com/path", "https://example.com/path", "example.com"]),
     );
   });
 
