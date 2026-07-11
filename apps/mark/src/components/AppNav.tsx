@@ -5,7 +5,7 @@ type AppNavProps = {
   active?: "settings";
 };
 
-const SEARCH_DEBOUNCE_MS = 250;
+const SEARCH_DEBOUNCE_MS = 350;
 
 export default function AppNav(props: AppNavProps) {
   const [params, setParams] = useSearchParams();
