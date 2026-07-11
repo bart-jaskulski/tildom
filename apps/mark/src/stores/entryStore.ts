@@ -64,6 +64,10 @@ type TagRow = {
   name: string;
 };
 
+type EntryIdRow = {
+  id: string;
+};
+
 const tagSelectSql = `
   LEFT JOIN (
     SELECT entry_tags.entry_id, group_concat(tags.name, ' ') AS tag_names
@@ -166,6 +170,18 @@ const fetchEntryRow = async (entryId: string) => {
 
   return rows[0] ?? null;
 };
+
+const findEntryIdByCanonicalUrl = async (canonicalUrl: string) => {
+  const rows = await query<EntryIdRow>(
+    "SELECT id FROM entries WHERE canonical_url = ? LIMIT 1",
+    [canonicalUrl],
+  );
+
+  return rows[0]?.id ?? null;
+};
+
+const isDuplicateUrlError = (error: unknown) =>
+  error instanceof Error && /UNIQUE constraint failed: entries\.canonical_url/i.test(error.message);
 
 const placeholders = (values: unknown[]) => values.map(() => "?").join(", ");
 
@@ -353,41 +369,57 @@ export const fetchEntryDetail = async (entryId: string): Promise<EntryDetail> =>
 
 const insertUrlEntry = async (urlInput: string) => {
   const normalizedUrl = normalizeUrlInput(urlInput);
+  const existingEntryId = await findEntryIdByCanonicalUrl(normalizedUrl.canonicalUrl);
+  if (existingEntryId) {
+    return existingEntryId;
+  }
+
   const metadata = await fetchLinkMetadata(normalizedUrl.canonicalUrl);
   const now = Date.now();
   const entryId = createRecordId();
   const title = metadata.title ?? buildUrlFallbackTitle(normalizedUrl);
   const excerptStatus = metadata.excerpt ? "ready" : "idle";
 
-  await exec(
-    `
-      INSERT INTO entries (
-        id,
-        source_url,
-        canonical_url,
-        domain,
+  try {
+    await exec(
+      `
+        INSERT INTO entries (
+          id,
+          source_url,
+          canonical_url,
+          domain,
+          title,
+          body,
+          excerpt,
+          excerpt_status,
+          created_at,
+          updated_at,
+          last_commented_at
+        ) VALUES (?, ?, ?, ?, ?, '', ?, ?, ?, ?, ?)
+      `,
+      [
+        entryId,
+        normalizedUrl.sourceUrl,
+        normalizedUrl.canonicalUrl,
+        normalizedUrl.domain,
         title,
-        body,
-        excerpt,
-        excerpt_status,
-        created_at,
-        updated_at,
-        last_commented_at
-      ) VALUES (?, ?, ?, ?, ?, '', ?, ?, ?, ?, ?)
-    `,
-    [
-      entryId,
-      normalizedUrl.sourceUrl,
-      normalizedUrl.canonicalUrl,
-      normalizedUrl.domain,
-      title,
-      metadata.excerpt,
-      excerptStatus,
-      now,
-      now,
-      now,
-    ],
-  );
+        metadata.excerpt,
+        excerptStatus,
+        now,
+        now,
+        now,
+      ],
+    );
+  } catch (error) {
+    if (isDuplicateUrlError(error)) {
+      const duplicateEntryId = await findEntryIdByCanonicalUrl(normalizedUrl.canonicalUrl);
+      if (duplicateEntryId) {
+        return duplicateEntryId;
+      }
+    }
+
+    throw error;
+  }
 
   tagEntryInBackground(entryId, {
     title,
@@ -453,28 +485,36 @@ export const updateEntry = async (
   const title = titleInput || (normalizedUrl ? buildUrlFallbackTitle(normalizedUrl) : deriveNoteTitle(content));
   const body = normalizedUrl ? "" : content;
 
-  await exec(
-    `
-      UPDATE entries
-      SET
-        source_url = ?,
-        canonical_url = ?,
-        domain = ?,
-        title = ?,
-        body = ?,
-        updated_at = ?
-      WHERE id = ?
-    `,
-    [
-      normalizedUrl?.sourceUrl ?? null,
-      normalizedUrl?.canonicalUrl ?? null,
-      normalizedUrl?.domain ?? null,
-      title,
-      body,
-      Date.now(),
-      entryId,
-    ],
-  );
+  try {
+    await exec(
+      `
+        UPDATE entries
+        SET
+          source_url = ?,
+          canonical_url = ?,
+          domain = ?,
+          title = ?,
+          body = ?,
+          updated_at = ?
+        WHERE id = ?
+      `,
+      [
+        normalizedUrl?.sourceUrl ?? null,
+        normalizedUrl?.canonicalUrl ?? null,
+        normalizedUrl?.domain ?? null,
+        title,
+        body,
+        Date.now(),
+        entryId,
+      ],
+    );
+  } catch (error) {
+    if (isDuplicateUrlError(error)) {
+      throw new Error("This link is already saved");
+    }
+
+    throw error;
+  }
 
   if (nextTags) {
     await setEntryTags(entryId, nextTags);

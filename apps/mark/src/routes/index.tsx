@@ -214,90 +214,106 @@ export default function Home() {
       <AppNav />
 
       <section class="hn-content hn-stack">
-        <form id="submit" class="hn-form hn-panel" onSubmit={handleSubmit}>
-          <div class="hn-form-row">
-            <label class="hn-label visually-hidden" for="entry-body">save</label>
-            <textarea
-              id="entry-body"
-              ref={(element) => {
-                entryBodyTextarea = element;
-                resizeTextareaToFitContent(element);
-              }}
-              value={entryBody()}
-              onInput={(event) => {
-                setEntryBody(event.currentTarget.value);
-                resizeTextareaToFitContent(event.currentTarget);
-              }}
-              onKeyDown={handleTextareaKeyboardSubmit}
-              rows={5}
-              placeholder="Paste a link or write a note"
-              class="hn-textarea"
-            />
-          </div>
+        <Show when={!searchQuery()}>
+          <form id="submit" class="hn-form hn-panel" onSubmit={handleSubmit}>
+            <div class="hn-form-row">
+              <label class="hn-label visually-hidden" for="entry-body">save</label>
+              <textarea
+                id="entry-body"
+                ref={(element) => {
+                  entryBodyTextarea = element;
+                  resizeTextareaToFitContent(element);
+                }}
+                value={entryBody()}
+                onInput={(event) => {
+                  setEntryBody(event.currentTarget.value);
+                  resizeTextareaToFitContent(event.currentTarget);
+                }}
+                onKeyDown={handleTextareaKeyboardSubmit}
+                rows={5}
+                placeholder="Paste a link or write a note"
+                class="hn-textarea"
+              />
+            </div>
 
-          <Show when={error()}>
-            <p class="hn-error">{error()}</p>
-          </Show>
+            <Show when={error()}>
+              <p class="hn-error">{error()}</p>
+            </Show>
 
-          <div class="hn-form-row">
-            <span />
-            <button type="submit" disabled={isSaving()} class="hn-button">
-              {isSaving() ? "saving..." : "save"}
-            </button>
-          </div>
-        </form>
-
-        <div>
-          <Show when={!isEntryStoreReady()}>
-            <p class="hn-status">Opening local database...</p>
-          </Show>
-
-          <Show when={searchQuery()}>
-            <p class="hn-feed-note">
-              Search results for <b>{searchQuery()}</b>. <a href="/">newest</a>
-            </p>
-          </Show>
-
-          <Show when={searchQuery() && results.loading}>
-            <p class="hn-feed-note">Searching...</p>
-          </Show>
-
-          <Show when={!isEmpty()}>
-            <ol class="entry-list" start={pageStart() + 1}>
-              <For each={paginatedEntries()}>
-                {(entry, index) => (
-                  <li class="entry-item">
-                    <EntryCard
-                      entry={entry}
-                      matchText={isSearchResult(entry) ? entry.matchText : undefined}
-                      searchQuery={searchQuery()}
-                      onDelete={handleDelete}
-                      isActive={index() === activeIndex()}
-                    />
-                  </li>
-                )}
-              </For>
-            </ol>
-          </Show>
-
-          <Show when={isEmpty()}>
-            <p class="hn-feed-note">
-              {searchQuery() ? "No local matches." : "No links yet."}
-            </p>
-          </Show>
-
-          <Show when={hasMore()}>
-            <nav class="hn-pagination" aria-label="Pagination">
-              <button
-                type="button"
-                class="hn-button"
-                onClick={() => setPage(currentPage() + 1)}
-              >
-                More
+            <div class="hn-form-row">
+              <span />
+              <button type="submit" disabled={isSaving()} class="hn-button">
+                {isSaving() ? "saving..." : "save"}
               </button>
-            </nav>
-          </Show>
-        </div>
+            </div>
+          </form>
+        </Show>
+
+        <Show
+          when={isEntryStoreReady()}
+          fallback={
+            <section class="local-db-startup" role="status" aria-live="polite">
+              <p class="local-db-status">
+                <span class="local-db-path">~/mark.db</span>
+                <span>opening local library</span>
+                <span class="local-db-cursor" aria-hidden="true">█</span>
+              </p>
+              <div class="local-db-rails" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </div>
+            </section>
+          }
+        >
+          <div>
+            <Show when={searchQuery()}>
+              <p class="hn-feed-note">
+                Search results for <b>{searchQuery()}</b>. <a href="/">newest</a>
+              </p>
+            </Show>
+
+            <Show when={searchQuery() && results.loading}>
+              <p class="hn-feed-note">Searching...</p>
+            </Show>
+
+            <Show when={!isEmpty()}>
+              <ol class="entry-list" start={pageStart() + 1}>
+                <For each={paginatedEntries()}>
+                  {(entry, index) => (
+                    <li class="entry-item">
+                      <EntryCard
+                        entry={entry}
+                        matchText={isSearchResult(entry) ? entry.matchText : undefined}
+                        searchQuery={searchQuery()}
+                        onDelete={handleDelete}
+                        isActive={index() === activeIndex()}
+                      />
+                    </li>
+                  )}
+                </For>
+              </ol>
+            </Show>
+
+            <Show when={isEmpty()}>
+              <p class="hn-feed-note">
+                {searchQuery() ? "No local matches." : "No links yet."}
+              </p>
+            </Show>
+
+            <Show when={hasMore()}>
+              <nav class="hn-pagination" aria-label="Pagination">
+                <button
+                  type="button"
+                  class="hn-button"
+                  onClick={() => setPage(currentPage() + 1)}
+                >
+                  More
+                </button>
+              </nav>
+            </Show>
+          </div>
+        </Show>
       </section>
     </main>
   );

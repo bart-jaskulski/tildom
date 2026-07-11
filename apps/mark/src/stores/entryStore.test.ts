@@ -10,6 +10,10 @@ vi.mock("~/lib/db", () => ({
   query: queryMock,
 }));
 
+vi.mock("~/lib/syncState", () => ({
+  markSyncDirty: vi.fn(),
+}));
+
 import { addCommentToEntry, createEntry, deleteComment, deleteEntry, fetchEntryDetail, replaceEntryTags, updateComment, updateEntry } from "./entryStore";
 
 describe("entryStore mutations", () => {
@@ -43,6 +47,14 @@ describe("entryStore mutations", () => {
       expect.stringContaining("INSERT INTO entries"),
       expect.arrayContaining(["00000000-0000-4000-8000-000000000001", "https://example.com/path", "https://example.com/path", "example.com"]),
     );
+  });
+
+  it("reuses an existing entry for a duplicate URL", async () => {
+    queryMock.mockResolvedValue([{ id: "entry-1" }]);
+
+    await expect(createEntry("https://example.com/article")).resolves.toBe("entry-1");
+    expect(execMock).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("prefills URL entries with fetched metadata", async () => {
@@ -91,6 +103,15 @@ describe("entryStore mutations", () => {
         "entry-1",
       ]),
     );
+  });
+
+  it("reports duplicate links when updating an entry", async () => {
+    execMock.mockRejectedValue(new Error("UNIQUE constraint failed: entries.canonical_url"));
+
+    await expect(updateEntry("entry-1", {
+      title: "Updated title",
+      content: "example.com/updated",
+    })).rejects.toThrow("This link is already saved");
   });
 
   it("stores non-url content as note body and clears URL fields", async () => {

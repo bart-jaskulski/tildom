@@ -7,4 +7,6 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
     .catch((error) => console.warn("SW registration failed:", error));
 }
 
-render(() => <App />, document.getElementById("app")!);
+const appRoot = document.getElementById("app")!;
+appRoot.replaceChildren();
+render(() => <App />, appRoot);

@@ -37,6 +37,10 @@ CREATE TABLE IF NOT EXISTS entry_tags (
   FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS entries_canonical_url_unique
+ON entries(canonical_url)
+WHERE canonical_url IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS entry_tags_tag_id_idx ON entry_tags(tag_id);
 CREATE INDEX IF NOT EXISTS entry_tags_entry_id_idx ON entry_tags(entry_id);
 

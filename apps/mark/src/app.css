@@ -332,6 +332,58 @@
   font-weight: bold;
 }
 
+.local-db-startup {
+  min-height: 8.5rem;
+  padding: 0.75rem 0 0 2ch;
+}
+
+.local-db-status {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  margin: 0;
+  color: var(--fg-default);
+  font-size: 13px;
+}
+
+.local-db-path {
+  color: var(--syntax-string);
+}
+
+.local-db-cursor {
+  color: var(--syntax-keyword);
+  animation: local-db-cursor-blink 1s steps(2, jump-none) infinite;
+}
+
+.local-db-rails {
+  display: grid;
+  gap: 0.7rem;
+  margin: 1rem 0 0 1ch;
+  padding: 0.25rem 0 0.25rem 2ch;
+  border-left: 2px solid var(--border-color);
+}
+
+.local-db-rails span {
+  display: block;
+  height: 0.75rem;
+  width: min(56ch, 74%);
+  background: var(--syntax-bg-active);
+}
+
+.local-db-rails span:nth-child(2) {
+  width: min(42ch, 58%);
+}
+
+.local-db-rails span:nth-child(3) {
+  width: min(48ch, 66%);
+}
+
+@keyframes local-db-cursor-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
 /* List elements & Entry rows */
 .entry-list {
   counter-reset: entry-counter;
@@ -861,5 +913,9 @@ mark {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  .local-db-cursor {
+    animation: none;
   }
 }
