@@ -1,0 +1,80 @@
+.feedNote {
+  margin: 0 0 1.5rem;
+  padding: 0.75rem 1.5ch;
+  border-left: 2px solid var(--highlight-blue);
+  background: var(--bg-canvas);
+  font-size: 13px;
+
+  & a {
+    font-weight: bold;
+  }
+}
+
+.startup {
+  min-height: 8.5rem;
+  padding: 0.75rem 0 0 2ch;
+}
+
+.startupStatus {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  margin: 0;
+  color: var(--fg-default);
+  font-size: 13px;
+}
+
+.startupPath {
+  color: var(--syntax-string);
+}
+
+.startupCursor {
+  color: var(--syntax-keyword);
+  animation: cursorBlink 1s steps(2, jump-none) infinite;
+}
+
+.startupRails {
+  display: grid;
+  gap: 0.7rem;
+  margin: 1rem 0 0 1ch;
+  padding: 0.25rem 0 0.25rem 2ch;
+  border-left: 2px solid var(--border-color);
+
+  & span {
+    display: block;
+    width: min(56ch, 74%);
+    height: 0.75rem;
+    background: var(--syntax-bg-active);
+
+    &:nth-child(2) {
+      width: min(42ch, 58%);
+    }
+
+    &:nth-child(3) {
+      width: min(48ch, 66%);
+    }
+  }
+}
+
+.entryList {
+  margin: 0;
+  padding: 0;
+  counter-reset: entry-counter;
+  list-style: none;
+}
+
+.entryItem {
+  position: relative;
+  margin-bottom: 1.35rem;
+  counter-increment: entry-counter;
+}
+
+.pagination {
+  margin: 2rem 0 0;
+}
+
+@keyframes cursorBlink {
+  50% {
+    opacity: 0;
+  }
+}

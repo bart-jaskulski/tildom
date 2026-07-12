@@ -1,6 +1,7 @@
 import { Link, Meta, MetaProvider, Title } from "@solidjs/meta";
-import { Route, Router } from "@solidjs/router";
-import { Suspense, onMount } from "solid-js";
+import { Route, Router, useLocation, useNavigate } from "@solidjs/router";
+import { Suspense, onMount, type ParentProps } from "solid-js";
+import { VimNavigationProvider, type VimKeymap } from "@tildom/ui";
 import NotFound from "~/routes/[...404]";
 import Home from "~/routes/index";
 import ItemPage from "~/routes/item/[id]";
@@ -10,10 +11,45 @@ import ShareTarget from "~/routes/share-target";
 import { requestPersistentStorage } from "~/lib/persistentStorage";
 import { initializeSync } from "~/lib/syncClient";
 import { initializeEntryStore } from "~/stores/entryStore";
+import KeybindHelp from "~/components/KeybindHelp";
+import { pwaInstall } from "~/lib/pwaInstall";
 import "./app.css";
+
+function MarkVimNavigation(props: ParentProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const keymaps: VimKeymap[] = [
+    {
+      lhs: ["gt", "gT"],
+      callback: () => navigate(location.pathname === "/settings" ? "/" : "/settings"),
+      help: "change tab",
+    },
+    { lhs: "h", callback: () => window.history.back(), help: "back" },
+    { lhs: "l", callback: () => window.history.forward(), help: "forward" },
+    {
+      lhs: "/",
+      callback: () => {
+        const searchInput = document.querySelector("[data-mark-search]") as HTMLInputElement | null;
+        searchInput?.focus();
+        searchInput?.select();
+      },
+      help: "search",
+    },
+    {
+      lhs: "Escape",
+      callback: () => {
+        if (location.pathname !== "/") navigate("/");
+      },
+      help: "return to bookmarks",
+    },
+  ];
+
+  return <VimNavigationProvider keymaps={keymaps}>{props.children}</VimNavigationProvider>;
+}
 
 export default function App() {
   onMount(async () => {
+    pwaInstall.initialize();
     void requestPersistentStorage();
     await initializeEntryStore();
 
@@ -28,7 +64,10 @@ export default function App() {
           <Meta name="theme-color" content="#d73a49" />
           <Link rel="icon" href="/icon.svg" type="image/svg+xml" />
           <Link rel="manifest" href="/manifest.json" />
-          <Suspense>{props.children}</Suspense>
+          <MarkVimNavigation>
+            <Suspense>{props.children}</Suspense>
+            <KeybindHelp />
+          </MarkVimNavigation>
         </MetaProvider>
       )}
     >

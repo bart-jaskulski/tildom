@@ -11,5 +11,6 @@ export const query = client.query;
 export const exportDatabase = client.exportDatabase;
 export const importDatabase = client.importDatabase;
 export const closeDb = client.close;
+export const destroyDatabase = client.deleteDatabaseFile;
 
 export const dbVersion = () => client.dbVersion;

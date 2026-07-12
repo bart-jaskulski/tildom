@@ -1,0 +1,230 @@
+.topbar {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 120ch;
+  height: 48px;
+  min-height: 48px;
+  margin: 0 auto;
+  padding-left: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-canvas);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  min-width: 0;
+
+  & a {
+    color: inherit;
+
+    &:hover {
+      text-decoration: none;
+    }
+  }
+}
+
+.title {
+  color: var(--syntax-keyword) !important;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.nav {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: stretch;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  & a {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 2.2ch;
+    border-right: 0;
+    color: var(--fg-muted);
+    font-size: 12px;
+    transition: background-color 0.15s ease-out, color 0.15s ease-out;
+    white-space: nowrap;
+
+    &:hover {
+      background: var(--bg-surface);
+      color: var(--fg-default);
+      text-decoration: none;
+    }
+
+    &[aria-current="page"] {
+      border-bottom: 2px solid var(--syntax-keyword);
+      background: var(--bg-surface);
+      color: var(--fg-default);
+      font-weight: bold;
+    }
+  }
+}
+
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 24ch;
+  min-width: 24ch;
+  margin-left: auto;
+  padding: 0;
+  border-left: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &:focus-within {
+    width: min(44ch, 42vw);
+  }
+
+  &::before {
+    position: absolute;
+    top: 50%;
+    left: 1.25ch;
+    color: var(--syntax-keyword);
+    content: ">";
+    font-weight: bold;
+    pointer-events: none;
+    transform: translateY(-50%);
+  }
+
+  & input {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 1.5ch 0 3.5ch;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--fg-default);
+    font-size: 13px;
+    transition: box-shadow 0.15s ease-out;
+
+    &:focus {
+      box-shadow: inset 2px 0 0 var(--syntax-keyword);
+    }
+
+    &::placeholder {
+      color: var(--fg-muted);
+      opacity: 0.8;
+    }
+  }
+}
+
+.toggle {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 48px;
+    grid-template-rows: 48px 48px;
+    max-width: none;
+    height: 96px;
+    min-height: 96px;
+    margin: 0;
+    padding: 0;
+  }
+
+  .brand {
+    grid-column: 1;
+    grid-row: 1;
+    height: auto;
+    gap: 0.75rem;
+    padding-left: 1.5ch;
+  }
+
+  .nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+
+    & a {
+      flex: 1 0 auto;
+      justify-content: center;
+      padding: 0 1.5ch;
+    }
+  }
+
+  .search {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+    width: 48px;
+    min-width: 48px;
+    height: 48px;
+    margin: 0;
+    border-bottom: 0;
+    border-left: 0;
+    overflow: hidden;
+    transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+    &::before {
+      display: none;
+    }
+
+    & input {
+      display: none;
+    }
+
+    &[data-open] {
+      width: 100%;
+      min-width: 0;
+
+      & input {
+        display: block;
+        min-height: 48px;
+        padding: 0 48px 0 1.5ch;
+      }
+
+      & .toggle {
+        position: absolute;
+        top: 0;
+        right: 0;
+      }
+    }
+  }
+
+  .toggle {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    margin-left: auto;
+    border: 0;
+    background: transparent;
+    color: var(--fg-default);
+    cursor: pointer;
+    place-items: center;
+
+    &:hover,
+    &:focus-visible {
+      outline: none;
+      background: var(--syntax-bg-active);
+    }
+
+    & svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: square;
+      stroke-width: 2;
+    }
+  }
+}

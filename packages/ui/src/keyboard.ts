@@ -1,28 +1,41 @@
-import { onMount, onCleanup } from "solid-js";
+import { onMount, onCleanup, type Accessor } from "solid-js";
 import { getSharedPreferences } from "./preferences.ts";
 
-export interface VimNavigationOptions {
-  onUp?: () => void;
-  onDown?: () => void;
-  onSearch?: () => void;
-  onSave?: () => void;
-  onFocusInput?: () => void;
-  onEscape?: () => void;
-  customCommands?: Record<string, (lastKey?: string) => void>;
-}
+export const VIM_HELP_EVENT = "tildom:keybind-help";
+let activeKeymaps: VimKeymap[] = [];
 
-export function createVimNavigation(options: VimNavigationOptions) {
+export type VimKeymap = {
+  lhs: string | string[];
+  callback: (context: { lhs: string }) => void;
+  help?: string;
+};
+
+export const showVimHelp = (keymaps = activeKeymaps) =>
+  window.dispatchEvent(new CustomEvent<VimKeymap[]>(VIM_HELP_EVENT, { detail: keymaps }));
+
+export const setActiveVimKeymaps = (keymaps: VimKeymap[]) => {
+  activeKeymaps = [{ lhs: "?", callback: () => {}, help: "show this help" }, ...keymaps];
+};
+
+export type VimKeymaps = VimKeymap[] | Accessor<VimKeymap[]>;
+
+export function createVimNavigation(keymaps: VimKeymaps) {
   onMount(() => {
-    let lastKey = "";
-    let clearLastKeyTimer: ReturnType<typeof setTimeout> | undefined;
+    const getKeymaps = () => typeof keymaps === "function" ? keymaps() : keymaps;
+    const getBindings = () => getKeymaps().flatMap((keymap) =>
+      (Array.isArray(keymap.lhs) ? keymap.lhs : [keymap.lhs]).map((lhs) => ({ ...keymap, lhs })),
+    );
+    let pending = "";
+    let clearPendingTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const clearPending = () => {
+      pending = "";
+      if (clearPendingTimer) clearTimeout(clearPendingTimer);
+    };
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      // 1. Desktop & Global Enablement Checks
-      const isDesktop = !("ontouchstart" in window) && window.innerWidth > 768;
-      const isVimEnabled = getSharedPreferences().vimKeys;
-      if (!isDesktop || !isVimEnabled) return;
+      if (window.innerWidth <= 768 || !getSharedPreferences().vimKeys) return;
 
-      // 2. Prevent triggers while typing in fields
       const activeEl = document.activeElement;
       const isTyping = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
       if (isTyping) {
@@ -33,97 +46,38 @@ export function createVimNavigation(options: VimNavigationOptions) {
         return;
       }
 
-      const key = event.key;
-
-      if (key === "Escape") {
-        lastKey = "";
-        options.onEscape?.();
+      if (event.key === "?") {
+        setActiveVimKeymaps(getKeymaps());
+        showVimHelp();
         event.preventDefault();
         return;
       }
 
-      // Handle combo prefixes: 'g' or ':'
-      if (key === "g" && lastKey === "") {
-        lastKey = "g";
-        if (clearLastKeyTimer) clearTimeout(clearLastKeyTimer);
-        clearLastKeyTimer = setTimeout(() => {
-          if (lastKey === "g") lastKey = "";
-        }, 1000);
-        return;
-      }
-
-      if (key === ":" && lastKey === "") {
-        lastKey = ":";
-        if (clearLastKeyTimer) clearTimeout(clearLastKeyTimer);
-        clearLastKeyTimer = setTimeout(() => {
-          if (lastKey === ":") lastKey = "";
-        }, 1000);
-        return;
-      }
-
-      // Check combo commands first
-      if (lastKey === ":" && key === "w") {
-        if (options.onSave) {
-          event.preventDefault();
-          options.onSave();
-        }
-        lastKey = "";
-        return;
-      }
-
-      // General Key Handlers
-      if (key === "j" || key === "ArrowDown") {
-        if (options.onDown) {
-          event.preventDefault();
-          options.onDown();
-        }
-        lastKey = "";
-        return;
-      }
-
-      if (key === "k" || key === "ArrowUp") {
-        if (options.onUp) {
-          event.preventDefault();
-          options.onUp();
-        }
-        lastKey = "";
-        return;
-      }
-
-      if (key === "/") {
-        if (options.onSearch) {
-          event.preventDefault();
-          options.onSearch();
-        }
-        lastKey = "";
-        return;
-      }
-
-      if (key === "i") {
-        if (options.onFocusInput) {
-          event.preventDefault();
-          options.onFocusInput();
-        }
-        lastKey = "";
-        return;
-      }
-
-      // Custom combo/single commands
-      const customAction = options.customCommands?.[key];
-      if (customAction) {
-        customAction(lastKey);
+      const lhs = `${pending}${event.key}`;
+      const bindings = getBindings();
+      const exact = bindings.find((keymap) => keymap.lhs === lhs);
+      if (exact) {
+        exact.callback({ lhs });
         event.preventDefault();
-        lastKey = "";
-      } else {
-        // Clear last key if no match
-        lastKey = "";
+        clearPending();
+        return;
       }
+
+      if (bindings.some((keymap) => keymap.lhs.startsWith(lhs))) {
+        pending = lhs;
+        if (clearPendingTimer) clearTimeout(clearPendingTimer);
+        clearPendingTimer = setTimeout(clearPending, 1_000);
+        event.preventDefault();
+        return;
+      }
+
+      clearPending();
     };
 
     window.addEventListener("keydown", handleKeyDown);
     onCleanup(() => {
       window.removeEventListener("keydown", handleKeyDown);
-      if (clearLastKeyTimer) clearTimeout(clearLastKeyTimer);
+      if (clearPendingTimer) clearTimeout(clearPendingTimer);
     });
   });
 }

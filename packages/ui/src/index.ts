@@ -1,4 +1,5 @@
 export * from "./keyboard.ts";
+export * from "./VimNavigationProvider.tsx";
 export * from "./preferences.ts";
 export { default as Checkbox } from "./components/Checkbox";
 export * from "./components/Checkbox";

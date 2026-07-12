@@ -1,6 +1,7 @@
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
 import { formatRelativeTimestamp, hasEntryLink, type Entry, type SearchResult } from "~/lib/entries";
+import styles from "./EntryCard.module.css";
 
 type EntryCardProps = {
   entry: Entry | SearchResult;
@@ -10,7 +11,7 @@ type EntryCardProps = {
   isActive?: boolean;
 };
 
-const searchTerms = (query: string) => query.toLowerCase().match(/[\p{L}\p{N}_]+/gu) ?? [];
+const searchTerms = (query: string): string[] => query.toLowerCase().match(/[\p{L}\p{N}_]+/gu) ?? [];
 
 const highlightText = (value: string, query: string) => {
   const terms = searchTerms(query).sort((left, right) => right.length - left.length);
@@ -40,17 +41,17 @@ export default function EntryCard(props: EntryCardProps) {
   const highlighted = (value: string) => (
     <For each={highlightText(value, props.searchQuery ?? "")}>
       {(part) => searchTerms(props.searchQuery ?? "").includes(part.toLowerCase())
-        ? <mark class="search-highlight">{part}</mark>
+        ? <mark class={styles.searchHighlight}>{part}</mark>
         : part}
     </For>
   );
 
   return (
-    <article class={`entry-row ${props.isActive ? "active-row" : ""}`}>
-        <div class="entry-titleline">
-          <A href={`/item/${entry().id}`} class="entry-title">{highlighted(title())}</A>
+    <article class={styles.row} classList={{ [styles.activeRow]: props.isActive }} data-entry-row data-active={props.isActive ? "" : undefined}>
+        <div class={styles.titleline}>
+          <A href={`/item/${entry().id}`} class={styles.title}>{highlighted(title())}</A>
           <Show when={entry().domain}>
-            <span class="entry-domain">({entry().domain})</span>
+            <span class={styles.domain}>({entry().domain})</span>
           </Show>
         </div>
 

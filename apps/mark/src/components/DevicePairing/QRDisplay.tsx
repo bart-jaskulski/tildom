@@ -1,5 +1,6 @@
 import QRCode from "qrcode";
 import { Show, createEffect, createSignal } from "solid-js";
+import styles from "./QRDisplay.module.css";
 
 type QRDisplayProps = {
   value: string;
@@ -31,7 +32,7 @@ export default function QRDisplay(props: QRDisplayProps) {
         <p class="hn-error" role="alert">{error()}</p>
       </Show>
       <Show when={!error() && dataUrl()}>
-        <img class="qr-image" src={dataUrl()} alt="Pairing QR code" />
+        <img class={styles.image} src={dataUrl()} alt="Pairing QR code" />
       </Show>
     </>
   );

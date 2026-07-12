@@ -1,8 +1,9 @@
 import { Title } from "@solidjs/meta";
 import { useNavigate, useSearchParams } from "@solidjs/router";
-import { For, Show, createEffect, createMemo, createResource, createSignal, onMount } from "solid-js";
+import { For, Show, createEffect, createMemo, createResource, createSignal } from "solid-js";
 import { isServer } from "solid-js/web";
-import { createVimNavigation } from "@tildom/ui";
+import { useVimKeymaps } from "@tildom/ui";
+import styles from "./index.module.css";
 import AppNav from "~/components/AppNav";
 import EntryCard from "~/components/EntryCard";
 import { dbVersion } from "~/lib/db";
@@ -49,121 +50,66 @@ export default function Home() {
     }
   });
 
-  onMount(() => {
-    const scrollActiveIntoView = () => {
-      requestAnimationFrame(() => {
-        const activeRowEl = document.querySelector('.entry-row.active-row');
-        if (activeRowEl) {
-          activeRowEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        }
-      });
-    };
+  const scrollActiveIntoView = () => {
+    requestAnimationFrame(() => {
+      const activeRowEl = document.querySelector("[data-entry-row][data-active]");
+      activeRowEl?.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+  };
 
-    createVimNavigation({
-      onDown: () => {
+  useVimKeymaps([
+    {
+      lhs: "j",
+      callback: () => {
         setActiveIndex(prev => Math.min(prev + 1, paginatedEntries().length - 1));
         scrollActiveIntoView();
       },
-      onUp: () => {
+      help: "next item",
+    },
+    {
+      lhs: "k",
+      callback: () => {
         setActiveIndex(prev => Math.max(prev - 1, 0));
         scrollActiveIntoView();
       },
-      onSearch: () => {
-        const searchInput = document.querySelector('.hn-search input') as HTMLInputElement;
-        if (searchInput) {
-          searchInput.focus();
-          searchInput.select();
-        }
-      },
-      onFocusInput: () => {
-        if (entryBodyTextarea) {
-          entryBodyTextarea.focus();
-        }
-      },
-      onSave: () => {
-        if (entryBody()) {
-          void handleSubmit(new Event("submit") as any);
-        }
-      },
-      customCommands: {
-        t: (lastKey) => {
-          if (lastKey === "g") navigate("/settings");
-        },
-        T: (lastKey) => {
-          if (lastKey === "g") navigate("/settings");
-        },
-        x: (lastKey) => {
-          if (lastKey === "g") {
-            const selected = paginatedEntries()[activeIndex()];
-            if (selected && selected.canonicalUrl) {
-              window.open(selected.canonicalUrl, "_blank", "noreferrer");
-            }
-          }
-        },
-        g: (lastKey) => {
-          if (lastKey === "g") {
-            setActiveIndex(0);
-            scrollActiveIntoView();
-          }
-        },
-        G: () => {
-          setActiveIndex(paginatedEntries().length - 1);
+      help: "previous item",
+    },
+    { lhs: "i", callback: () => entryBodyTextarea?.focus(), help: "focus new bookmark" },
+    { lhs: ":w", callback: () => {
+      if (entryBody()) void handleSubmit(new Event("submit") as SubmitEvent);
+    }, help: "save" },
+    { lhs: ["gx", "o"], callback: () => {
+      const selected = paginatedEntries()[activeIndex()];
+      if (selected?.canonicalUrl) window.open(selected.canonicalUrl, "_blank", "noreferrer");
+    }, help: "open original URL" },
+    { lhs: "gg", callback: () => { setActiveIndex(0); scrollActiveIntoView(); }, help: "first item" },
+    { lhs: "G", callback: () => { setActiveIndex(paginatedEntries().length - 1); scrollActiveIntoView(); }, help: "last item" },
+    { lhs: ["e", "Enter"], callback: () => {
+      const selected = paginatedEntries()[activeIndex()];
+      if (selected) navigate(`/item/${selected.id}`);
+    }, help: "open selected item" },
+        { lhs: "d", callback: () => {
+          const selected = paginatedEntries()[activeIndex()];
+          if (selected) void handleDelete(selected.id);
+        }, help: "delete selected item" },
+        { lhs: "p", callback: () => {
+          entryBodyTextarea?.focus();
+          navigator.clipboard.readText().then((text) => {
+            if (text) setEntryBody(prev => prev + text);
+          }).catch(() => {});
+        }, help: "paste into new bookmark" },
+    {
+      lhs: Array.from({ length: 9 }, (_, i) => String(i + 1)),
+      callback: ({ lhs }) => {
+        const index = Number(lhs) - 1;
+        if (index < paginatedEntries().length) {
+          setActiveIndex(index);
           scrollActiveIntoView();
-        },
-        h: () => {
-          window.history.back();
-        },
-        l: () => {
-          window.history.forward();
-        },
-        e: () => {
-          const selected = paginatedEntries()[activeIndex()];
-          if (selected) {
-            navigate(`/item/${selected.id}`);
-          }
-        },
-        Enter: () => {
-          const selected = paginatedEntries()[activeIndex()];
-          if (selected) {
-            navigate(`/item/${selected.id}`);
-          }
-        },
-        o: () => {
-          const selected = paginatedEntries()[activeIndex()];
-          if (selected && selected.canonicalUrl) {
-            window.open(selected.canonicalUrl, "_blank", "noreferrer");
-          }
-        },
-        d: () => {
-          const selected = paginatedEntries()[activeIndex()];
-          if (selected) {
-            void handleDelete(selected.id);
-          }
-        },
-        p: () => {
-          if (entryBodyTextarea) {
-            entryBodyTextarea.focus();
-            navigator.clipboard.readText().then((text) => {
-              if (text) {
-                setEntryBody(prev => prev + text);
-              }
-            }).catch(() => {});
-          }
-        },
-        ...Object.fromEntries(
-          Array.from({ length: 9 }, (_, i) => [
-            String(i + 1),
-            () => {
-              if (i < paginatedEntries().length) {
-                setActiveIndex(i);
-                scrollActiveIntoView();
-              }
-            }
-          ])
-        )
-      }
-    });
-  });
+        }
+      },
+      help: "select item 1–9",
+    },
+  ]);
 
   createEffect(() => {
     entryBody();
@@ -252,13 +198,13 @@ export default function Home() {
         <Show
           when={isEntryStoreReady()}
           fallback={
-            <section class="local-db-startup" role="status" aria-live="polite">
-              <p class="local-db-status">
-                <span class="local-db-path">~/mark.db</span>
+            <section class={styles.startup} role="status" aria-live="polite">
+              <p class={styles.startupStatus}>
+                <span class={styles.startupPath}>~/mark.db</span>
                 <span>opening local library</span>
-                <span class="local-db-cursor" aria-hidden="true">█</span>
+                <span class={styles.startupCursor} aria-hidden="true">█</span>
               </p>
-              <div class="local-db-rails" aria-hidden="true">
+              <div class={styles.startupRails} aria-hidden="true">
                 <span />
                 <span />
                 <span />
@@ -268,20 +214,20 @@ export default function Home() {
         >
           <div>
             <Show when={searchQuery()}>
-              <p class="hn-feed-note">
+              <p class={styles.feedNote}>
                 Search results for <b>{searchQuery()}</b>. <a href="/">newest</a>
               </p>
             </Show>
 
             <Show when={searchQuery() && results.loading}>
-              <p class="hn-feed-note">Searching...</p>
+              <p class={styles.feedNote}>Searching...</p>
             </Show>
 
             <Show when={!isEmpty()}>
-              <ol class="entry-list" start={pageStart() + 1}>
+              <ol class={styles.entryList} start={pageStart() + 1}>
                 <For each={paginatedEntries()}>
                   {(entry, index) => (
-                    <li class="entry-item">
+                    <li class={styles.entryItem}>
                       <EntryCard
                         entry={entry}
                         matchText={isSearchResult(entry) ? entry.matchText : undefined}
@@ -296,13 +242,13 @@ export default function Home() {
             </Show>
 
             <Show when={isEmpty()}>
-              <p class="hn-feed-note">
+              <p class={styles.feedNote}>
                 {searchQuery() ? "No local matches." : "No links yet."}
               </p>
             </Show>
 
             <Show when={hasMore()}>
-              <nav class="hn-pagination" aria-label="Pagination">
+              <nav class={styles.pagination} aria-label="Pagination">
                 <button
                   type="button"
                   class="hn-button"

@@ -1,14 +1,15 @@
 import { Title } from "@solidjs/meta";
 import { A, useNavigate, useParams } from "@solidjs/router";
-import { For, Show, createEffect, createResource, createSignal, onMount, onCleanup } from "solid-js";
+import { For, Show, createEffect, createResource, createSignal, onCleanup } from "solid-js";
 import { isServer } from "solid-js/web";
-import { createVimNavigation } from "@tildom/ui";
+import { useVimKeymaps } from "@tildom/ui";
 import AppNav from "~/components/AppNav";
 import { dbVersion } from "~/lib/db";
 import { formatRelativeTimestamp } from "~/lib/entries";
 import { renderMarkdownToHtml } from "~/lib/markdown";
 import { handleTextareaKeyboardSubmit, resizeTextareaToFitContent } from "~/lib/textarea";
 import { addCommentToEntry, deleteComment, deleteEntry, fetchEntryDetail, isEntryStoreReady, updateComment, updateEntry } from "~/stores/entryStore";
+import styles from "./[id].module.css";
 
 export default function ItemPage() {
   const params = useParams();
@@ -37,48 +38,14 @@ export default function ItemPage() {
   );
   const entry = () => detail()?.entry ?? null;
 
-  onMount(() => {
-    createVimNavigation({
-      onEscape: () => {
-        navigate("/");
-      },
-      onSearch: () => {
-        const searchInput = document.querySelector('.hn-search input') as HTMLInputElement;
-        if (searchInput) {
-          searchInput.focus();
-          searchInput.select();
-        }
-      },
-      onFocusInput: () => {
-        startEditing();
-      },
-      customCommands: {
-        t: (lastKey) => {
-          if (lastKey === "g") navigate("/settings");
-        },
-        T: (lastKey) => {
-          if (lastKey === "g") navigate("/settings");
-        },
-        x: (lastKey) => {
-          if (lastKey === "g") {
-            const currentEntry = entry();
-            if (currentEntry && currentEntry.canonicalUrl) {
-              window.open(currentEntry.canonicalUrl, "_blank", "noreferrer");
-            }
-          }
-        },
-        h: () => {
-          window.history.back();
-        },
-        l: () => {
-          window.history.forward();
-        },
-        d: () => {
-          void handleDelete();
-        }
-      }
-    });
-  });
+  useVimKeymaps([
+    { lhs: "i", callback: () => startEditing(), help: "edit entry" },
+    { lhs: ["o", "gx"], callback: () => {
+      const currentEntry = entry();
+      if (currentEntry?.canonicalUrl) window.open(currentEntry.canonicalUrl, "_blank", "noreferrer");
+    }, help: "open original URL" },
+    { lhs: "d", callback: () => void handleDelete(), help: "delete entry" },
+  ]);
 
   createEffect(() => {
     editContent();
@@ -306,7 +273,7 @@ export default function ItemPage() {
                       <p class="hn-error">{actionError()}</p>
                     </Show>
 
-                    <div class="hn-actions">
+                    <div class={styles.actions}>
                       <button type="submit" disabled={isEditSaving()} class="hn-button">
                         {isEditSaving() ? "saving..." : "save changes"}
                       </button>
@@ -316,20 +283,20 @@ export default function ItemPage() {
                     </div>
                   </form>
                 }>
-                  <h1 class="item-title">{currentEntry().title}</h1>
+                  <h1 class={styles.title}>{currentEntry().title}</h1>
 
                   <Show when={currentEntry().canonicalUrl}>
-                    <a href={currentEntry().canonicalUrl!} target="_blank" rel="noreferrer" class="item-url entry-subtext">
+                    <a href={currentEntry().canonicalUrl!} target="_blank" rel="noreferrer" class={`${styles.url} entry-subtext`}>
                       {currentEntry().canonicalUrl}
                     </a>
                   </Show>
 
                   <Show when={currentEntry().excerpt}>
-                    <p class="entry-preview">{currentEntry().excerpt}</p>
+                    <p class={`entry-preview ${styles.preview}`}>{currentEntry().excerpt}</p>
                   </Show>
 
                   <Show when={currentEntry().tags.length > 0}>
-                    <p class="entry-tags item-tags">
+                    <p class={`entry-tags ${styles.tags}`}>
                       <For each={currentEntry().tags}>
                         {(tag) => (
                           <A href={`/?q=${encodeURIComponent(`#${tag}`)}`} class="entry-tag">
@@ -341,7 +308,7 @@ export default function ItemPage() {
                   </Show>
 
                   <Show when={currentEntry().body}>
-                    <div class="item-body hn-markdown prose" innerHTML={renderMarkdownToHtml(currentEntry().body)} />
+                    <div class={`${styles.body} ${styles.markdown} ${styles.prose}`} innerHTML={renderMarkdownToHtml(currentEntry().body)} />
                   </Show>
 
                   <Show when={actionError()}>
@@ -357,12 +324,12 @@ export default function ItemPage() {
 
                 <For each={detail()?.comments ?? []}>
                   {(comment) => (
-                    <article class="comment">
+                    <article class={styles.comment}>
                       <Show
                         when={editingCommentId() === comment.id}
                         fallback={
                           <>
-                            <div class="comment-body hn-markdown" innerHTML={renderMarkdownToHtml(comment.body)} />
+                            <div class={`${styles.commentBody} ${styles.markdown}`} innerHTML={renderMarkdownToHtml(comment.body)} />
                             <p class="entry-subtext">
                               {formatRelativeTimestamp(comment.createdAt)}
                               <span> | </span>
@@ -404,7 +371,7 @@ export default function ItemPage() {
                             rows={4}
                             class="hn-textarea"
                           />
-                          <div class="hn-actions">
+                          <div class={styles.actions}>
                             <button type="submit" class="hn-button" disabled={commentSavingId() === comment.id}>
                               {commentSavingId() === comment.id ? "saving..." : "save"}
                             </button>

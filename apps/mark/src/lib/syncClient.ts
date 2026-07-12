@@ -30,6 +30,7 @@ const [statusText, setStatusText] = createSignal("sync disabled");
 const [isPaired, setIsPaired] = createSignal(false);
 const [lastSeenRevision, setLastSeenRevision] = createSignal<string | null>(null);
 const [hasLocalChanges, setHasLocalChanges] = createSignal(false);
+const [isReady, setIsReady] = createSignal(false);
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 let syncInFlight: Promise<void> | null = null;
@@ -47,7 +48,7 @@ const toBodyBuffer = (bytes: Uint8Array) => {
   return copy.buffer;
 };
 
-const refreshSignals = async () => {
+export const refreshSyncState = async () => {
   const config = await getSyncConfig();
   const runtime = await getSyncRuntime();
   setIsPaired(Boolean(config));
@@ -55,6 +56,7 @@ const refreshSignals = async () => {
   setHasLocalChanges(runtime.hasLocalChanges);
   setStatus(config ? (runtime.lastError ? "error" : "idle") : "unpaired");
   setStatusText(runtime.lastError ?? (config ? "sync idle" : "sync disabled"));
+  setIsReady(true);
 };
 
 export const syncSignals = {
@@ -63,6 +65,7 @@ export const syncSignals = {
   isPaired,
   lastSeenRevision,
   hasLocalChanges,
+  isReady,
 };
 
 export const getSyncBaseUrl = () => {
@@ -200,7 +203,7 @@ export const syncNow = async () => {
   syncInFlight = (async () => {
     const config = await getSyncConfig();
     if (!config) {
-      await refreshSignals();
+      await refreshSyncState();
       return;
     }
 
@@ -261,7 +264,7 @@ export const syncNow = async () => {
       }));
     } finally {
       syncInFlight = null;
-      await refreshSignals();
+      await refreshSyncState();
     }
   })();
 
@@ -296,7 +299,7 @@ export const joinSyncVault = async (secret: string) => {
     await importRemoteSnapshot(config, remote.revision, remote.body);
   }
 
-  await refreshSignals();
+  await refreshSyncState();
   return config;
 };
 
@@ -310,11 +313,11 @@ const defaultJoinRuntime = () => ({
 
 export const disconnectSync = async () => {
   await clearSyncConfig();
-  await refreshSignals();
+  await refreshSyncState();
 };
 
 export const initializeSync = async () => {
-  await refreshSignals();
+  await refreshSyncState();
   window.addEventListener("mark-sync-dirty", scheduleSync);
   window.addEventListener("online", () => void syncNow());
   document.addEventListener("visibilitychange", () => {

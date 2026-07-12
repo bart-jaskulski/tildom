@@ -1,0 +1,125 @@
+.title {
+  max-width: 75ch;
+  margin: 0.35rem 0;
+  color: var(--fg-default);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.url {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.tags {
+  margin-bottom: 0.75rem;
+}
+
+.preview {
+  max-width: 100%;
+}
+
+.body {
+  margin-top: 1rem;
+  padding: 1rem 0;
+  border-top: 1px dashed var(--border-color);
+  border-bottom: 1px dashed var(--border-color);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.prose {
+  max-width: 75ch !important;
+  font-family: inherit !important;
+
+  & * {
+    border-radius: 0 !important;
+    font-family: inherit !important;
+  }
+
+  & p {
+    margin-top: 0;
+    margin-bottom: 1.25rem;
+    line-height: 1.6;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  & a {
+    color: var(--highlight-blue);
+    font-weight: bold;
+  }
+
+  & pre {
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    overflow-x: auto;
+    background: var(--bg-canvas) !important;
+  }
+
+  & code {
+    padding: 0.2em 0.4em;
+    background: var(--bg-canvas);
+    font-size: 85%;
+  }
+}
+
+.markdown {
+  & pre code {
+    padding: 0;
+    background: transparent;
+    font-size: inherit;
+  }
+}
+
+.comment {
+  margin-bottom: 1.5rem;
+  padding: 1rem 0 1rem 3ch;
+  border-left: 2px solid var(--border-color);
+  transition: background-color 0.15s ease-out, border-color 0.15s ease-out;
+
+  &:hover {
+    border-left-color: var(--syntax-string);
+    background: var(--syntax-bg-active);
+  }
+}
+
+.commentBody {
+  max-width: 75ch;
+  color: var(--fg-default);
+  font-size: 14px;
+  line-height: 1.5;
+
+  & p {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1ch;
+  margin-top: 1rem;
+}
+
+@media (max-width: 768px) {
+  .comment {
+    padding-left: 2ch;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

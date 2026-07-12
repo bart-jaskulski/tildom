@@ -1,5 +1,6 @@
 import { A, useLocation, useNavigate, useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal, onCleanup } from "solid-js";
+import styles from "./AppNav.module.css";
 
 type AppNavProps = {
   active?: "settings";
@@ -48,20 +49,20 @@ export default function AppNav(props: AppNavProps) {
   };
 
   return (
-    <header class="hn-topbar">
-      <div class="hn-brand">
-        <A href="/" class="hn-title">tildom</A>
+    <header class={styles.topbar}>
+      <div class={styles.brand}>
+        <A href="/" class={styles.title}>tildom</A>
       </div>
 
-      <nav class="hn-nav" aria-label="Primary">
+      <nav class={styles.nav} aria-label="Primary">
         <A href="/" aria-current={!props.active ? "page" : undefined}>[ bookmarks.db ]</A>
         <A href="/settings" aria-current={props.active === "settings" ? "page" : undefined}>[ settings.json ]</A>
       </nav>
 
-      <div class="hn-search" classList={{ "is-open": mobileSearchOpen() }} role="search">
+      <div class={styles.search} data-open={mobileSearchOpen() || undefined} role="search">
         <button
           type="button"
-          class="hn-search-toggle"
+          class={styles.toggle}
           aria-label={mobileSearchOpen() ? "Close search" : "Search saved links"}
           aria-expanded={mobileSearchOpen()}
           onMouseDown={(event) => event.preventDefault()}
@@ -72,6 +73,7 @@ export default function AppNav(props: AppNavProps) {
           </svg>
         </button>
         <input
+          data-mark-search
           ref={searchInput}
           type="search"
           value={searchQuery()}
