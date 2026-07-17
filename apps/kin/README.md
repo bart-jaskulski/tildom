@@ -2,7 +2,7 @@
 
 kin.tildom is the Tildom personal relationship manager. It is a Solid/Vite app that stores contacts, relationships, and notes locally in browser SQLite via OPFS.
 
-This app is currently client-only. It has no production Node server and no Docker image yet.
+This app is client-only and can be served from its production Docker image.
 
 ## Developing
 
@@ -43,8 +43,16 @@ pnpm build
 
 All relationship data is stored in the browser. The app supports local backup/import through browser-exported SQLite data.
 
+## Docker
+
+From the repository root:
+
+```bash
+docker build -f apps/kin/Dockerfile -t kin.tildom .
+docker run --rm -p 3002:3000 kin.tildom
+```
+
 ## Notes
 
 - `dist/` is a build output.
-- Add server or Docker deployment only when Kin gains a server-required feature.
 - See the root [PROJECT.md](../../PROJECT.md) for the long-term sync and deployment plan.

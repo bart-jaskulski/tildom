@@ -80,6 +80,7 @@ const ensureSchema = async () => {
       CREATE TABLE IF NOT EXISTS contacts (
         id TEXT PRIMARY KEY NOT NULL,
         name TEXT NOT NULL,
+        relationship TEXT DEFAULT '',
         location TEXT DEFAULT '',
         birthday TEXT DEFAULT '',
         phone TEXT DEFAULT '',
@@ -116,8 +117,13 @@ const ensureSchema = async () => {
     // Unique index on relationships is already enforced by the composite PRIMARY KEY,
     // but let's make sure it's explicitly documented and fully enforced.
     
-    execSql("PRAGMA user_version = 1");
-    console.debug("Kin database schema version set to 1");
+    execSql("PRAGMA user_version = 2");
+    console.debug("Kin database schema version set to 2");
+  }
+
+  if (currentVersion === 1) {
+    execSql("ALTER TABLE contacts ADD COLUMN relationship TEXT DEFAULT ''");
+    execSql("PRAGMA user_version = 2");
   }
 };
 

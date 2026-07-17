@@ -1,5 +1,6 @@
 import { createSignal } from "solid-js";
 import type { DbRequest, DbRequestBody, DbResponse } from "./db.types";
+import { markSyncDirty } from "./syncState";
 
 let worker: Worker | null = null;
 let nextId = 1;
@@ -75,8 +76,9 @@ export const initDb = async (): Promise<void> => {
   flushQueue();
 };
 
-export const exec = (sql: string, params?: any[]): Promise<void> => {
-  return postAndWait({ type: "exec", sql, params });
+export const exec = async (sql: string, params?: any[]): Promise<void> => {
+  await postAndWait({ type: "exec", sql, params });
+  await markSyncDirty();
 };
 
 export const query = <T = any>(sql: string, params?: any[]): Promise<T[]> => {

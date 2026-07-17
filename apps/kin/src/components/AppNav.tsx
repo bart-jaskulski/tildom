@@ -1,105 +1,82 @@
 import { A, useLocation, useNavigate, useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal, onCleanup } from "solid-js";
+import styles from "./AppNav.module.css";
 
 type AppNavProps = {
   active?: "settings" | "people";
 };
 
-const SEARCH_DEBOUNCE_MS = 200;
+const SEARCH_DEBOUNCE_MS = 350;
 
 export default function AppNav(props: AppNavProps) {
   const [params, setParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
-  
-  const [searchQuery, setSearchQuery] = createSignal(String(params.q ?? ""));
-  let searchTimer: ReturnType<typeof setTimeout> | undefined;
+  const [query, setQuery] = createSignal(String(params.q ?? ""));
+  const [mobileSearchOpen, setMobileSearchOpen] = createSignal(false);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let searchInput: HTMLInputElement | undefined;
 
-  // Reactively track changes to the URL parameter (e.g. cleared externally)
-  createEffect(() => {
-    setSearchQuery(String(params.q ?? ""));
-  });
-
-  onCleanup(() => {
-    if (searchTimer) {
-      clearTimeout(searchTimer);
-    }
-  });
+  createEffect(() => setQuery(String(params.q ?? "")));
+  onCleanup(() => timer && clearTimeout(timer));
 
   const scheduleSearch = (rawQuery: string) => {
-    if (searchTimer) {
-      clearTimeout(searchTimer);
-    }
-
-    searchTimer = setTimeout(() => {
-      const query = rawQuery.trim();
-      
-      // If we are already on the directory home, update URL search params in-place
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      const nextQuery = rawQuery.trim();
       if (location.pathname === "/") {
-        setParams({ q: query || undefined }, { replace: true });
-        return;
+        setParams({ q: nextQuery || undefined }, { replace: true });
+      } else {
+        navigate(nextQuery ? `/?q=${encodeURIComponent(nextQuery)}` : "/");
       }
-
-      // If we are on details/settings, navigate back to home with the query parameter
-      navigate(query ? `/?q=${encodeURIComponent(query)}` : "/");
     }, SEARCH_DEBOUNCE_MS);
   };
 
-  const handleClear = () => {
-    setSearchQuery("");
-    if (location.pathname === "/") {
-      setParams({ q: undefined }, { replace: true });
-    } else {
-      navigate("/");
-    }
+  const toggleMobileSearch = () => {
+    const open = !mobileSearchOpen();
+    setMobileSearchOpen(open);
+    if (open) queueMicrotask(() => searchInput?.focus());
   };
 
   return (
-    <header class="tui-tabline">
-      <div class="tui-brand">
-        <A href="/" class="tui-brand-logo" style="color: inherit; text-decoration: none;">K</A>
-        <A href="/" style="color: inherit; text-decoration: none; font-weight: bold;">kin.db</A>
-      </div>
+    <header class={styles.topbar}>
+      <A href="/" class={styles.title}>tildom</A>
 
-      <nav class="tui-nav" aria-label="Primary">
-        <A
-          href="/"
-          class="tui-nav-item"
-          classList={{ "active-tab": props.active === "people" || location.pathname.startsWith("/person") }}
-        >
-          [ people.db ]
-        </A>
-        <A
-          href="/settings"
-          class="tui-nav-item"
-          classList={{ "active-tab": props.active === "settings" }}
-        >
-          [ settings.conf ]
-        </A>
+      <nav class={styles.nav} aria-label="Primary">
+        <A href="/" aria-current={props.active === "people" ? "page" : undefined}>[ people.db ]</A>
+        <A href="/settings" aria-current={props.active === "settings" ? "page" : undefined}>[ settings.json ]</A>
       </nav>
 
-      <div class="tui-search" role="search">
+      <div class={styles.search} data-open={mobileSearchOpen() || undefined} role="search">
+        <button
+          type="button"
+          class={styles.toggle}
+          aria-label={mobileSearchOpen() ? "Close search" : "Search people"}
+          aria-expanded={mobileSearchOpen()}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={toggleMobileSearch}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d={mobileSearchOpen() ? "M6 6l12 12M18 6 6 18" : "m21 21-4.35-4.35m2.35-5.15a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"} />
+          </svg>
+        </button>
         <input
           id="search-input"
+          data-kin-search
+          ref={searchInput}
           type="search"
-          value={searchQuery()}
-          placeholder="search"
-          aria-label="Search contacts"
-          onInput={(e) => {
-            const val = e.currentTarget.value;
-            setSearchQuery(val);
-            scheduleSearch(val);
+          value={query()}
+          placeholder="search people and notes"
+          aria-label="Search people and notes"
+          onInput={(event) => {
+            const nextQuery = event.currentTarget.value;
+            setQuery(nextQuery);
+            scheduleSearch(nextQuery);
+          }}
+          onBlur={() => {
+            if (!query()) setMobileSearchOpen(false);
           }}
         />
-        {searchQuery() && (
-          <button
-            style="padding: 0 4px; cursor: pointer; color: var(--syntax-error); font-weight: bold; border: none; background: transparent; font-family: inherit;"
-            onClick={handleClear}
-            aria-label="Clear search"
-          >
-            [X]
-          </button>
-        )}
       </div>
     </header>
   );

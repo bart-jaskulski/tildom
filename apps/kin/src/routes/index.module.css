@@ -1,0 +1,199 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+
+  & :global(.kin-button) {
+    min-height: 32px;
+    padding: 0 1ch;
+    border-width: 1px;
+    text-transform: none;
+  }
+}
+
+.feedNote {
+  margin: 0 0 1.5rem;
+  padding: 0.75rem 1.5ch;
+  border-left: 2px solid var(--highlight-blue);
+  font-size: 13px;
+
+  & a {
+    font-weight: bold;
+  }
+}
+
+.peopleList {
+  margin: 0;
+  padding: 0;
+  counter-reset: person-counter;
+  list-style: none;
+}
+
+.peopleItem {
+  position: relative;
+  margin-bottom: 1.35rem;
+  counter-increment: person-counter;
+}
+
+.personRow {
+  position: relative;
+  margin-left: 2ch;
+  padding: 0.75rem 1.5ch 0.75rem 2.5ch;
+  border-left: 2px solid var(--border-color);
+  transition: background-color 0.15s ease-out, border-color 0.15s ease-out;
+
+  &::before {
+    position: absolute;
+    top: 0.85rem;
+    right: calc(100% + 1.5ch);
+    width: 3ch;
+    color: var(--fg-muted);
+    content: counter(person-counter);
+    font-size: 13px;
+    text-align: right;
+  }
+
+  &:hover,
+  &.activeRow {
+    border-left-color: var(--syntax-keyword);
+    background: var(--syntax-bg-active);
+  }
+}
+
+.personLink {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg-default);
+  text-align: left;
+  cursor: pointer;
+}
+
+.personName {
+  max-width: 75ch;
+  font-size: 16px;
+  font-weight: bold;
+  overflow-wrap: anywhere;
+}
+
+.personMeta {
+  margin-left: 2ch;
+  color: var(--fg-muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+.matches {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.match {
+  display: grid;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.45rem 0;
+  border: 0;
+  border-top: 1px dashed var(--border-color);
+  background: transparent;
+  color: var(--fg-default);
+  text-align: left;
+  cursor: pointer;
+}
+
+.matchMeta {
+  color: var(--fg-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.highlight {
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--syntax-keyword);
+  text-underline-offset: 2px;
+}
+
+.addDialog {
+  width: min(50ch, calc(100vw - 2rem));
+  padding: 0;
+  border: 1px solid var(--fg-default);
+  background: var(--bg-surface);
+  color: var(--fg-default);
+
+  &::backdrop {
+    background: rgb(0 0 0 / 38%);
+  }
+}
+
+.dialogForm {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1.5rem 3ch;
+
+  & h2 {
+    margin: 0 0 0.25rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+    text-transform: uppercase;
+  }
+
+  & label {
+    display: grid;
+    gap: 0.35rem;
+    color: var(--fg-muted);
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1ch;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .personRow {
+    margin-left: 1.25ch;
+    padding-left: 1.5ch;
+
+    &::before {
+      right: calc(100% + 0.75ch);
+      width: 2ch;
+    }
+
+    &.activeRow {
+      background: transparent;
+    }
+  }
+
+  .personLink {
+    align-items: flex-start;
+  }
+
+  .personMeta {
+    max-width: 45vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .personRow {
+    transition: none;
+  }
+}

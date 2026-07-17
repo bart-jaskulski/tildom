@@ -4,10 +4,10 @@ import { join } from "node:path";
 import { expect, test } from "vitest";
 import { createSyncApp } from "../src/app.ts";
 
-const createApp = async () =>
+const createApp = async (appIds = ["mark"]) =>
   createSyncApp({
     storageRoot: await mkdtemp(join(tmpdir(), "tildom-sync-")),
-    appIds: ["mark"],
+    appIds,
     maxBytes: 1024,
     hostedOrigins: ["https://mark.tildom.app"],
     devOrigins: ["http://localhost:5173"],
@@ -71,4 +71,18 @@ test("hides vaults without the derived bearer token", async () => {
   });
 
   expect(response.status).toBe(404);
+});
+
+test("accepts kin vaults when configured", async () => {
+  const sync = await createApp(["mark", "kin"]);
+  const response = await sync.request("http://sync.test/v1/apps/kin/vaults/vault_1/snapshots", {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer secret-token",
+      "Content-Type": "application/octet-stream",
+      "If-None-Match": "*",
+    },
+    body: new Uint8Array([1]),
+  });
+  expect(response.status).toBe(201);
 });

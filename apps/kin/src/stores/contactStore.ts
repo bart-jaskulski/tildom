@@ -5,12 +5,23 @@ import { dbVersion, exec, initDb, query } from "~/lib/db";
 export type Contact = {
   id: string;
   name: string;
+  relationship: string;
   location: string;
   birthday: string;
   phone: string;
   email: string;
   created_at: number;
   updated_at: number;
+};
+
+export type ContactSearchMatch = {
+  kind: "profile" | "timeline";
+  text: string;
+  createdAt?: number;
+};
+
+export type ContactSearchResult = Contact & {
+  matches: ContactSearchMatch[];
 };
 
 export type ContactNote = {
@@ -30,6 +41,45 @@ export type SymmetricalRelationship = {
   rawRole: string; // The role stored in DB (e.g. "parent")
   contactIdA: string;
   contactIdB: string;
+};
+
+export const slugifyContactName = (name: string): string => name
+  .normalize("NFKD")
+  .toLowerCase()
+  .replace(/\p{Mark}/gu, "")
+  .replace(/[^\p{Letter}\p{Number}]+/gu, "-")
+  .replace(/^-|-$/g, "") || "person";
+
+export const contactSlugs = (allContacts: Contact[]): Map<string, string> => {
+  const slugs = new Map<string, string>();
+  const used = new Set<string>();
+
+  for (const contact of [...allContacts].sort((a, b) => a.created_at - b.created_at || a.id.localeCompare(b.id))) {
+    const base = slugifyContactName(contact.name);
+    let slug = base;
+    let suffix = 2;
+    while (used.has(slug)) slug = `${base}-${suffix++}`;
+    used.add(slug);
+    slugs.set(contact.id, slug);
+  }
+
+  return slugs;
+};
+
+const fetchContactRoutes = async (): Promise<{ contacts: Contact[]; slugs: Map<string, string> }> => {
+  const allContacts = await query<Contact>("SELECT * FROM contacts ORDER BY created_at ASC, id ASC");
+  return { contacts: allContacts, slugs: contactSlugs(allContacts) };
+};
+
+export const fetchContactPath = async (id: string): Promise<`/person/${string}` | "/"> => {
+  const { slugs } = await fetchContactRoutes();
+  const slug = slugs.get(id);
+  return slug ? `/person/${slug}` : "/";
+};
+
+export const fetchContactBySlug = async (slug: string): Promise<Contact | null> => {
+  const { contacts: allContacts, slugs } = await fetchContactRoutes();
+  return allContacts.find((contact) => slugs.get(contact.id) === slug) ?? null;
 };
 
 export const INVERSE_ROLES: Record<string, string> = {
@@ -74,40 +124,7 @@ const appStore = createRoot(() => {
     searchQuery: "",
   });
 
-  const refreshContacts = async () => {
-    const q = state.searchQuery.trim();
-    let rows: Contact[] = [];
-
-    if (q.startsWith("#") && q.length > 1) {
-      // Tag search
-      const tag = q.slice(1).toLowerCase();
-      rows = await query<Contact>(
-        `
-          SELECT DISTINCT c.*
-          FROM contacts c
-          JOIN notes n ON n.contact_id = c.id
-          WHERE n.tags LIKE ?
-          ORDER BY c.name ASC
-        `,
-        [`% ${tag} %`]
-      );
-    } else if (q !== "") {
-      // Text search (name, location, email)
-      rows = await query<Contact>(
-        `
-          SELECT * FROM contacts
-          WHERE name LIKE ? OR location LIKE ? OR email LIKE ?
-          ORDER BY name ASC
-        `,
-        [`%${q}%`, `%${q}%`, `%${q}%`]
-      );
-    } else {
-      // Load all contacts
-      rows = await query<Contact>("SELECT * FROM contacts ORDER BY name ASC");
-    }
-
-    setState("contacts", rows);
-  };
+  const refreshContacts = async () => setState("contacts", await query<Contact>("SELECT * FROM contacts ORDER BY name ASC"));
 
   createEffect(() => {
     const version = dbVersion();
@@ -137,39 +154,76 @@ export const initializeContactStore = async () => {
 };
 
 export const contacts = () => appStore.state.contacts;
+export const refreshContacts = appStore.refreshContacts;
 export const isContactStoreReady = () => appStore.state.isReady;
 export const searchQuery = () => appStore.state.searchQuery;
 export const setSearchQuery = (q: string) => {
   appStore.setState("searchQuery", q);
-  void appStore.refreshContacts();
+};
+
+export const searchContacts = async (rawQuery: string): Promise<ContactSearchResult[]> => {
+  const search = rawQuery.trim();
+  if (!search) return contacts().map((contact) => ({ ...contact, matches: [] }));
+
+  const pattern = `%${search}%`;
+  const profileRows = search.startsWith("#") ? [] : await query<Contact>(
+    `SELECT * FROM contacts
+     WHERE name LIKE ? OR relationship LIKE ? OR location LIKE ? OR email LIKE ? OR phone LIKE ? OR birthday LIKE ?
+     ORDER BY name ASC`,
+    Array(6).fill(pattern),
+  );
+  const noteRows = await query<Contact & { note_body: string; note_created_at: number }>(
+    `SELECT c.*, n.body AS note_body, n.created_at AS note_created_at
+     FROM notes n JOIN contacts c ON c.id = n.contact_id
+     WHERE ${search.startsWith("#") ? "n.tags LIKE ?" : "n.body LIKE ?"}
+     ORDER BY c.name ASC, n.created_at DESC`,
+    [search.startsWith("#") ? `% ${search.slice(1).toLowerCase()} %` : pattern],
+  );
+  const results = new Map<string, ContactSearchResult>();
+  const ensure = (contact: Contact) => {
+    if (!results.has(contact.id)) results.set(contact.id, { ...contact, matches: [] });
+    return results.get(contact.id)!;
+  };
+  const lower = search.toLowerCase();
+
+  for (const contact of profileRows) {
+    const matchedDetails = [contact.relationship, contact.location, contact.email, contact.phone, contact.birthday]
+      .filter((value) => value.toLowerCase().includes(lower));
+    ensure(contact).matches.push({ kind: "profile", text: matchedDetails.join(" · ") || contact.name });
+  }
+  for (const row of noteRows) {
+    ensure(row).matches.push({ kind: "timeline", text: row.note_body, createdAt: row.note_created_at });
+  }
+
+  return [...results.values()].sort((left, right) => left.name.localeCompare(right.name));
 };
 
 // CRUD: Contacts
-export const createContact = async (name: string): Promise<string> => {
+export const createContact = async (name: string, relationship = "", location = ""): Promise<string> => {
   const id = crypto.randomUUID();
   const now = Date.now();
   await exec(
     `
-      INSERT INTO contacts (id, name, location, birthday, phone, email, created_at, updated_at)
-      VALUES (?, ?, '', '', '', '', ?, ?)
+      INSERT INTO contacts (id, name, relationship, location, birthday, phone, email, created_at, updated_at)
+      VALUES (?, ?, ?, ?, '', '', '', ?, ?)
     `,
-    [id, name.trim(), now, now]
+    [id, name.trim(), relationship.trim(), location.trim(), now, now]
   );
   return id;
 };
 
 export const updateContact = async (
   id: string,
-  data: { name: string; location: string; birthday: string; phone: string; email: string }
+  data: { name: string; relationship: string; location: string; birthday: string; phone: string; email: string }
 ): Promise<void> => {
   const now = Date.now();
   await exec(
     `
       UPDATE contacts
-      SET name = ?, location = ?, birthday = ?, phone = ?, email = ?, updated_at = ?
+      SET name = ?, relationship = ?, location = ?, birthday = ?, phone = ?, email = ?, updated_at = ?
       WHERE id = ?
     `,
-    [data.name.trim(), data.location.trim(), data.birthday.trim(), data.phone.trim(), data.email.trim(), now, id]
+    [data.name.trim(), data.relationship.trim(), data.location.trim(), data.birthday.trim(), data.phone.trim(), data.email.trim(), now, id]
   );
 };
 
@@ -251,12 +305,10 @@ export const fetchRelationships = async (contactId: string): Promise<Symmetrical
     const relatedId = isA ? row.contact_id_b : row.contact_id_a;
     const relatedName = isA ? row.name_b : row.name_a;
 
-    // Symmetrical role translation
-    // If the database stores Bob (A) is Parent of Alice (B) (role = "parent"):
-    // - On Bob's page (isA === true): Alice is Bob's Child (use inverse).
-    // - On Alice's page (isA === false): Bob is Alice's Parent (use rawRole as-is).
+    // The stored role describes A's relationship to B. The opposite page uses
+    // the inverse when one is known, while custom relationship names stay intact.
     const rawRole = row.role.toLowerCase();
-    const roleKey = isA ? (INVERSE_ROLES[rawRole] ?? rawRole) : rawRole;
+    const roleKey = isA ? rawRole : (INVERSE_ROLES[rawRole] ?? rawRole);
     const roleLabel = ROLE_LABELS[roleKey] ?? (roleKey.charAt(0).toUpperCase() + roleKey.slice(1));
 
     return {

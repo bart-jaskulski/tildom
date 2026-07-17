@@ -1,588 +1,288 @@
-import { Show, For, createSignal, createEffect, onMount, onCleanup } from "solid-js";
-import { useParams, useNavigate } from "@solidjs/router";
+import { For, Show, createEffect, createSignal } from "solid-js";
+import { useNavigate, useParams } from "@solidjs/router";
+import { useVimKeymaps } from "@tildom/ui";
 import AppNav from "~/components/AppNav";
-import { getSharedPreferences } from "@tildom/ui";
-import {
-  fetchContact,
-  fetchNotes,
-  fetchRelationships,
-  createNote,
-  deleteNote,
-  updateContact,
-  deleteContact,
-  createRelationship,
-  deleteRelationship,
-  ROLE_LABELS,
-  contacts,
-  togglePinNote,
-  type Contact,
-  type ContactNote,
-  type SymmetricalRelationship
-} from "~/stores/contactStore";
 import { dbVersion } from "~/lib/db";
 import {
-  User,
-  MapPin,
-  Phone,
-  Mail,
-  Cake,
-  Pin,
-  Trash2,
-  Check,
-  X,
-  Edit2,
-  Share2
-} from "lucide-solid";
+  contacts,
+  createNote,
+  createRelationship,
+  deleteContact,
+  deleteNote,
+  deleteRelationship,
+  fetchContactBySlug,
+  fetchContactPath,
+  fetchNotes,
+  fetchRelationships,
+  togglePinNote,
+  updateContact,
+  type Contact,
+  type ContactNote,
+  type SymmetricalRelationship,
+} from "~/stores/contactStore";
+import styles from "./person.module.css";
+
+const formatDate = (timestamp: number) => new Intl.DateTimeFormat(undefined, {
+  dateStyle: "medium",
+  timeStyle: "short",
+}).format(timestamp);
 
 export default function PersonDetail() {
   const params = useParams();
   const navigate = useNavigate();
-  const contactId = () => params.id || "";
-
-  const [selectedContact, setSelectedContact] = createSignal<Contact | null>(null);
-  const [contactNotes, setContactNotes] = createSignal<ContactNote[]>([]);
-  const [contactRelationships, setContactRelationships] = createSignal<SymmetricalRelationship[]>([]);
-
+  const routeSlug = () => params.slug ?? "";
+  const contactId = () => person()?.id ?? "";
+  const [person, setPerson] = createSignal<Contact | null>(null);
+  const [notes, setNotes] = createSignal<ContactNote[]>([]);
+  const [relationships, setRelationships] = createSignal<SymmetricalRelationship[]>([]);
   const [selectedTag, setSelectedTag] = createSignal<string | null>(null);
-
-  // Dynamic tags aggregator scanning all notes of this specific contact
-  const uniqueTags = () => {
-    const set = new Set<string>();
-    contactNotes().forEach(note => {
-      if (note.tags) {
-        note.tags.trim().split(/\s+/).forEach(t => {
-          if (t) set.add(t);
-        });
-      }
-    });
-    return Array.from(set).sort();
-  };
-
-  // Computed filtered list of notes
-  const filteredNotes = () => {
-    const tag = selectedTag();
-    if (!tag) return contactNotes();
-    return contactNotes().filter(note => note.tags.includes(` ${tag} `));
-  };
-
-  // Metadata editing buffers
-  const [isEditingContact, setIsEditingContact] = createSignal(false);
+  const [detailsOpen, setDetailsOpen] = createSignal(false);
+  const [isEditing, setIsEditing] = createSignal(false);
+  const [isSaving, setIsSaving] = createSignal(false);
+  const [isAddingRelationship, setIsAddingRelationship] = createSignal(false);
   const [editName, setEditName] = createSignal("");
+  const [editRelationship, setEditRelationship] = createSignal("");
   const [editLocation, setEditLocation] = createSignal("");
   const [editBirthday, setEditBirthday] = createSignal("");
   const [editPhone, setEditPhone] = createSignal("");
   const [editEmail, setEditEmail] = createSignal("");
+  const [relationshipRole, setRelationshipRole] = createSignal("");
+  const [relationshipTarget, setRelationshipTarget] = createSignal("");
+  const [noteBody, setNoteBody] = createSignal("");
+  let noteInput: HTMLTextAreaElement | undefined;
 
-  // Adding relationship buffers
-  const [isAddingRelationship, setIsAddingRelationship] = createSignal(false);
-  const [relRole, setRelRole] = createSignal("friend");
-  const [relTargetId, setRelTargetId] = createSignal("");
+  const openPerson = async (id: string, replace = false) => navigate(await fetchContactPath(id), { replace });
+  const tags = () => [...new Set(notes().flatMap((note) => note.tags.trim().split(/\s+/).filter(Boolean)))].sort();
+  const visibleNotes = () => selectedTag()
+    ? notes().filter((note) => note.tags.includes(` ${selectedTag()} `))
+    : notes();
 
-  // Note entry buffers
-  const [newNoteBody, setNewNoteBody] = createSignal("");
-  const [newNotePinned, setNewNotePinned] = createSignal(false);
-  let noteTextareaRef!: HTMLTextAreaElement;
-
-  // Reactively fetch contact details whenever id or dbVersion changes
   createEffect(async () => {
-    const id = contactId();
-    dbVersion(); // reactive bind
-
-    if (id) {
-      const c = await fetchContact(id);
-      setSelectedContact(c);
-      if (c) {
-        setEditName(c.name);
-        setEditLocation(c.location);
-        setEditBirthday(c.birthday);
-        setEditPhone(c.phone);
-        setEditEmail(c.email);
-
-        const notesList = await fetchNotes(id);
-        setContactNotes(notesList);
-        const relsList = await fetchRelationships(id);
-        setContactRelationships(relsList);
-      } else {
-        // Contact not found
-        navigate("/");
-      }
+    const slug = routeSlug();
+    dbVersion();
+    if (!slug) return;
+    const nextPerson = await fetchContactBySlug(slug);
+    if (routeSlug() !== slug) return;
+    if (!nextPerson) {
+      if (!isSaving()) navigate("/");
+      return;
     }
+    setPerson(nextPerson);
+    setEditName(nextPerson.name);
+    setEditRelationship(nextPerson.relationship);
+    setEditLocation(nextPerson.location);
+    setEditBirthday(nextPerson.birthday);
+    setEditPhone(nextPerson.phone);
+    setEditEmail(nextPerson.email);
+    setNotes(await fetchNotes(nextPerson.id));
+    setRelationships(await fetchRelationships(nextPerson.id));
   });
 
-  // Page Vim key bindings
-  onMount(() => {
-    let lastKey = "";
-    const isVimEnabled = getSharedPreferences().vimKeys;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const isDesktop = !("ontouchstart" in window) && window.innerWidth > 768;
-      if (!isDesktop || !isVimEnabled) return;
-
-      const activeEl = document.activeElement;
-      const isTyping = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.tagName === "SELECT");
-
-      if (isTyping) {
-        if (event.key === "Escape") {
-          (activeEl as HTMLElement).blur();
-          event.preventDefault();
-        }
-        return;
-      }
-
-      const key = event.key;
-
-      // Esc: Go back to list page /
-      if (key === "Escape") {
-        event.preventDefault();
-        navigate("/");
-        return;
-      }
-
-      // Buffer Tab Shifts
-      if (lastKey === "g" && (key === "t" || key === "T")) {
-        event.preventDefault();
-        lastKey = "";
-        navigate("/settings");
-        return;
-      }
-      if (key === "g") {
-        lastKey = "g";
-        setTimeout(() => { if (lastKey === "g") lastKey = ""; }, 1000);
-      }
-
-      // Focus note input: i
-      if (key === "i") {
-        event.preventDefault();
-        if (noteTextareaRef) noteTextareaRef.focus();
-        return;
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    onCleanup(() => {
-      window.removeEventListener("keydown", handleKeyDown);
-    });
-  });
-
-  const handleUpdateContactMetadata = async (e: Event) => {
-    e.preventDefault();
-    const id = contactId();
-    if (!id) return;
-
-    try {
-      await updateContact(id, {
-        name: editName(),
-        location: editLocation(),
-        birthday: editBirthday(),
-        phone: editPhone(),
-        email: editEmail(),
-      });
-      setIsEditingContact(false);
-    } catch (err) {
-      alert("Failed to update contact.");
-    }
-  };
-
-  const handleDeleteContact = async () => {
-    const confirmDelete = window.confirm("Delete this person? This will remove all note and connection records permanently.");
-    if (!confirmDelete) return;
-
-    await deleteContact(contactId());
+  const removePerson = async () => {
+    const current = person();
+    if (!current || !window.confirm(`Delete ${current.name}? This also removes their notes and relationships.`)) return;
+    await deleteContact(current.id);
     navigate("/");
   };
 
-  const handleAddNote = async (e: Event) => {
-    e.preventDefault();
-    const body = newNoteBody().trim();
+  useVimKeymaps([
+    { lhs: "i", callback: () => noteInput?.focus(), help: "write note" },
+    { lhs: "e", callback: () => { setIsEditing(true); setDetailsOpen(true); }, help: "edit person" },
+    { lhs: "d", callback: () => void removePerson(), help: "delete person" },
+  ]);
+
+  const savePerson = async (event: SubmitEvent) => {
+    event.preventDefault();
+    setIsSaving(true);
+    try {
+      await updateContact(contactId(), {
+        name: editName(), relationship: editRelationship(), location: editLocation(), birthday: editBirthday(), phone: editPhone(), email: editEmail(),
+      });
+      setIsEditing(false);
+      await openPerson(contactId(), true);
+    } catch { window.alert("Failed to update person."); }
+    finally { setIsSaving(false); }
+  };
+
+  const addNote = async (event: SubmitEvent) => {
+    event.preventDefault();
+    const body = noteBody().trim();
     if (!body) return;
-
     try {
-      await createNote(contactId(), body, newNotePinned());
-      setNewNoteBody("");
-      setNewNotePinned(false);
-    } catch (err) {
-      alert("Failed to save note.");
-    }
+      await createNote(contactId(), body, false);
+      setNoteBody("");
+    } catch { window.alert("Failed to save note."); }
   };
 
-  const handleTogglePin = async (noteId: string, currentIsPinned: number) => {
+  const addRelationship = async (event: SubmitEvent) => {
+    event.preventDefault();
+    if (!relationshipTarget()) return;
     try {
-      await togglePinNote(noteId, currentIsPinned);
-    } catch (err) {
-      alert("Failed to toggle pinned status.");
-    }
-  };
-
-  const handleAddRelationship = async (e: Event) => {
-    e.preventDefault();
-    const currentId = contactId();
-    const targetId = relTargetId();
-    const role = relRole();
-    if (!currentId || !targetId || !role) return;
-
-    try {
-      await createRelationship(currentId, targetId, role);
+      await createRelationship(contactId(), relationshipTarget(), relationshipRole());
+      setRelationshipTarget("");
+      setRelationshipRole("");
       setIsAddingRelationship(false);
-      setRelTargetId("");
-    } catch (err: any) {
-      alert(err.message || "Failed to add relationship.");
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Failed to add relationship.");
     }
   };
 
-  const handleDeleteRelationship = async (relatedId: string) => {
-    const currentId = contactId();
-    const confirmDel = window.confirm("Remove this connection record?");
-    if (!confirmDel) return;
-
-    await deleteRelationship(currentId, relatedId);
-  };
-
-  const renderNoteBody = (body: string) => {
-    const parts = body.split(/(#[a-zA-Z0-9_-]+)/g);
-    return (
-      <>
-        {parts.map(part => {
-          if (part.startsWith("#")) {
-            const rawTag = part.slice(1).toLowerCase();
-            return (
-              <span
-                class="tui-tag"
-                onClick={() => {
-                  setSelectedTag(selectedTag() === rawTag ? null : rawTag);
-                }}
-              >
-                {part}
-              </span>
-            );
-          }
-          return part;
-        })}
-      </>
-    );
-  };
+  const renderNote = (body: string) => body.split(/(#[a-zA-Z0-9_-]+)/g).map((part) => {
+    if (!part.startsWith("#")) return part;
+    const tag = part.slice(1).toLowerCase();
+    return <button type="button" class={styles.inlineTag} onClick={() => setSelectedTag(selectedTag() === tag ? null : tag)}>{part}</button>;
+  });
 
   return (
-    <div class="tui-page">
+    <main class="kin-page">
       <AppNav active="people" />
+      <section class={`kin-content ${styles.layout}`}>
+        <Show when={person()} fallback={<p class={styles.loading}>Reading contact… █</p>}>
+          <button
+            type="button"
+            class={styles.mobileToggle}
+            aria-expanded={detailsOpen()}
+            onClick={() => setDetailsOpen(!detailsOpen())}
+          >[{detailsOpen() ? "−" : "+"}] {detailsOpen() ? "hide" : "show"} personal details</button>
 
-      <main class="tui-content">
-        <Show when={!selectedContact()}>
-          <div class="tui-empty">
-            <span class="vim-cursor">█</span> Loading Contact Details...
-          </div>
-        </Show>
-
-        <Show when={selectedContact()}>
-          {/* Header buffer */}
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.75rem;">
-            <div>
-              <h1 style="margin: 0; font-size: 24px; font-weight: 900;">{selectedContact()!.name}</h1>
-              <Show when={selectedContact()!.location}>
-                <span class="tui-muted" style="font-size: 13px; display: inline-flex; align-items: center; gap: 0.5ch; margin-top: 0.25rem;">
-                  <MapPin size={12} /> {selectedContact()!.location}
-                </span>
+          <aside class={styles.sidebar} classList={{ [styles.sidebarOpen]: detailsOpen() }}>
+            <section class={styles.sidebarBlock}>
+              <Show when={!isEditing()}>
+                <div class={styles.profileHeading}>
+                  <div>
+                    <h1>{person()!.name}</h1>
+                    <Show when={person()!.relationship}><span>[ {person()!.relationship} ]</span></Show>
+                  </div>
+                  <div class={styles.compactActions}>
+                    <button type="button" class="kin-link-button" onClick={() => { setIsEditing(true); setDetailsOpen(true); }}>[ edit ]</button>
+                    <button type="button" class="kin-link-button kin-danger-link" onClick={removePerson}>[ delete ]</button>
+                  </div>
+                </div>
+                <dl class={styles.parameters}>
+                  <Show when={person()!.location}><div><dt>Location</dt><dd>{person()!.location}</dd></div></Show>
+                  <Show when={person()!.email}><div><dt>Email</dt><dd><a href={`mailto:${person()!.email}`}>{person()!.email}</a></dd></div></Show>
+                  <Show when={person()!.phone}><div><dt>Phone</dt><dd><a href={`tel:${person()!.phone}`}>{person()!.phone}</a></dd></div></Show>
+                  <Show when={person()!.birthday}><div><dt>Birthday</dt><dd>{person()!.birthday}</dd></div></Show>
+                </dl>
               </Show>
-            </div>
 
-            <div style="display: flex; gap: 1.5ch;">
-              <button
-                class="tui-btn"
-                style="min-height: 38px; padding: 0 2ch;"
-                onClick={() => {
-                  setIsEditingContact(!isEditingContact());
-                  setIsAddingRelationship(false);
-                }}
-              >
-                <Edit2 size={13} style="margin-right: 0.5ch;" />
-                {isEditingContact() ? "Cancel" : "Edit Details"}
-              </button>
-              <button
-                class="tui-btn tui-btn-danger"
-                style="min-height: 38px; padding: 0 1.5ch;"
-                onClick={handleDeleteContact}
-                aria-label="Delete Contact"
-              >
-                <Trash2 size={13} />
-              </button>
-              <button
-                class="tui-btn"
-                style="min-height: 38px; padding: 0 1.5ch;"
-                onClick={() => navigate("/")}
-                aria-label="Go back to list"
-              >
-                [ esc: back ]
-              </button>
-            </div>
-          </div>
-
-          <div class="tui-split-pane">
-            {/* Left Pane: Key Details & Connections */}
-            <div class="tui-stack" style="display: flex; flex-direction: column; gap: 1.5rem;">
-              
-              {/* Demographics details */}
-              <div class="tui-panel">
-                <h3 class="tui-panel-heading">Key Parameters</h3>
-
-                <Show when={!isEditingContact()}>
-                  <div class="tui-meta-list">
-                    <div class="tui-meta-item">
-                      <span class="tui-meta-label">📍 LOCATION:</span>
-                      <span class="tui-meta-value">{selectedContact()!.location || "—"}</span>
-                    </div>
-                    <div class="tui-meta-item">
-                      <span class="tui-meta-label">✉ EMAIL:</span>
-                      <span class="tui-meta-value">{selectedContact()!.email || "—"}</span>
-                    </div>
-                    <div class="tui-meta-item">
-                      <span class="tui-meta-label">📞 PHONE:</span>
-                      <span class="tui-meta-value">{selectedContact()!.phone || "—"}</span>
-                    </div>
-                    <div class="tui-meta-item">
-                      <span class="tui-meta-label">🎂 BIRTHDAY:</span>
-                      <span class="tui-meta-value">{selectedContact()!.birthday || "—"}</span>
-                    </div>
-                  </div>
-                </Show>
-
-                <Show when={isEditingContact()}>
-                  <form onSubmit={handleUpdateContactMetadata} class="tui-stack">
-                    <div class="tui-form-row">
-                      <label class="tui-label">Name</label>
-                      <input type="text" class="tui-input" value={editName()} onInput={(e) => setEditName(e.currentTarget.value)} required />
-                    </div>
-                    <div class="tui-form-row">
-                      <label class="tui-label">Location</label>
-                      <input type="text" class="tui-input" value={editLocation()} onInput={(e) => setEditLocation(e.currentTarget.value)} />
-                    </div>
-                    <div class="tui-form-row">
-                      <label class="tui-label">Email</label>
-                      <input type="email" class="tui-input" value={editEmail()} onInput={(e) => setEditEmail(e.currentTarget.value)} />
-                    </div>
-                    <div class="tui-form-row">
-                      <label class="tui-label">Phone</label>
-                      <input type="text" class="tui-input" value={editPhone()} onInput={(e) => setEditPhone(e.currentTarget.value)} />
-                    </div>
-                    <div class="tui-form-row">
-                      <label class="tui-label">Birthday</label>
-                      <input type="text" class="tui-input" placeholder="e.g. November 20" value={editBirthday()} onInput={(e) => setEditBirthday(e.currentTarget.value)} />
-                    </div>
-                    <div class="tui-row-actions">
-                      <button type="submit" class="tui-btn"><Check size={14} style="margin-right: 0.5ch;" /> Save</button>
-                      <button type="button" class="tui-btn tui-btn-danger" onClick={() => setIsEditingContact(false)}>Cancel</button>
-                    </div>
-                  </form>
-                </Show>
-              </div>
-
-              {/* Bidirectional Relationships */}
-              <div class="tui-panel">
-                <h3 class="tui-panel-heading">Relationships</h3>
-
-                <Show when={contactRelationships().length === 0}>
-                  <p class="tui-muted" style="font-size: 13px; margin: 0 0 1rem 0;">No connection records defined.</p>
-                </Show>
-
-                <Show when={contactRelationships().length > 0}>
-                  <div class="tui-relationship-list">
-                    <For each={contactRelationships()}>
-                      {(rel) => (
-                        <div class="tui-relationship-item">
-                          <div>
-                            <span
-                              class="tui-relationship-name"
-                              style="color: var(--highlight-blue); cursor: pointer; text-decoration: underline;"
-                              onClick={() => navigate(`/person/${rel.contactId}`)}
-                            >
-                              {rel.name}
-                            </span>
-                            <span class="tui-relationship-label">({rel.roleLabel})</span>
-                          </div>
-                          <span class="tui-relationship-delete" onClick={() => handleDeleteRelationship(rel.contactId)}>
-                            [X]
-                          </span>
-                        </div>
-                      )}
-                    </For>
-                  </div>
-                </Show>
-
-                {/* Add relationship inline trigger */}
-                <Show when={!isAddingRelationship() && contacts().length > 1}>
-                  <div class="tui-inline-trigger" style="min-height: 32px;" onClick={() => setIsAddingRelationship(true)}>
-                    <Share2 size={12} style="margin-right: 0.5ch;" /> [+] Define Connection
-                  </div>
-                </Show>
-
-                <Show when={isAddingRelationship()}>
-                  <form onSubmit={handleAddRelationship} class="tui-inline-add" style="margin-top: 0.5rem;">
-                    <div class="tui-form-row">
-                      <label class="tui-label">Related Contact</label>
-                      <select
-                        class="tui-select"
-                        value={relTargetId()}
-                        onChange={(e) => setRelTargetId(e.currentTarget.value)}
-                        required
-                      >
-                        <option value="">-- Choose Person --</option>
-                        <For each={contacts().filter(c => c.id !== contactId())}>
-                          {(c) => <option value={c.id}>{c.name}</option>}
-                        </For>
-                      </select>
-                    </div>
-
-                    <div class="tui-form-row">
-                      <label class="tui-label">Relation Role</label>
-                      <select
-                        class="tui-select"
-                        value={relRole()}
-                        onChange={(e) => setRelRole(e.currentTarget.value)}
-                      >
-                        <option value="friend">Friend</option>
-                        <option value="spouse">Spouse</option>
-                        <option value="parent">Parent of this Contact (Symmetrical)</option>
-                        <option value="child">Child of this Contact (Symmetrical)</option>
-                        <option value="sibling">Sibling</option>
-                        <option value="partner">Partner</option>
-                        <option value="colleague">Colleague</option>
-                        <option value="mentor">Mentor</option>
-                        <option value="mentee">Mentee</option>
-                      </select>
-                    </div>
-
-                    <div class="tui-row-actions">
-                      <button type="submit" class="tui-btn" style="min-height: 36px; padding: 0 2ch;">Add</button>
-                      <button type="button" class="tui-btn tui-btn-danger" style="min-height: 36px; padding: 0 1.5ch;" onClick={() => setIsAddingRelationship(false)}>Cancel</button>
-                    </div>
-                  </form>
-                </Show>
-              </div>
-
-              {/* Timeline Tags Filter Panel */}
-              <div class="tui-panel">
-                <h3 class="tui-panel-heading">Tags Index</h3>
-                <Show when={uniqueTags().length === 0}>
-                  <p class="tui-muted" style="font-size: 13px; margin: 0;">No tags registered in notes.</p>
-                </Show>
-                <Show when={uniqueTags().length > 0}>
-                  <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                    <For each={uniqueTags()}>
-                      {(tag) => (
-                        <button
-                          style="display: flex; align-items: center; text-align: left; cursor: pointer; border: none; background: transparent; padding: 4px 8px; font-family: inherit; font-size: 13px; font-weight: bold; width: 100%; transition: all 0.1s;"
-                          classList={{ "tui-tag": tag === selectedTag(), "tui-muted": tag !== selectedTag() }}
-                          onClick={() => setSelectedTag(selectedTag() === tag ? null : tag)}
-                        >
-                          <span style="margin-right: 0.5ch;">{selectedTag() === tag ? "[x]" : "[ ]"}</span>
-                          <span>#{tag}</span>
-                        </button>
-                      )}
-                    </For>
-                    <Show when={selectedTag()}>
-                      <button
-                        class="tui-btn"
-                        style="margin-top: 0.5rem; min-height: 32px; padding: 0 1.5ch; font-size: 11px;"
-                        onClick={() => setSelectedTag(null)}
-                      >
-                        [ Clear Filter ]
-                      </button>
-                    </Show>
-                  </div>
-                </Show>
-              </div>
-            </div>
-
-            {/* Right Pane: Unified Timeline Notes Feed */}
-            <div class="tui-stack" style="display: flex; flex-direction: column; gap: 1.5rem;">
-              
-              <div class="tui-panel" style="padding-bottom: 1.5rem;">
-                <h3 class="tui-panel-heading">Timeline Feed</h3>
-
-                {/* Add Timeline Note */}
-                <form onSubmit={handleAddNote} style="margin-bottom: 2rem;">
-                  <div class="tui-form-row">
-                    <label class="tui-label">Log Note</label>
-                    <textarea
-                      ref={noteTextareaRef}
-                      class="tui-textarea"
-                      placeholder="Log an interaction, milestone, or notes... Use #tags to index."
-                      value={newNoteBody()}
-                      onInput={(e) => setNewNoteBody(e.currentTarget.value)}
-                      required
-                    />
-                  </div>
-
-                  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
-                    <label style="display: inline-flex; align-items: center; gap: 1ch; cursor: pointer; user-select: none; font-weight: bold; font-size: 13px;">
-                      <input
-                        type="checkbox"
-                        checked={newNotePinned()}
-                        onChange={(e) => setNewNotePinned(e.currentTarget.checked)}
-                        style="display: none;"
-                      />
-                      <span>{newNotePinned() ? "[x]" : "[ ]"} PIN NOTE TO TOP</span>
-                    </label>
-
-                    <button type="submit" class="tui-btn" style="min-height: 38px;">
-                      Save Timeline Entry
-                    </button>
+              <Show when={isEditing()}>
+                <form class={styles.editForm} onSubmit={savePerson}>
+                  <h1>Edit profile</h1>
+                  <label><span>Name</span><input class="kin-input" value={editName()} onInput={(event) => setEditName(event.currentTarget.value)} required /></label>
+                  <label><span>Relationship</span><input class="kin-input" value={editRelationship()} placeholder="friend / family / colleague" onInput={(event) => setEditRelationship(event.currentTarget.value)} /></label>
+                  <label><span>Location</span><input class="kin-input" value={editLocation()} onInput={(event) => setEditLocation(event.currentTarget.value)} /></label>
+                  <label><span>Email</span><input class="kin-input" type="email" value={editEmail()} onInput={(event) => setEditEmail(event.currentTarget.value)} /></label>
+                  <label><span>Phone</span><input class="kin-input" type="tel" value={editPhone()} onInput={(event) => setEditPhone(event.currentTarget.value)} /></label>
+                  <label><span>Birthday</span><input class="kin-input" value={editBirthday()} placeholder="YYYY-MM-DD" onInput={(event) => setEditBirthday(event.currentTarget.value)} /></label>
+                  <div class={styles.formActions}>
+                    <button type="submit" class="kin-primary-button" disabled={isSaving()}>{isSaving() ? "saving…" : "save"}</button>
+                    <button type="button" class="kin-button" onClick={() => setIsEditing(false)}>cancel</button>
                   </div>
                 </form>
+              </Show>
+            </section>
 
-                {/* Timeline display stream */}
-                <Show when={filteredNotes().length === 0}>
-                  <div class="tui-empty">
-                    {selectedTag()
-                      ? `No notes in the timeline match the tag #${selectedTag()}.`
-                      : "Timeline stream is empty. Add a note to record personal updates."}
-                  </div>
-                </Show>
-
-                <Show when={filteredNotes().length > 0}>
-                  <div class="tui-feed">
-                    <For each={filteredNotes()}>
-                      {(note) => (
-                        <div
-                          class="tui-feed-item"
-                          classList={{ "pinned-note": note.is_pinned === 1 }}
-                        >
-                          <div class="tui-feed-item-header">
-                            <span style="font-weight: 500;">{new Date(note.created_at).toLocaleString()}</span>
-                            <div style="display: flex; gap: 1.5ch; align-items: center;">
-                              <Show when={note.is_pinned === 1}>
-                                <span class="tui-feed-pin-badge">PINNED</span>
-                              </Show>
-                              <button
-                                style="color: var(--highlight-blue); font-size: 10px; font-weight: bold; cursor: pointer; border: none; background: transparent; padding: 2px; font-family: inherit;"
-                                onClick={() => handleTogglePin(note.id, note.is_pinned)}
-                              >
-                                {note.is_pinned === 1 ? "[UNPIN]" : "[PIN]"}
-                              </button>
-                              <button
-                                style="color: var(--syntax-error); font-size: 10px; font-weight: bold; cursor: pointer; border: none; background: transparent; padding: 2px; font-family: inherit;"
-                                onClick={async () => {
-                                  if (window.confirm("Remove this entry from the timeline?")) {
-                                    await deleteNote(note.id);
-                                  }
-                                }}
-                              >
-                                [DELETE]
-                              </button>
-                            </div>
-                          </div>
-                          <div class="tui-feed-body">
-                            {renderNoteBody(note.body)}
-                          </div>
-                        </div>
-                      )}
-                    </For>
-                  </div>
+            <section class={styles.sidebarBlock}>
+              <div class={styles.blockHeading}>
+                <h2>Relationships</h2>
+                <Show when={!isAddingRelationship() && contacts().length > 1}>
+                  <button type="button" class="kin-link-button" onClick={() => { setIsAddingRelationship(true); setDetailsOpen(true); }}>[ add ]</button>
                 </Show>
               </div>
+              <Show when={relationships().length === 0}><p class={styles.blockEmpty}>No relationships mapped.</p></Show>
+              <ul class={styles.relationshipList}>
+                <For each={relationships()}>{(relationship) => (
+                  <li>
+                    <button type="button" class={styles.relationshipLink} onClick={() => void openPerson(relationship.contactId)}>
+                      <span>{relationship.roleLabel}:</span> {relationship.name}
+                    </button>
+                    <button
+                      type="button"
+                      class="kin-link-button kin-danger-link"
+                      aria-label={`Remove relationship with ${relationship.name}`}
+                      onClick={async () => { if (window.confirm("Remove this relationship?")) await deleteRelationship(contactId(), relationship.contactId); }}
+                    >[×]</button>
+                  </li>
+                )}</For>
+              </ul>
+              <Show when={isAddingRelationship()}>
+                <form class={styles.relationshipForm} onSubmit={addRelationship}>
+                  <select class="kin-select" aria-label="Related person" value={relationshipTarget()} onChange={(event) => setRelationshipTarget(event.currentTarget.value)} required>
+                    <option value="">target</option>
+                    <For each={contacts().filter((contact) => contact.id !== contactId())}>{(contact) => <option value={contact.id}>{contact.name}</option>}</For>
+                  </select>
+                  <input
+                    class="kin-input"
+                    aria-label="Relationship type"
+                    value={relationshipRole()}
+                    placeholder="type"
+                    onInput={(event) => setRelationshipRole(event.currentTarget.value)}
+                    required
+                  />
+                  <div class={styles.formActions}>
+                    <button type="button" class="kin-button" onClick={() => setIsAddingRelationship(false)}>cancel</button>
+                    <button type="submit" class="kin-primary-button">save</button>
+                  </div>
+                </form>
+              </Show>
+            </section>
 
-            </div>
-          </div>
+            <section class={styles.sidebarBlock}>
+              <div class={styles.blockHeading}>
+                <h2>Tags index</h2>
+                <Show when={selectedTag()}><button type="button" class="kin-link-button" onClick={() => setSelectedTag(null)}>[ clear ]</button></Show>
+              </div>
+              <Show when={tags().length === 0}><p class={styles.blockEmpty}>No tags found in timeline logs.</p></Show>
+              <div class={styles.tagList}>
+                <For each={tags()}>{(tag) => (
+                  <button type="button" classList={{ [styles.activeTag]: selectedTag() === tag }} onClick={() => setSelectedTag(selectedTag() === tag ? null : tag)}>
+                    {selectedTag() === tag ? `[ #${tag} ]` : `#${tag}`}
+                  </button>
+                )}</For>
+              </div>
+            </section>
+          </aside>
+
+          <section class={styles.log} aria-label={`${person()!.name} timeline`}>
+            <form class={styles.composer} onSubmit={addNote}>
+              <label class="visually-hidden" for="new-note">Add timeline note</label>
+              <textarea
+                id="new-note"
+                ref={noteInput}
+                class="kin-textarea"
+                value={noteBody()}
+                placeholder="Enter interaction notes, observations, or updates here (use #tags to index)…"
+                onInput={(event) => setNoteBody(event.currentTarget.value)}
+                required
+              />
+              <button type="submit" class="kin-primary-button">add</button>
+            </form>
+
+            <Show when={visibleNotes().length === 0}><p class={styles.logEmpty}>{selectedTag() ? `No entries tagged #${selectedTag()}.` : "The timeline is empty."}</p></Show>
+            <Show when={visibleNotes().length > 0}>
+              <div class={styles.timeline}>
+                <For each={visibleNotes()}>{(note) => (
+                  <article class={styles.timelineItem} classList={{ [styles.pinned]: note.is_pinned === 1 }}>
+                    <span class={styles.marker} aria-hidden="true" />
+                    <div class={styles.timelineMeta}>
+                      <div>
+                        <time>{formatDate(note.created_at)}</time>
+                        <button type="button" class="kin-link-button" onClick={() => void togglePinNote(note.id, note.is_pinned)}>
+                          {note.is_pinned === 1 ? "[ unpin ]" : "[ pin ]"}
+                        </button>
+                      </div>
+                      <button type="button" class="kin-link-button kin-danger-link" onClick={async () => { if (window.confirm("Delete this timeline entry?")) await deleteNote(note.id); }}>[ delete ]</button>
+                    </div>
+                    <p>{renderNote(note.body)}</p>
+                  </article>
+                )}</For>
+                <span class={styles.eof}>~ EOF</span>
+              </div>
+            </Show>
+          </section>
         </Show>
-      </main>
-    </div>
+      </section>
+    </main>
   );
 }

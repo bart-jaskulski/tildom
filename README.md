@@ -81,14 +81,15 @@ Mark is exposed on `http://localhost:3000`. Sync is exposed on `http://localhost
 docker compose --profile apps up --build
 ```
 
-With that profile, `do` is exposed on `http://localhost:3001`.
+With that profile, `do` is exposed on `http://localhost:3001` and Kin on `http://localhost:3002`.
 
 ## Published Images
 
-GitHub Actions publishes Mark and sync images to GHCR on pushes to `main`, version tags, and manual runs:
+GitHub Actions publishes Mark, Kin, and sync images to GHCR on pushes to `main`, version tags, and manual runs:
 
 ```txt
 ghcr.io/bart-jaskulski/tildom/mark
+ghcr.io/bart-jaskulski/tildom/kin
 ghcr.io/bart-jaskulski/tildom/sync
 ```
 

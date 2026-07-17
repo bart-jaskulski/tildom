@@ -1,5 +1,25 @@
 import { describe, it, expect } from "vitest";
-import { parseTags, INVERSE_ROLES, ROLE_LABELS } from "../stores/contactStore";
+import { contactSlugs, parseTags, slugifyContactName, INVERSE_ROLES, ROLE_LABELS, type Contact } from "../stores/contactStore";
+
+const contact = (id: string, name: string, created_at: number): Contact => ({
+  id, name, relationship: "", created_at, updated_at: created_at, location: "", birthday: "", phone: "", email: "",
+});
+
+describe("Contact routes", () => {
+  it("creates readable slugs from names", () => {
+    expect(slugifyContactName("  Ann Lévigne  ")).toBe("ann-levigne");
+  });
+
+  it("adds stable numeric suffixes when names collide", () => {
+    const slugs = contactSlugs([
+      contact("third", "John", 3),
+      contact("first", "John", 1),
+      contact("second", "John", 2),
+    ]);
+
+    expect([...slugs.values()]).toEqual(["john", "john-2", "john-3"]);
+  });
+});
 
 describe("Hashtag Parsing Pipeline", () => {
   it("should extract multiple hashtags and format as space-padded strings", () => {

@@ -25,6 +25,8 @@ jobs:
         include:
           - image: mark
             dockerfile: apps/mark/Dockerfile
+          - image: kin
+            dockerfile: apps/kin/Dockerfile
           - image: sync
             dockerfile: services/sync/Dockerfile
 

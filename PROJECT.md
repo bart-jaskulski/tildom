@@ -241,3 +241,25 @@ Recommended order:
 - Preserve local-first behavior before adding hosted convenience.
 - Treat self-hosting docs as a product feature.
 - Do not let billing logic leak into local-only app behavior.
+
+## CSS and Browser Baseline
+
+Use modern, standards-based CSS without a preprocessor. Core UI behavior must
+use features classified as **Baseline Widely Available**. Features classified
+as **Baseline Newly Available** may be used only as progressive enhancements
+with a graceful fallback until they become widely available.
+
+- Prefer CSS Modules for component and route ownership; keep global styles for
+  tokens, resets, and intentional app-wide primitives.
+- Use native CSS nesting for related child, state, and media rules. Keep it
+  shallow (normally one nested level) and use `&` for states and compound
+  selectors so the resulting selector stays obvious.
+- Use cascade layers only at global stylesheet boundaries. Mark declares the
+  order `reset`, Tailwind's `theme`/`base`, `tildom-base`, Tailwind's
+  `components`/`utilities`, then `app`; component CSS Modules remain
+  unlayered.
+- Do not use `@scope` for component isolation while CSS Modules cover that
+  need. Reassess it once it is Baseline Widely Available.
+- Prefer normal cascade order and local selectors over `!important`; retain it
+  only for deliberate cross-cutting invariants that cannot otherwise be
+  expressed safely.

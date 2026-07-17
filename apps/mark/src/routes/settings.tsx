@@ -132,7 +132,7 @@ export default function Settings() {
             <input type="checkbox" checked={prefs().vimKeys} onChange={() => setPrefs(prev => ({ ...prev, vimKeys: !prev.vimKeys }))} />
             <span class={styles.optionLabel}>{prefs().vimKeys ? "[x]" : "[ ]"} enable Vim keys</span>
           </label>
-          <p class={styles.optionDescription}>Wide screens with a hardware keyboard. <button type="button" class="hn-link-button" onClick={showVimHelp}>view keybinds <kbd>?</kbd></button></p>
+          <p class={styles.optionDescription}>Wide screens with a hardware keyboard. <button type="button" class="hn-link-button" onClick={() => showVimHelp()}>view keybinds <kbd>?</kbd></button></p>
         </section>
 
         <section class={styles.section}>

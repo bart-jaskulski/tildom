@@ -4,16 +4,10 @@ import {
   shouldHandleOfflineNavigation,
 } from "~/lib/serviceWorkerRouting";
 import {
-  SYNC_APP_ID,
   SYNC_BACKGROUND_TAG,
-  clearPendingUpload,
-  getPendingUpload,
-  getSyncConfig,
-  getSyncRuntime,
-  setPrefetchedSnapshot,
-  setSyncRuntime,
-  type SyncConfig,
+  syncState,
 } from "~/lib/syncState";
+import { createSyncWorker } from "@tildom/sync-client/service-worker";
 
 declare const self: ServiceWorkerGlobalScope;
 
@@ -87,108 +81,7 @@ const errorResponse = () =>
     },
   });
 
-const syncEndpoint = (config: SyncConfig, suffix = "") =>
-  `${config.baseUrl.replace(/\/$/, "")}/v1/apps/${SYNC_APP_ID}/vaults/${config.vaultId}/snapshots${suffix}`;
-
-const syncHeaders = (config: SyncConfig) => ({
-  Authorization: `Bearer ${config.bearerToken}`,
-});
-
-const listRemoteRevisions = async (config: SyncConfig) => {
-  const response = await fetch(syncEndpoint(config), { headers: syncHeaders(config) });
-  if (!response.ok) {
-    return [];
-  }
-
-  const body = await response.json() as { revisions?: unknown };
-  return Array.isArray(body.revisions) ? body.revisions.filter((item): item is string => typeof item === "string") : [];
-};
-
-const prefetchLatestSnapshot = async () => {
-  const config = await getSyncConfig();
-  if (!config) {
-    return;
-  }
-
-  const response = await fetch(syncEndpoint(config, "/latest"), { headers: syncHeaders(config) });
-  if (!response.ok) {
-    return;
-  }
-
-  const revision = response.headers.get("x-tildom-revision") || response.headers.get("etag");
-  if (!revision || revision === (await getSyncRuntime()).lastSeenRevision) {
-    return;
-  }
-
-  await setPrefetchedSnapshot({
-    revision,
-    fetchedAt: Date.now(),
-    body: await response.arrayBuffer(),
-  });
-};
-
-const uploadPendingSnapshot = async () => {
-  const config = await getSyncConfig();
-  const pending = await getPendingUpload();
-  if (!config || !pending) {
-    return;
-  }
-
-  const response = await fetch(syncEndpoint(config), {
-    method: "POST",
-    headers: {
-      ...syncHeaders(config),
-      "Content-Type": "application/octet-stream",
-      ...(pending.revision ? { "If-Match": pending.revision } : { "If-None-Match": "*" }),
-    },
-    body: pending.body,
-  });
-
-  if (response.status === 409) {
-    await clearPendingUpload();
-    await setSyncRuntime({
-      ...(await getSyncRuntime()),
-      hasLocalChanges: false,
-      lastError: null,
-    });
-    await prefetchLatestSnapshot();
-    return;
-  }
-
-  if (!response.ok) {
-    throw new Error(`Background sync upload failed (${response.status})`);
-  }
-
-  const body = await response.json() as { revision?: unknown };
-  if (typeof body.revision !== "string") {
-    return;
-  }
-
-  const runtime = await getSyncRuntime();
-  if (runtime.pendingGeneration === pending.generation) {
-    await setSyncRuntime({
-      ...runtime,
-      lastSeenRevision: body.revision,
-      hasLocalChanges: false,
-      lastSyncedAt: Date.now(),
-      lastError: null,
-    });
-  }
-
-  await clearPendingUpload();
-};
-
-const runBackgroundSync = async () => {
-  await uploadPendingSnapshot();
-
-  const config = await getSyncConfig();
-  if (config) {
-    const latest = (await listRemoteRevisions(config))[0] ?? null;
-    if (latest !== (await getSyncRuntime()).lastSeenRevision) {
-      await prefetchLatestSnapshot();
-    }
-  }
-};
+const { prefetchLatestSnapshot, runBackgroundSync } = createSyncWorker(syncState);
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();

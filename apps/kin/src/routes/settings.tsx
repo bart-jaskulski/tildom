@@ -1,197 +1,96 @@
-import { Show, createSignal, onMount, onCleanup } from "solid-js";
-import { useNavigate } from "@solidjs/router";
+import { Show, createSignal } from "solid-js";
+import { createPreferences } from "@tildom/ui";
 import AppNav from "~/components/AppNav";
+import SyncSettings from "~/components/SyncSettings";
 import { exportDatabase, importDatabase } from "~/lib/db";
-import { Download, Upload } from "lucide-solid";
-import { createPreferences, getSharedPreferences } from "@tildom/ui";
+import styles from "./settings.module.css";
+import { markSyncDirty } from "~/lib/syncState";
 
 export default function Settings() {
-  const navigate = useNavigate();
-
   const [status, setStatus] = createSignal<string | null>(null);
   const [error, setError] = createSignal<string | null>(null);
-  const [isExporting, setIsExporting] = createSignal(false);
-  const [isImporting, setIsImporting] = createSignal(false);
-  const [prefs, setPrefs] = createPreferences();
-  
-  let fileInputRef!: HTMLInputElement;
+  const [busy, setBusy] = createSignal<"export" | "import" | null>(null);
+  const [preferences, setPreferences] = createPreferences();
+  let fileInput: HTMLInputElement | undefined;
 
-  // Settings-specific Vim hotkeys
-  onMount(() => {
-    let lastKey = "";
-    const isVimEnabled = getSharedPreferences().vimKeys;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const isDesktop = !("ontouchstart" in window) && window.innerWidth > 768;
-      if (!isDesktop || !isVimEnabled) return;
-
-      const activeEl = document.activeElement;
-      const isTyping = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.tagName === "SELECT");
-
-      if (isTyping) {
-        if (event.key === "Escape") {
-          (activeEl as HTMLElement).blur();
-          event.preventDefault();
-        }
-        return;
-      }
-
-      const key = event.key;
-
-      // Esc: return to index
-      if (key === "Escape") {
-        event.preventDefault();
-        navigate("/");
-        return;
-      }
-
-      // Buffer Tab Shifts
-      if (lastKey === "g" && (key === "t" || key === "T")) {
-        event.preventDefault();
-        lastKey = "";
-        navigate("/");
-        return;
-      }
-      if (key === "g") {
-        lastKey = "g";
-        setTimeout(() => { if (lastKey === "g") lastKey = ""; }, 1000);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    onCleanup(() => {
-      window.removeEventListener("keydown", handleKeyDown);
-    });
-  });
-
-  const handleExport = async () => {
-    setStatus(null);
-    setError(null);
-    setIsExporting(true);
-
+  const exportBackup = async () => {
+    setStatus(null); setError(null); setBusy("export");
     try {
       const bytes = await exportDatabase();
-      const backup = new Uint8Array(bytes);
-      const url = URL.createObjectURL(new Blob([backup.buffer], { type: "application/vnd.sqlite3" }));
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `kin-backup-${new Date().toISOString().slice(0, 10)}.sqlite3`;
-      anchor.click();
+      const url = URL.createObjectURL(new Blob([new Uint8Array(bytes).buffer], { type: "application/vnd.sqlite3" }));
+      Object.assign(document.createElement("a"), {
+        href: url,
+        download: `kin-tildom-${new Date().toISOString().slice(0, 10)}.sqlite3`,
+      }).click();
       URL.revokeObjectURL(url);
-      setStatus("Database export successful.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to export database");
-    } finally {
-      setIsExporting(false);
-    }
+      setStatus("Database export started.");
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Failed to export database.");
+    } finally { setBusy(null); }
   };
 
-  const handleImport = async (event: Event) => {
+  const importBackup = async (event: Event) => {
     const file = (event.currentTarget as HTMLInputElement).files?.[0];
     if (!file) return;
-
-    const confirmImport = window.confirm("Import this SQLite database? It will COMPLETELY OVERWRITE your current local database.");
-    if (!confirmImport) {
-      if (fileInputRef) fileInputRef.value = "";
+    if (!window.confirm("Import this database backup? It will replace the current local database.")) {
+      if (fileInput) fileInput.value = "";
       return;
     }
-
-    setStatus(null);
-    setError(null);
-    setIsImporting(true);
-
+    setStatus(null); setError(null); setBusy("import");
     try {
       await importDatabase(new Uint8Array(await file.arrayBuffer()));
-      setStatus("Database import completed successfully.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to import database");
+      await markSyncDirty();
+      setStatus("Database imported.");
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Failed to import database.");
     } finally {
-      setIsImporting(false);
-      if (fileInputRef) fileInputRef.value = "";
+      setBusy(null);
+      if (fileInput) fileInput.value = "";
     }
-  };
-
-  const toggleVim = () => {
-    setPrefs(prev => ({ ...prev, vimKeys: !prev.vimKeys }));
   };
 
   return (
-    <div class="tui-page">
+    <main class="kin-page">
       <AppNav active="settings" />
+      <section class={`kin-content ${styles.panel}`}>
+        <section class={styles.section}>
+          <h1>Keyboard</h1>
+          <label class={styles.checkbox}>
+            <input
+              type="checkbox"
+              checked={preferences().vimKeys}
+              onChange={() => setPreferences((current) => ({ ...current, vimKeys: !current.vimKeys }))}
+            />
+            <span>{preferences().vimKeys ? "[x]" : "[ ]"} enable Vim keys</span>
+          </label>
+          <p>Wide screens with a hardware keyboard. Use <kbd>j</kbd>/<kbd>k</kbd> to move, <kbd>e</kbd> to open, <kbd>/</kbd> to search, <kbd>i</kbd> to write, and <kbd>Esc</kbd> to return.</p>
+        </section>
 
-      <main class="tui-content">
-        <div class="tui-panel" style="max-width: 80ch; margin: 0 auto; width: 100%;">
-          <h2 class="tui-panel-heading">Settings</h2>
+        <SyncSettings />
 
-          {/* Vim keyboard binds toggles */}
-          <div class="tui-settings-item">
-            <h3 style="margin: 0 0 0.5rem; font-size: 14px; font-weight: bold;">VIM NORMAL MODE KEYBOARD NAVIGATION</h3>
-            <p class="tui-muted" style="margin: 0 0 1rem; font-size: 13px;">
-              Enables rapid Neovim-style desktop navigation using standard commands:
-              <br />
-              <code style="background: var(--bg-canvas); padding: 2px 4px; font-size: 12px;">j</code> / <code style="background: var(--bg-canvas); padding: 2px 4px; font-size: 12px;">k</code> to scroll contacts list,
-              <code style="background: var(--bg-canvas); padding: 2px 4px; font-size: 12px;">e</code> or <code style="background: var(--bg-canvas); padding: 2px 4px; font-size: 12px;">Enter</code> to open contact drawer,
-              <code style="background: var(--bg-canvas); padding: 2px 4px; font-size: 12px;">Esc</code> to close buffers or go back,
-              <code style="background: var(--bg-canvas); padding: 2px 4px; font-size: 12px;">/</code> to search,
-              <code style="background: var(--bg-canvas); padding: 2px 4px; font-size: 12px;">i</code> to write note.
-            </p>
-
-            <label style="display: inline-flex; align-items: center; gap: 1ch; cursor: pointer; user-select: none; font-weight: bold; font-size: 14px;">
+        <section class={styles.section}>
+          <h2>Database</h2>
+          <p>Kin stays local in this browser. Export the complete SQLite database as a backup, or replace it with a previous export.</p>
+          <div class={styles.actions}>
+            <button type="button" class="kin-button" disabled={busy() !== null} onClick={exportBackup}>
+              {busy() === "export" ? "exporting…" : "export"}
+            </button>
+            <label class={`kin-button ${styles.fileButton}`}>
               <input
-                type="checkbox"
-                checked={prefs().vimKeys}
-                onChange={toggleVim}
-                style="display: none;"
+                ref={fileInput}
+                type="file"
+                accept=".sqlite,.sqlite3,.db,application/vnd.sqlite3,application/x-sqlite3"
+                disabled={busy() !== null}
+                onChange={importBackup}
               />
-              <span>{prefs().vimKeys ? "[x]" : "[ ]"} ENABLE VIM KEYBINDINGS (DESKTOP)</span>
+              {busy() === "import" ? "importing…" : "import"}
             </label>
           </div>
+        </section>
 
-          {/* Database Export/Import */}
-          <div class="tui-settings-item">
-            <h3 style="margin: 0 0 0.5rem; font-size: 14px; font-weight: bold;">LOCAL DATABASE PORTABILITY (SQLITE)</h3>
-            <p class="tui-muted" style="margin: 0 0 1.25rem; font-size: 13px;">
-              Backup your personal relationship records by downloading the complete, binary SQLite database directly out of the browser OPFS file storage, or import a previously exported database.
-            </p>
-
-            <div style="display: flex; flex-wrap: wrap; gap: 2ch;">
-              <button
-                type="button"
-                class="tui-btn"
-                onClick={handleExport}
-                disabled={isExporting() || isImporting()}
-              >
-                <Download size={14} style="margin-right: 1ch;" />
-                {isExporting() ? "exporting..." : "export database"}
-              </button>
-
-              <label class="tui-btn tui-file-btn">
-                <Upload size={14} style="margin-right: 1ch;" />
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".sqlite,.sqlite3,.db,application/vnd.sqlite3"
-                  disabled={isExporting() || isImporting()}
-                  onChange={handleImport}
-                />
-                {isImporting() ? "importing..." : "import database"}
-              </label>
-            </div>
-
-            <Show when={status()}>
-              <div class="tui-status-box" role="status">
-                {status()}
-              </div>
-            </Show>
-
-            <Show when={error()}>
-              <div class="tui-error-box" role="alert">
-                {error()}
-              </div>
-            </Show>
-          </div>
-        </div>
-      </main>
-    </div>
+        <Show when={status()}><p class={styles.status} role="status">{status()}</p></Show>
+        <Show when={error()}><p class={styles.error} role="alert">{error()}</p></Show>
+      </section>
+    </main>
   );
 }

@@ -1,0 +1,405 @@
+.layout {
+  display: grid;
+  grid-template-columns: 35ch minmax(0, 1fr);
+  align-items: start;
+  gap: 4ch;
+}
+
+.loading {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0.75rem 1.5ch;
+  border-left: 2px solid var(--highlight-blue);
+}
+
+.mobileToggle {
+  display: none;
+}
+
+.sidebar {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.sidebarBlock {
+  padding: 1rem 1.5ch;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+}
+
+.profileHeading,
+.blockHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1ch;
+}
+
+.profileHeading {
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--border-color);
+
+  & h1 {
+    margin: 0;
+    font-size: 16px;
+  }
+
+  & span {
+    display: block;
+    margin-top: 0.15rem;
+    color: var(--fg-muted);
+    font-size: 11px;
+  }
+}
+
+.compactActions {
+  display: flex;
+
+  & :global(.kin-link-button) {
+    min-height: 32px;
+    font-size: 11px;
+  }
+}
+
+.parameters {
+  margin: 0.75rem 0 0;
+
+  & div {
+    display: grid;
+    grid-template-columns: 10ch minmax(0, 1fr);
+    gap: 1ch;
+    padding: 0.18rem 0;
+  }
+
+  & dt,
+  & dd {
+    margin: 0;
+  }
+
+  & dt {
+    color: var(--fg-muted);
+    font-size: 11px;
+  }
+
+  & dd {
+    min-width: 0;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+}
+
+.editForm {
+  display: grid;
+  gap: 0.35rem;
+
+  & h1 {
+    margin: 0 0 0.65rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 16px;
+    text-transform: uppercase;
+  }
+
+  & label {
+    display: grid;
+    grid-template-columns: 10ch minmax(0, 1fr);
+    align-items: center;
+    gap: 1ch;
+    color: var(--fg-muted);
+    font-size: 11px;
+  }
+
+  & :global(.kin-input) {
+    min-height: 26px;
+    padding: 0.15rem 0.5ch;
+    border-color: var(--syntax-keyword);
+    font-size: 12px;
+  }
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1ch;
+  margin-top: 0.65rem;
+
+  & :global(.kin-button),
+  & :global(.kin-primary-button) {
+    min-height: 28px;
+    padding: 0 1ch;
+    border-width: 0;
+  }
+}
+
+.blockHeading {
+  min-height: 32px;
+
+  & h2 {
+    margin: 0;
+    color: var(--fg-muted);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  & :global(.kin-link-button) {
+    min-height: 32px;
+    font-size: 11px;
+  }
+}
+
+.blockEmpty {
+  margin: 0.5rem 0;
+  color: var(--fg-muted);
+  font-size: 11px;
+}
+
+.relationshipList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  & li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 36px;
+    border-bottom: 1px dashed var(--border-color);
+  }
+
+  & :global(.kin-link-button) {
+    min-height: 36px;
+    font-size: 11px;
+  }
+}
+
+.relationshipLink {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg-default);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  & span {
+    color: var(--fg-muted);
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.relationshipForm {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed var(--border-color);
+
+  & :global(.kin-select),
+  & :global(.kin-input) {
+    min-height: 30px;
+    padding: 0.15rem 0.5ch;
+    border-color: var(--syntax-keyword);
+    font-size: 11px;
+  }
+
+  & .formActions {
+    grid-column: 1 / -1;
+  }
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1ch;
+
+  & button {
+    min-height: 32px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--syntax-keyword);
+    cursor: pointer;
+    font-weight: bold;
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    &.activeTag {
+      background: var(--syntax-bg-active);
+      color: var(--fg-default);
+    }
+  }
+}
+
+.log {
+  min-width: 0;
+}
+
+.composer {
+  display: grid;
+  justify-items: end;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+
+  & :global(.kin-textarea) {
+    justify-self: stretch;
+  }
+
+  & :global(.kin-primary-button) {
+    min-height: 32px;
+    padding: 0 2ch;
+  }
+}
+
+.logEmpty {
+  margin: 1.5rem 0;
+  color: var(--fg-muted);
+}
+
+.timeline {
+  position: relative;
+  display: grid;
+  gap: 1.75rem;
+  padding-left: 3.25ch;
+
+  &::before {
+    position: absolute;
+    top: 0.35rem;
+    bottom: 1.6rem;
+    left: 0.9ch;
+    width: 2px;
+    background: var(--border-color);
+    content: "";
+  }
+}
+
+.timelineItem {
+  position: relative;
+  max-width: 75ch;
+
+  & p {
+    margin: 0.3rem 0 0;
+    font-size: 13px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+}
+
+.marker {
+  position: absolute;
+  top: 0.35rem;
+  left: -2.75ch;
+  width: 8px;
+  height: 8px;
+  background: var(--fg-muted);
+}
+
+.pinned .marker {
+  background: var(--syntax-keyword);
+}
+
+.timelineMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1ch;
+  color: var(--fg-muted);
+  font-size: 11px;
+
+  & > div {
+    display: flex;
+    align-items: center;
+    gap: 1ch;
+  }
+
+  & :global(.kin-link-button) {
+    min-height: 28px;
+    font-size: 11px;
+  }
+}
+
+.inlineTag {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--syntax-keyword);
+  cursor: pointer;
+  font-weight: bold;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.eof {
+  color: var(--fg-muted);
+  font-size: 11px;
+}
+
+@media (max-width: 768px) {
+  .layout {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .mobileToggle {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 48px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--syntax-keyword);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+
+  .sidebar {
+    display: none;
+    width: 100%;
+    margin-bottom: 1.5rem;
+  }
+
+  .sidebarOpen {
+    display: grid;
+  }
+
+  .log {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: calc(100vh - 160px);
+  }
+
+  .timeline,
+  .logEmpty {
+    order: 1;
+    margin-bottom: 112px;
+  }
+
+  .composer {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    order: 2;
+    margin: auto 0 0;
+    padding: 0.75rem 0 max(0.75rem, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-canvas);
+  }
+}

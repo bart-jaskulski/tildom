@@ -22,8 +22,8 @@ services:
       NODE_ENV: production
       PORT: 8787
       SYNC_STORAGE_ROOT: /app/storage/vaults
-      SYNC_APP_IDS: mark
-      SYNC_HOSTED_ORIGINS: ${SYNC_HOSTED_ORIGINS:-http://localhost:3000}
+      SYNC_APP_IDS: mark,kin
+      SYNC_HOSTED_ORIGINS: ${SYNC_HOSTED_ORIGINS:-http://localhost:3000,http://localhost:3002}
     volumes:
       - sync-storage:/app/storage
     restart: unless-stopped
@@ -41,6 +41,21 @@ services:
       PORT: 3000
     volumes:
       - do-storage:/app/storage
+    restart: unless-stopped
+
+  kin:
+    profiles:
+      - apps
+    build:
+      context: .
+      dockerfile: apps/kin/Dockerfile
+      args:
+        VITE_SYNC_BASE_URL: ${KIN_SYNC_BASE_URL:-http://localhost:8787}
+    ports:
+      - "${KIN_APP_PORT:-3002}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
     restart: unless-stopped
 
 volumes:

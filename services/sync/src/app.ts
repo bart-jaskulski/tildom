@@ -31,7 +31,7 @@ const readCsv = (value: string | undefined, fallback: readonly string[]) =>
 
 export const createDefaultOptions = (): SyncOptions => ({
   storageRoot: resolve(process.env.SYNC_STORAGE_ROOT ?? "./storage/vaults"),
-  appIds: readCsv(process.env.SYNC_APP_IDS, ["mark"]),
+  appIds: readCsv(process.env.SYNC_APP_IDS, ["mark", "kin"]),
   maxBytes: Number.parseInt(process.env.SYNC_MAX_BYTES ?? String(DEFAULT_MAX_BYTES), 10),
   hostedOrigins: readCsv(process.env.SYNC_HOSTED_ORIGINS, ["https://mark.tildom.app"]),
   devOrigins: readCsv(process.env.SYNC_DEV_ORIGINS, [
