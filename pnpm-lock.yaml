@@ -146,6 +146,9 @@ importers:
       '@tildom/node-server':
         specifier: workspace:*
         version: link:../../packages/node-server
+      '@tildom/sync-client':
+        specifier: workspace:*
+        version: link:../../packages/sync-client
       '@tildom/ui':
         specifier: workspace:*
         version: link:../../packages/ui

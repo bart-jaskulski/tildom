@@ -39,6 +39,8 @@ available offline; model responses require connectivity.
   streamed turn completes.
 - Memory tool writes return to the browser and are committed to the canonical local SQLite vault.
 - Existing conversations and memory remain available offline; sending a message does not.
+- Optional sync encrypts the complete SQLite vault in the browser before snapshot upload and uses
+  pairing links whose secret remains in the URL fragment.
 
 ## Primary Surfaces
 

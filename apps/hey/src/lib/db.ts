@@ -1,4 +1,5 @@
 import { BrowserDbClient } from "@tildom/browser-db";
+import { markSyncDirty } from "./syncState";
 
 const schema = `
   PRAGMA foreign_keys = ON;
@@ -44,7 +45,11 @@ export const initDb = async () => {
   }
 };
 
-export const exec = client.exec;
+export const exec = async (sql: string, params?: unknown[]) => {
+  const rows = await client.exec(sql, params);
+  await markSyncDirty();
+  return rows;
+};
 export const query = client.query;
 export const exportDatabase = client.exportDatabase;
 export const importDatabase = client.importDatabase;

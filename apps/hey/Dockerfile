@@ -21,6 +21,9 @@ COPY apps/hey/package.json apps/hey/package.json
 COPY --from=package-manifests /repo/packages packages
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter hey.tildom...
 
+ARG VITE_SYNC_BASE_URL=https://sync.tildom.app
+ENV VITE_SYNC_BASE_URL=$VITE_SYNC_BASE_URL
+
 COPY apps/hey apps/hey
 COPY packages packages
 RUN pnpm --filter hey.tildom build

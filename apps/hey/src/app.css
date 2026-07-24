@@ -778,16 +778,13 @@ dialog footer {
   margin-top: 1.5rem;
 }
 
-.pair-code {
-  display: block;
-  margin: 1.5rem 0;
-  padding: 1rem 2ch;
-  border-block: 1px solid var(--border-color);
+.pair-link {
+  width: 100%;
   color: var(--syntax-string);
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: .12em;
-  text-align: center;
+}
+
+.sync-error {
+  color: var(--syntax-error) !important;
 }
 
 .toast {

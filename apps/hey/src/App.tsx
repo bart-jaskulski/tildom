@@ -8,6 +8,17 @@ import {
 } from "solid-js";
 import { initDb } from "./lib/db";
 import { streamChat } from "./lib/chat";
+import { buildPairingUrl, clearPairingHash, parsePairingSecret } from "@tildom/sync-client";
+import {
+  createSyncVault,
+  disconnectSync,
+  initializeSync,
+  joinSyncVault,
+  refreshSyncState,
+  syncNow,
+  syncSignals,
+} from "./lib/syncClient";
+import { getSyncConfig } from "./lib/syncState";
 import {
   addMessage,
   createChat,
@@ -70,6 +81,10 @@ export default function App() {
   const [chatMenuOpen, setChatMenuOpen] = createSignal(false);
   const [loading, setLoading] = createSignal(true);
   const [sending, setSending] = createSignal(false);
+  const [syncBusy, setSyncBusy] = createSignal(false);
+  const [syncError, setSyncError] = createSignal("");
+  const [pairUrl, setPairUrl] = createSignal("");
+  const [joinSecret, setJoinSecret] = createSignal<string | null>(null);
   const [error, setError] = createSignal("");
   const [toast, setToast] = createSignal("");
   let searchInput: HTMLInputElement | undefined;
@@ -153,6 +168,14 @@ export default function App() {
       setMemoryDraft(files[0]?.content || "");
       await refreshChats();
       if (activeChatId()) setDraft(await readChatDraft(activeChatId()));
+      await refreshSyncState();
+      await refreshPairUrl();
+      const secret = parsePairingSecret(window.location.hash);
+      if (secret) {
+        setJoinSecret(secret);
+        queueMicrotask(() => pairDialog?.showModal());
+      }
+      window.setTimeout(() => void initializeSync(), 1_000);
       queueMicrotask(() => resizeComposer());
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -232,6 +255,35 @@ export default function App() {
     await writeSettings(next);
     showToast("Settings saved");
   };
+
+  const refreshPairUrl = async () => {
+    const config = await getSyncConfig();
+    setPairUrl(config ? buildPairingUrl(window.location.origin, config.secret) : "");
+  };
+
+  const runSync = async (action: () => Promise<unknown>) => {
+    setSyncBusy(true);
+    setSyncError("");
+    try {
+      await action();
+      await refreshSyncState();
+      await refreshPairUrl();
+    } catch (cause) {
+      setSyncError(cause instanceof Error ? cause.message : "Sync failed");
+    } finally {
+      setSyncBusy(false);
+    }
+  };
+
+  const joinPair = () => runSync(async () => {
+    const secret = joinSecret();
+    if (!secret) throw new Error("Missing pairing secret");
+    await joinSyncVault(secret);
+    clearPairingHash();
+    setJoinSecret(null);
+    pairDialog?.close();
+    showToast("Device paired");
+  });
 
   const beginRename = () => {
     if (!activeChat()) return;
@@ -544,10 +596,24 @@ export default function App() {
 
                 <section class="settings-section">
                   <h2>Sync</h2>
-                  <p>Not connected. Data stays local.</p>
+                  <p>{syncSignals.isPaired() ? syncSignals.statusText() : "Not connected. Data stays local."}</p>
                   <div class="button-row">
-                    <button class="button" type="button" onClick={() => pairDialog?.showModal()}>pair another device</button>
+                    <Show
+                      when={syncSignals.isPaired()}
+                      fallback={
+                        <button
+                          class="button"
+                          type="button"
+                          disabled={syncBusy()}
+                          onClick={() => pairDialog?.showModal()}
+                        >create sync vault</button>
+                      }
+                    >
+                      <button class="button" type="button" disabled={syncBusy()} onClick={() => void runSync(syncNow)}>sync now</button>
+                      <button class="button" type="button" disabled={syncBusy()} onClick={() => pairDialog?.showModal()}>pair another device</button>
+                    </Show>
                   </div>
+                  <Show when={syncError()}><p class="sync-error" role="alert">{syncError()}</p></Show>
                 </section>
               </section>}
             </Show>
@@ -580,19 +646,47 @@ export default function App() {
 
       <dialog ref={pairDialog} aria-labelledby="pair-title">
         <form method="dialog">
-          <header><h2 id="pair-title">Pair another device</h2></header>
-          <p>Open Hey on the other device and enter this one-time code. It expires in ten minutes.</p>
-          <output class="pair-code" aria-label="Pairing code">HE7K–4M2Q</output>
+          <header><h2 id="pair-title">{joinSecret() ? "Join sync vault" : "Sync"}</h2></header>
+          <Show when={joinSecret()}>
+            <p>Pairing replaces this device with the latest encrypted snapshot from the vault.</p>
+          </Show>
+          <Show when={!joinSecret() && !syncSignals.isPaired()}>
+            <p>Create an encrypted vault for chats, settings, and memory.</p>
+          </Show>
+          <Show when={!joinSecret() && syncSignals.isPaired()}>
+            <p>Open this link on the other device.</p>
+            <input class="pair-link" aria-label="Pairing link" readOnly value={pairUrl()} />
+          </Show>
+          <Show when={syncError()}><p class="sync-error" role="alert">{syncError()}</p></Show>
           <footer>
-            <button class="button" value="cancel">close</button>
-            <button
-              class="button primary"
-              type="button"
-              onClick={() => {
-                void navigator.clipboard?.writeText("HE7K-4M2Q");
-                showToast("Pairing code copied");
-              }}
-            >copy code</button>
+            <button class="button" value="cancel" disabled={syncBusy()}>cancel</button>
+            <Show when={joinSecret()}>
+              <button class="button primary" type="button" disabled={syncBusy()} onClick={() => void joinPair()}>
+                {syncBusy() ? "pairing…" : "join vault"}
+              </button>
+            </Show>
+            <Show when={!joinSecret() && !syncSignals.isPaired()}>
+              <button class="button primary" type="button" disabled={syncBusy()} onClick={() => void runSync(createSyncVault)}>
+                {syncBusy() ? "creating…" : "create vault"}
+              </button>
+            </Show>
+            <Show when={!joinSecret() && syncSignals.isPaired()}>
+              <button
+                class="button danger"
+                type="button"
+                disabled={syncBusy()}
+                onClick={() => void runSync(async () => {
+                  await disconnectSync();
+                  pairDialog?.close();
+                })}
+              >disconnect</button>
+              <button
+                class="button primary"
+                type="button"
+                disabled={syncBusy() || !pairUrl()}
+                onClick={() => void navigator.clipboard.writeText(pairUrl()).then(() => showToast("Pairing link copied"))}
+              >copy link</button>
+            </Show>
           </footer>
         </form>
       </dialog>
