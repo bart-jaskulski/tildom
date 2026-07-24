@@ -99,6 +99,7 @@ With that profile, `do` is exposed on `http://localhost:3001` and Kin on `http:/
 GitHub Actions publishes the app, API, and sync images to GHCR:
 
 ```txt
+ghcr.io/bart-jaskulski/tildom/home
 ghcr.io/bart-jaskulski/tildom/mark
 ghcr.io/bart-jaskulski/tildom/do
 ghcr.io/bart-jaskulski/tildom/kin

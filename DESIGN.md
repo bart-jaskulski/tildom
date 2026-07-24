@@ -51,9 +51,13 @@ Color variables are mapped to syntax-highlighting terms rather than layout descr
 
 Tildom icons use the interface's block-cursor language rather than letter tiles. Every icon has a
 full-bleed `--fg-default` field, one square `--syntax-keyword` red block, and a white geometry-only app glyph.
-Mark uses a bookmark ribbon, Do a checked square, Kin a three-node relationship graph, and Hey a
-prompt chevron with block cursor. Glyphs stay inside the central 50% safe zone, use fills or strokes
+Home uses a four-cell launcher grid, Mark a bookmark ribbon, Do a checked square, Kin a three-node
+relationship graph, and Hey a prompt chevron with block cursor. Glyphs stay inside the central 50% safe zone, use fills or strokes
 at least 4/64 units wide, and never depend on fonts, gradients, rounded corners, or color alone.
+
+`@tildom/ui`'s `AppIcon` is the canonical in-app icon set. Each app keeps a matching
+`public/icon.svg` only for favicons and generated install/PWA assets; icon changes must update both
+representations.
 
 ---
 

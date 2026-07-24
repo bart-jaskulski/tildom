@@ -1,6 +1,7 @@
 import { createSignal, For, onMount, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { Title } from "@solidjs/meta";
+import { AppIcon } from "@tildom/ui";
 import { vaultState } from "~/stores/vaultStore";
 import { syncStateStore, syncNow } from "~/lib/sync";
 import { isOnline } from "~/stores/networkStore";
@@ -153,7 +154,7 @@ export default function SettingsPage() {
       {/* TUI Navigation Header */}
       <header class="tui-topbar">
         <A href="/" class="tui-brand">
-          <img class="tui-logo" src="/icon.svg" alt="" />
+          <AppIcon app="do" class="tui-logo" />
           <span class="tui-title">tildom</span>
         </A>
         <nav class="tui-nav">

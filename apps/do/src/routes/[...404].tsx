@@ -1,5 +1,6 @@
 import { Title } from "@solidjs/meta";
 import { A } from "@solidjs/router";
+import { AppIcon } from "@tildom/ui";
 
 export default function NotFound() {
   return (
@@ -9,7 +10,7 @@ export default function NotFound() {
       {/* TUI Topbar */}
       <header class="tui-topbar">
         <A href="/" class="tui-brand">
-          <img class="tui-logo" src="/icon.svg" alt="" />
+          <AppIcon app="do" class="tui-logo" />
           <span class="tui-title">tildom</span>
         </A>
         <nav class="tui-nav">

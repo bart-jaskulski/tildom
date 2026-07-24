@@ -1,4 +1,5 @@
 import { A, useLocation, useNavigate, useSearchParams } from "@solidjs/router";
+import { AppIcon } from "@tildom/ui";
 import { createEffect, createSignal, onCleanup } from "solid-js";
 import styles from "./AppNav.module.css";
 
@@ -52,7 +53,7 @@ export default function AppNav(props: AppNavProps) {
     <header class={styles.topbar}>
       <div class={styles.brand}>
         <A href="/" class={styles.title}>
-          <img class={styles.logo} src="/icon.svg" alt="" />
+          <AppIcon app="mark" class={styles.logo} />
           <span>tildom</span>
         </A>
       </div>

@@ -185,6 +185,7 @@ Published images should use stable, per-deployable GHCR names:
 
 ```txt
 ghcr.io/bart-jaskulski/tildom/mark -> apps/mark
+ghcr.io/bart-jaskulski/tildom/home -> apps/home
 ghcr.io/bart-jaskulski/tildom/sync -> services/sync
 ```
 

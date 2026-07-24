@@ -1,6 +1,7 @@
 import { A } from "@solidjs/router";
 import { Show, createMemo, createSignal, onMount } from "solid-js";
 import { Title } from "@solidjs/meta";
+import { AppIcon } from "@tildom/ui";
 import { QRDisplay } from "~/components/DevicePairing";
 import {
   buildPairingHash,
@@ -134,7 +135,7 @@ export default function PairPage() {
       {/* TUI Navigation Header */}
       <header class="tui-topbar">
         <A href="/" class="tui-brand">
-          <img class="tui-logo" src="/icon.svg" alt="" />
+          <AppIcon app="do" class="tui-logo" />
           <span class="tui-title">tildom</span>
         </A>
         <nav class="tui-nav">

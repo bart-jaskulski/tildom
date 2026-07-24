@@ -31,8 +31,8 @@ export const heyRoutes = new Hono();
 
 heyRoutes.get("/health", (context) => context.json({
   ready: Boolean(process.env.GOOGLE_API_KEY),
-  model: process.env.HEY_MODEL ?? "gemini-3-flash-preview",
-  titleModel: process.env.HEY_TITLE_MODEL ?? "gemini-2.5-flash-lite",
+  model: process.env.HEY_MODEL ?? "gemini-3.6-flash",
+  titleModel: process.env.HEY_TITLE_MODEL ?? "gemini-3.5-flash-lite",
 }));
 
 heyRoutes.post("/title", async (context) => {
@@ -42,7 +42,7 @@ heyRoutes.post("/title", async (context) => {
   if (!parsed.success) return context.json({ error: "Invalid title request." }, 400);
 
   const { text } = await generateText({
-    model: model(process.env.HEY_TITLE_MODEL ?? "gemini-2.5-flash-lite"),
+    model: model(process.env.HEY_TITLE_MODEL ?? "gemini-3.5-flash-lite"),
     instructions: "Write a concise chat title. Return only the title, without quotes or ending punctuation.",
     prompt: parsed.data.message,
     maxOutputTokens: 30,
@@ -94,7 +94,7 @@ heyRoutes.post("/chat", async (context) => {
   } : undefined;
 
   const result = streamText({
-    model: model(process.env.HEY_MODEL ?? "gemini-3-flash-preview"),
+    model: model(process.env.HEY_MODEL ?? "gemini-3.6-flash"),
     instructions: `You are Hey, a private personal companion.
 Be ${settings.tone}. Keep responses ${settings.responseLength}.
 ${settings.instructions}

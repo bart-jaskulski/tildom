@@ -44,9 +44,16 @@ a:focus-visible {
 }
 
 .wordmark {
+  gap: 0.75rem;
   color: var(--syntax-keyword);
   font-weight: 900;
   letter-spacing: -0.03em;
+}
+
+.home-icon {
+  width: 24px;
+  height: 24px;
+  flex: none;
 }
 
 .tab {

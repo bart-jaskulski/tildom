@@ -1,4 +1,5 @@
 import type { Accessor, Setter } from "solid-js";
+import { AppIcon } from "@tildom/ui";
 import type { Surface } from "../lib/types";
 import styles from "./AppHeader.module.css";
 
@@ -17,7 +18,7 @@ export default function AppHeader(props: Props) {
 
   return <header class={styles.topbar}>
     <button class={styles.wordmark} type="button" onClick={() => selectSurface("chats")}>
-      <img src="/icon.svg" alt="" />
+      <AppIcon app="hey" />
       <span>tildom</span>
     </button>
     <nav aria-label="Primary">

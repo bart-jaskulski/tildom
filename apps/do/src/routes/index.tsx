@@ -1,6 +1,7 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { Title } from "@solidjs/meta";
+import { AppIcon } from "@tildom/ui";
 import TaskPrompt from "~/components/TaskPrompt";
 import TasksList from "~/components/TasksList";
 import {
@@ -114,7 +115,7 @@ export default function Home() {
       {/* TUI Top Navigation Bar */}
       <header class="tui-topbar">
         <A href="/" class="tui-brand">
-          <img class="tui-logo" src="/icon.svg" alt="" />
+          <AppIcon app="do" class="tui-logo" />
           <span class="tui-title">tildom</span>
         </A>
         <nav class="tui-nav">
