@@ -1,10 +1,19 @@
 import solid from "vite-plugin-solid";
 import { defineConfig } from "vite";
 import { fileURLToPath, URL } from "node:url";
+import { tildomPwa } from "@tildom/config/pwa";
 
 export default defineConfig(() => {
   return {
-    plugins: [solid()],
+    plugins: [
+      solid(),
+      tildomPwa({
+        name: "kin.tildom",
+        short_name: "kin",
+        description: "A local-first personal relationship manager.",
+        theme_color: "#d73a49",
+      }),
+    ],
     resolve: {
       alias: {
         "~": fileURLToPath(new URL("./src", import.meta.url)),
@@ -21,6 +30,12 @@ export default defineConfig(() => {
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/sync/, ""),
         },
+      },
+    },
+    preview: {
+      headers: {
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Embedder-Policy": "require-corp",
       },
     },
     optimizeDeps: {

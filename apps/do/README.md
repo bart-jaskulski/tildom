@@ -2,7 +2,9 @@
 
 do.tildom is the Tildom task manager. It is a Solid/Vite app with local-first task storage in browser SQLite through `@tildom/browser-db`.
 
-The app includes a small Node/Hono server for AI task breakdown. It also contains an older sync route prototype under `src/routes/api/sync`; keep that code as reference until the dedicated `services/sync` architecture replaces it.
+The app is served as static files. AI task breakdown is provided by `services/api` at
+`/v1/do/breakdown`. It also contains an older sync route prototype under `src/routes/api/sync`;
+keep that code as reference until the dedicated `services/sync` architecture replaces it.
 
 ## Developing
 
@@ -10,6 +12,7 @@ From the repository root:
 
 ```bash
 pnpm install
+pnpm dev:api
 pnpm dev:do
 ```
 
@@ -21,17 +24,7 @@ pnpm dev
 
 The Vite dev server defaults to `http://localhost:5173`.
 
-## Optional AI Feature
-
-AI task breakdown uses `GOOGLE_API_KEY` when the server endpoint is called.
-
-For local development, create an app-local env file if needed:
-
-```bash
-cp .env.example .env
-```
-
-Then set `GOOGLE_API_KEY` in `.env`.
+AI task breakdown uses `GOOGLE_API_KEY` configured on `services/api`.
 
 The core task app does not require an AI key.
 
@@ -53,10 +46,11 @@ pnpm test
 pnpm build
 ```
 
-Run the production server locally after building:
+Preview the static production build locally:
 
 ```bash
-pnpm start
+pnpm build
+pnpm preview
 ```
 
 ## Docker
@@ -76,6 +70,5 @@ DO_APP_PORT=8081 docker compose --profile apps up --build
 ## Notes
 
 - Task data lives in browser storage, not in the Docker container.
-- The mounted `/app/storage` volume is for server-side sync experiments and future service boundaries.
-- `dist/`, `server-dist/`, and generated `public/sw.js` are build outputs.
+- `dist/` and generated service-worker assets are build outputs.
 - See the root [PROJECT.md](../../PROJECT.md) before expanding sync or billing behavior.

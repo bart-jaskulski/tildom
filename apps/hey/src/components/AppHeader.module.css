@@ -1,0 +1,16 @@
+.topbar { display: flex; align-items: stretch; width: 100%; max-width: 120ch; min-height: 48px; margin: 0 auto; padding-left: 1.5rem; border-bottom: 1px solid var(--border-color); background: var(--bg-canvas); }
+.wordmark { display: flex; align-items: center; gap: .75rem; margin-right: 1.5rem; padding: 0; border: 0; background: transparent; color: var(--syntax-keyword); cursor: pointer; font-size: 16px; font-weight: 900; letter-spacing: -.02em; }
+.wordmark img { width: 24px; height: 24px; flex: none; }
+nav { display: flex; flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+nav::-webkit-scrollbar { display: none; }
+nav button { min-height: 48px; padding: 0 2.2ch; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--fg-muted); cursor: pointer; font-size: 12px; white-space: nowrap; }
+nav button:hover { background: var(--bg-surface); color: var(--fg-default); }
+nav button.active { border-bottom-color: var(--syntax-keyword); background: var(--bg-surface); color: var(--fg-default); font-weight: 700; }
+.search { position: relative; display: flex; width: 27ch; min-width: 27ch; margin-left: auto; border-left: 1px solid var(--border-color); background: var(--bg-surface); }
+.search::before { position: absolute; top: 50%; left: 1.25ch; color: var(--syntax-keyword); content: ">"; font-weight: 700; pointer-events: none; transform: translateY(-50%); }
+.search:focus-within { width: min(44ch, 42vw); }
+.search input { width: 100%; min-height: 48px; padding: 0 1.5ch 0 3.5ch; border: 0; outline: 0; background: transparent; font-size: 13px; }
+.search input:focus { box-shadow: inset 2px 0 var(--syntax-keyword); }
+.search input::-webkit-search-cancel-button { display: none; }
+.searchToggle { display: none; }
+@media (max-width: 768px) { .topbar { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 48px; grid-template-rows: 48px 48px; min-height: 96px; padding: 0; } .wordmark { grid-column: 1; grid-row: 1; justify-self: start; margin: 0; padding-left: 1.5ch; } nav { grid-column: 1 / -1; grid-row: 2; } nav button { flex: 1 0 auto; padding: 0 1.5ch; } .search { position: absolute; top: 0; right: 0; z-index: 2; width: 48px; min-width: 48px; height: 48px; border-left: 0; overflow: hidden; } .search::before, .search input { display: none; } .search[data-open] { width: 100%; } .search[data-open] input { display: block; min-height: 48px; padding: 0 48px 0 1.5ch; } .searchToggle { display: grid; width: 48px; height: 48px; margin-left: auto; padding: 0; border: 0; background: transparent; cursor: pointer; place-items: center; } .searchToggle:hover, .searchToggle:focus-visible { background: var(--syntax-bg-active); } .searchToggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: square; stroke-width: 2; } }

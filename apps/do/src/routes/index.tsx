@@ -113,10 +113,10 @@ export default function Home() {
 
       {/* TUI Top Navigation Bar */}
       <header class="tui-topbar">
-        <div class="tui-brand">
-          <span class="tui-logo">~</span>
-          <span class="tui-title">do.tildom</span>
-        </div>
+        <A href="/" class="tui-brand">
+          <img class="tui-logo" src="/icon.svg" alt="" />
+          <span class="tui-title">tildom</span>
+        </A>
         <nav class="tui-nav">
           <A href="/" end>[ tasks.db ]</A>
           <A href="/settings">[ settings.json ]</A>

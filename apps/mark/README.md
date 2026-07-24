@@ -2,11 +2,11 @@
 
 mark.tildom is the Tildom bookmark and note manager. It is a Solid/Vite app that stores entries locally in browser SQLite via OPFS.
 
-The app has a small Node/Hono server for network-required helpers, currently bookmark metadata fetching. Bookmark data itself remains local-first in the browser.
+The app is served as static files. Bookmark metadata and AI tagging are provided by
+`services/api` at `/v1/mark/*`. Bookmark data itself remains local-first in the browser.
 
-## Optional AI Feature
-
-AI bookmark tagging uses `GOOGLE_API_KEY` when the `/api/tags` endpoint is called after saving a link. Missing keys, offline state, rate limits, and AI failures do not block saving; tags simply are not applied.
+AI bookmark tagging uses the API service's `GOOGLE_API_KEY`. Offline state, rate limits, and AI
+failures do not block saving; tags simply are not applied.
 
 ## Developing
 
@@ -14,6 +14,7 @@ From the repository root:
 
 ```bash
 pnpm install
+pnpm dev:api
 pnpm dev:mark
 ```
 
@@ -45,10 +46,11 @@ pnpm test
 pnpm build
 ```
 
-Run the production server locally:
+Preview the static production build locally:
 
 ```bash
-pnpm start
+pnpm build
+pnpm preview
 ```
 
 ## Docker
@@ -68,5 +70,5 @@ APP_PORT=8080 docker compose up --build
 ## Notes
 
 - Local data lives in browser storage, not in the Docker container.
-- `dist/`, `server-dist/`, and generated `public/sw.js` are build outputs.
+- `dist/` and generated service-worker assets are build outputs.
 - See the root [PROJECT.md](../../PROJECT.md) for the long-term sync and deployment plan.

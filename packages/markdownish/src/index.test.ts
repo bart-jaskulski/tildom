@@ -7,6 +7,13 @@ describe("renderMarkdownishToHtml", () => {
       .toBe("<p><strong>important</strong> &lt;script&gt;bad()&lt;/script&gt;</p>");
   });
 
+  it("completes unfinished Markdown only while streaming", () => {
+    expect(renderMarkdownishToHtml("This is **still streaming", { streaming: true }))
+      .toBe("<p>This is <strong>still streaming</strong></p>");
+    expect(renderMarkdownishToHtml("This is **still streaming"))
+      .toBe("<p>This is **still streaming</p>");
+  });
+
   it("optionally makes hashtags interactive outside links and code", () => {
     expect(renderMarkdownishToHtml("#hello `#code` [#link](https://example.com)", { hashtags: true }))
       .toContain('data-markdownish-tag="hello"');

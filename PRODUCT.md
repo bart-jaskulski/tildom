@@ -1,38 +1,78 @@
 # Product
 
-## Register
+<!-- impeccable:product-schema 1 -->
 
-product
+## Platform
+
+web
 
 ## Users
-People who value private, focused, high-density personal software that remains approachable on touch devices and fast from the keyboard.
+
+Privacy-conscious individuals who want focused personal tools for organizing information, work,
+relationships, and conversations. They value local ownership, offline access, keyboard speed,
+high information density, and interfaces that remain practical on touch devices.
 
 ## Product Purpose
-Tildom is a suite of personal applications for organizing information, maintaining relationships, completing work, and receiving contextual assistance. Its apps share a blocky, Neovim/TUI-inspired visual structure and a fast, touch-friendly local-first foundation.
 
-Offline-capable features must remain useful without a connection. Features that inherently require a network, such as model inference or remote synchronization, must identify that boundary clearly and preserve access to local data while unavailable.
+Tildom is a family of personal web applications: Mark for saved reading and notes, Do for tasks,
+Kin for relationships, and Hey for conversations with durable memory. Success means each app is
+useful on its own, keeps its canonical product data under the user's control, and remains available
+offline wherever the feature itself does not require a network.
 
-## Brand Personality
-* Minimalist
-* Structural
-* Keyboard-focused
-* Calm and direct
-* Personal without being intrusive
+## Positioning
 
-## Anti-references
-* Generic SaaS-cream templates
-* Curved, over-rounded card layouts (border-radius > 0px is banned)
-* Soft, wide shadows and gradient text headers
+Tildom combines browser-local SQLite applications with independent deployment and explicit network
+boundaries. Optional services extend local products with encrypted sync or network-required
+features; they do not silently become the owner of the user's data or turn the suite into a
+mandatory hosted platform.
 
-## Design Principles
-1. **Structural and Flat**: Rely on vertical guide rails, thin dividing borders, and solid block highlights. No nested cards or shadows.
-2. **Strict System Monospace**: Maintain clean, high-density system typography without external web font dependencies.
-3. **Desktop-Speed with Mobile-Safety**: Enable rapid keyboard navigation (Vim keybinds) while maintaining touch-friendly hit areas (≥44px) on mobile.
-4. **Local Data Has Primacy**: Product data belongs to the user and remains locally accessible. Network services are explicit extensions, not invisible owners of the experience.
-5. **Quiet by Default**: Surface information when it supports the user’s current decision. Keep implementation details, routine automation, and passive status out of primary flows.
+## Operating Context
+
+People use the apps on desktop and mobile browsers, often moving between quick capture, search,
+focused review, and detailed editing. The suite supports keyboard-driven use while keeping core
+actions accessible without memorized commands. It can be run from Tildom's hosted deployments or
+self-hosted as separate applications and services.
+
+## Capabilities and Constraints
+
+- Mark saves bookmarks, notes, discussions, and offline reading captures.
+- Do captures, structures, and completes tasks, with optional AI-assisted breakdown.
+- Kin stores people, profile details, notes, and relationships.
+- Hey stores conversations and inspectable memory, with network-required model responses.
+- Product data is canonical in browser SQLite/OPFS. Offline-capable behavior must not depend on a
+  configured server.
+- Sync is optional and encrypts snapshots in the browser before upload.
+- Network-required features must identify that boundary and preserve access to local data when
+  unavailable.
+- Each app owns its domain schema and behavior and remains independently deployable.
+- Shared code is extracted only after real reuse establishes a stable boundary.
+
+## Brand Commitments
+
+The product family is named Tildom, with short application names Mark, Do, Kin, and Hey. Its voice
+is calm, direct, personal without being intrusive, and free of unnecessary urgency. The established
+identity and interaction language are recorded in `DESIGN.md`.
+
+## Evidence on Hand
+
+Runnable implementations exist in `apps/mark`, `apps/do`, `apps/kin`, and `apps/hey`. Architecture,
+privacy boundaries, deployment direction, and self-hosting commitments are documented in
+`PROJECT.md`, `README.md`, and the application documentation. The repository contains no customer
+testimonials, adoption benchmarks, case studies, press claims, or pricing evidence; future work
+must not fabricate them.
+
+## Product Principles
+
+1. **Local data has primacy:** local access and ownership are product behavior, not fallback modes.
+2. **Network boundaries stay explicit:** remote computation and sync are optional, legible
+   extensions.
+3. **Each tool stays focused:** application domains and deployables remain independent.
+4. **Fast without exclusion:** keyboard efficiency complements, rather than replaces, accessible
+   touch and standard controls.
+5. **Quiet by default:** surface information when it supports the user's current decision.
 
 ## Accessibility & Inclusion
-* High-contrast default light mode theme.
-* Screen-reader semantic structure and keyboard-centric focus states.
-* Clear language without shame, judgment, or unnecessary urgency.
-* Essential actions remain available without requiring memorized keyboard commands.
+
+Core actions must support keyboard and touch use, clear focus and semantic structure, readable
+contrast, and reduced motion. Essential functionality cannot require memorized keyboard commands.
+Product language must avoid shame, judgment, manipulation, and unnecessary urgency.

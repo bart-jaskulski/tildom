@@ -1,11 +1,11 @@
-This document defines the visual standards and interactive behaviors for our suite of personal applications. The goal is to establish a unified, highly consistent design language inspired by modern, light-mode terminal interfaces (TUI) and tools like Golang's `bubbletea` or Neovim, while maintaining standard touch-friendly mobile usability.
+This document defines the visual standards and interactive behaviors for our suite of personal applications. The goal is a unified, highly consistent design language informed by light-mode code editors and text tools, while remaining unmistakably modern web software with touch-friendly mobile usability.
 
 ---
 
 ## 1. Core Philosophy
 
 * **Light Mode by Default:** Crisp, high-contrast, paper-like readability inspired by the "One Light" and "GitHub Light" color schemes.
-* **Terminal-Inspired structure, Not Terminal-Emulated:** The layout looks structured and blocky like a terminal, but behaves like a modern web application. We use standard HTML input forms instead of rigid command lines.
+* **Text-Tool-Informed, Not Terminal-Emulated:** Borrow monospace typography, concise labels, syntax color, and disciplined alignment. Do not recreate editor chrome: decorative command prompts, mode/status lines, window frames, or terminal output are not general-purpose page furniture.
 * **Minimal Visual Taste:** Prefer the fewest visible elements that let the user complete the task. Do not add status panels, sidebars, hints, instructional copy, or metadata just because the system knows it; show those only when they are actionable or required for the current decision.
 * **Progressive Enhancement:** Fully accessible on mobile via touch targets. Advanced desktop interactions (such as custom hotkeys or modes) are layered on top as progressive enhancements.
 * **Dense but Readable:** High information density without visual clutter. 
@@ -17,7 +17,7 @@ This document defines the visual standards and interactive behaviors for our sui
 To maintain a strict layout structure, we align elements to a simulated character-based grid.
 
 ### Grid Constraints
-* **Max-Width:** Content-heavy containers must not exceed `120ch` (120 characters wide) to preserve optimal reading line-length.
+* **Max-Width:** Use `120ch` as a soft maximum for dense reading and working content, not as a frame around the entire viewport. App backgrounds, header rules, and layout regions may span the available width; narrower text measures should be chosen for readability.
 * **Corners:** Strict `border-radius: 0px` across all apps. No rounded corners.
 * **Spacing Scale:** Spacing is defined in standardized steps, utilizing `ch` (character width) for horizontal alignment and `rem` or `px` for vertical padding.
 
@@ -47,26 +47,30 @@ Color variables are mapped to syntax-highlighting terms rather than layout descr
 | `--syntax-bg-active`| Focused state, active selection | `#e1e4e8` or `#dbedff` (soft gray/blue block) |
 | `--border-color` | Layout lines, structural divides | `#e1e4e8` (light gray) |
 
+### Application Icon Family
+
+Tildom icons use the interface's block-cursor language rather than letter tiles. Every icon has a
+full-bleed `--fg-default` field, one square `--syntax-keyword` red block, and a white geometry-only app glyph.
+Mark uses a bookmark ribbon, Do a checked square, Kin a three-node relationship graph, and Hey a
+prompt chevron with block cursor. Glyphs stay inside the central 50% safe zone, use fills or strokes
+at least 4/64 units wide, and never depend on fonts, gradients, rounded corners, or color alone.
+
 ---
 
 ## 4. Structural Elements & Borders
 
-To prevent layouts from looking claustrophobic, we use subtle layout lines instead of full boxes for every element.
+To prevent layouts from looking claustrophobic, use subtle layout lines instead of full boxes. Do not draw an outer window frame around the application.
 
 ```
-┌──────────────────────────────────────────────────┐
-│  Tab 1  │  Tab 2  │  Tab 3                       │
-├──────────────────────────────────────────────────┤
-│                                                  │
-│  ❯ Search: [________________]                     │
-│                                                  │
-│  │ Item Title                                    │
-│  │ Secondary info & comments (3)                 │
-│  │                                               │
-│  │ Active Item Title                             │
-│  │ Detailed notes show up here                   │
-│                                                  │
-└──────────────────────────────────────────────────┘
+  tildom    [ Tab 1 ]   [ Tab 2 ]   [ Tab 3 ]
+────────────────────────────────────────────────────
+  Search…
+
+  │ Item Title
+  │ Secondary info & comments (3)
+
+  │ Active Item Title
+  │ Detailed notes show up here
 ```
 
 ### Layout Rules
@@ -86,9 +90,10 @@ These interface elements are shared across all current and future apps in the se
 * Global search is a persistent control on desktop. On narrow mobile viewports, a search button opens the search field within the header without displacing the app identity or tabline.
 * Search results may span the app's primary data surfaces, but each result must identify its source and lead directly to the matching item.
 * The header uses the canvas background and thin dividers. It is not a floating card and does not cast a shadow.
+* Keep one continuous header canvas. Do not give the wordmark, individual tabs, search, or utility links alternating background panels merely to resemble editor chrome.
 
 ### B. Navigation (The Tabline)
-* **Desktop:** Displayed at the very top as flat, inline blocks mimicking Neovim tabs. Buffer extensions are encouraged (e.g., suffixing `.db`, `.json`, or `.conf`) to reinforce the text-editor look.
+* **Desktop:** Displayed at the top as quiet inline labels on the shared canvas. Show the active destination with weight and a thin bottom rule, not a filled tab block. Brackets and file-like suffixes (for example `.db`, `.json`, or `.conf`) are optional naming details, not a requirement for every surface.
 * **Mobile:** The exact same top tabline is kept, but configured as a horizontally scrollable container with hidden scrollbars, making it highly swipe-and-tap friendly.
 
 ```

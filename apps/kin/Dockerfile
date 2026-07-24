@@ -27,17 +27,10 @@ ENV VITE_SYNC_BASE_URL=$VITE_SYNC_BASE_URL
 COPY apps/kin apps/kin
 COPY packages packages
 RUN pnpm --filter kin.tildom build
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter kin.tildom deploy --prod --legacy /app
 
-FROM gcr.io/distroless/nodejs22-debian12:nonroot AS runtime
+FROM nginxinc/nginx-unprivileged:1.28-alpine AS runtime
 
-WORKDIR /app
-
-ENV NODE_ENV=production
-ENV PORT=3000
-
-COPY --from=build --chown=65532:65532 /app ./
+COPY docker/static-spa.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /repo/apps/kin/dist /usr/share/nginx/html
 
 EXPOSE 3000
-
-CMD ["server.mjs"]

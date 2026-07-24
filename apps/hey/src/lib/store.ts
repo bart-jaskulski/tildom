@@ -59,6 +59,12 @@ export const addMessage = async (chatId: string, role: Message["role"], body: st
   return message;
 };
 
+export const updateMessage = async (message: Message, body: string) => {
+  await exec("UPDATE messages SET body = ? WHERE id = ?", [body, message.id]);
+  await exec("UPDATE chats SET updated_at = ? WHERE id = ?", [Date.now(), message.chatId]);
+  return { ...message, body };
+};
+
 export const readChatDraft = async (chatId: string) => {
   const rows = await query<{ body: string }>("SELECT body FROM chat_drafts WHERE chat_id = ?", [chatId]);
   return rows[0]?.body ?? "";

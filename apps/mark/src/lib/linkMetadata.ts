@@ -3,6 +3,9 @@ export type LinkMetadata = {
   excerpt: string | null;
 };
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+  || (import.meta.env.DEV ? "http://localhost:8788" : "https://api.tildom.app");
+
 const normalizeMetadataValue = (value: unknown) => {
   if (typeof value !== "string") {
     return null;
@@ -14,7 +17,7 @@ const normalizeMetadataValue = (value: unknown) => {
 
 export const fetchLinkMetadata = async (url: string): Promise<LinkMetadata> => {
   try {
-    const response = await fetch("/api/metadata", {
+    const response = await fetch(`${API_BASE_URL}/v1/mark/metadata`, {
       method: "POST",
       headers: {
         Accept: "application/json",

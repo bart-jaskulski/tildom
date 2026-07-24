@@ -5,8 +5,11 @@ type ChatEvent =
   | { type: "done"; memories: Array<{ path: string; content: string }> }
   | { type: "error"; error: string };
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+  || (import.meta.env.DEV ? "http://localhost:8788" : "https://api.tildom.app");
+
 export const generateChatTitle = async (message: string) => {
-  const response = await fetch("/api/title", {
+  const response = await fetch(`${API_BASE_URL}/v1/hey/title`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message }),
@@ -20,10 +23,12 @@ export const streamChat = async (
   memories: MemoryFile[],
   settings: Settings,
   onText: (text: string) => void,
+  signal?: AbortSignal,
 ) => {
-  const response = await fetch("/api/chat", {
+  const response = await fetch(`${API_BASE_URL}/v1/hey/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    signal,
     body: JSON.stringify({
       messages: messages.map(({ role, body }) => ({ role, body })),
       memories: memories.map(({ path, content }) => ({ path, content })),

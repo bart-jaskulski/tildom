@@ -5,7 +5,7 @@ This document defines the visual standards and interactive behaviors for our sui
 ## 1. Core Philosophy
 
 * **Light Mode by Default:** Crisp, high-contrast, paper-like readability inspired by the "One Light" and "GitHub Light" color schemes.
-* **Terminal-Inspired structure, Not Terminal-Emulated:** The layout looks structured and blocky like a terminal, but behaves like a modern web application. We use standard HTML input forms instead of rigid command lines.
+* **Text-Tool-Informed, Not Terminal-Emulated:** Borrow monospace typography, concise labels, syntax color, and disciplined alignment. Do not recreate editor chrome: decorative command prompts, mode/status lines, window frames, or terminal output are not general-purpose page furniture.
 * **Progressive Enhancement:** Fully accessible on mobile via touch targets. Advanced desktop interactions (such as custom hotkeys or modes) are layered on top as progressive enhancements.
 * **Dense but Readable:** High information density without visual clutter. 
 
@@ -80,7 +80,7 @@ To prevent layouts from looking claustrophobic, we use subtle layout lines inste
 These interface elements are shared across all current and future apps in the series.
 
 ### A. Navigation (The Tabline)
-* **Desktop:** Displayed at the very top as flat, inline blocks mimicking Neovim tabs. Buffer extensions are encouraged (e.g., suffixing `.db`, `.json`, or `.conf`) to reinforce the text-editor look.
+* **Desktop:** Displayed at the top as quiet inline labels on one continuous header canvas. Show the active destination with weight and a thin bottom rule, not a filled tab block. Brackets and file-like suffixes are optional naming details, not a requirement for every surface.
 * **Mobile:** The exact same top tabline is kept, but configured as a horizontally scrollable container with hidden scrollbars, making it highly swipe-and-tap friendly.
 
 ```

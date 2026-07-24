@@ -29,9 +29,11 @@ Tildom is managed via a standard **pnpm workspace**.
 
 ### Workspace Layout
 - `apps/` — Deployable frontend applications.
+  - `apps/home/` — Suite portal and trust page.
   - `apps/mark/` — Bookmark & note manager.
   - `apps/do/` — Task manager.
   - `apps/kin/` — Personal relationship manager.
+  - `apps/hey/` — Personal conversation app.
 - `services/` — Optional backend services.
   - `services/sync/` — Dumb, encrypted snapshot sync service (`sync.tildom.app`).
 - `packages/` — Shared libraries, extracted **only under reuse pressure**.
@@ -45,9 +47,11 @@ Tildom is managed via a standard **pnpm workspace**.
 ### Development & Verification Commands
 Always run these scripts from the **repository root**:
 - **Launch Development Servers**:
+  - `pnpm dev:home` — Runs Home
   - `pnpm dev:mark` — Runs Mark (defaults to `http://localhost:5173`)
   - `pnpm dev:do` — Runs Do
   - `pnpm dev:kin` — Runs Kin
+  - `pnpm dev:hey` — Runs Hey
 - **Typecheck & Tests**:
   - `pnpm typecheck` / `pnpm typecheck:mark`
   - `pnpm test` / `pnpm test:do`
@@ -59,7 +63,7 @@ Always run these scripts from the **repository root**:
 ---
 
 ## 3. Design System & CSS Tokens
-Tildom implements a unique **TUI-inspired (Terminal User Interface) aesthetic** that looks structural and blocky like a terminal, but behaves like a highly polished, responsive modern web application.
+Tildom uses a **text-tool-informed aesthetic**: monospace, syntax color, concise labels, and disciplined alignment inside a polished responsive web application. It is not a terminal or editor simulation.
 
 ### Visual Constraints
 - **Light Mode Default**: Crisp, high-contrast, paper-like background. Avoid dark mode assumptions unless requested.
@@ -68,7 +72,8 @@ Tildom implements a unique **TUI-inspired (Terminal User Interface) aesthetic** 
   font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   ```
 - **Corners**: Flat `border-radius: 0px` globally. No rounded corners.
-- **Layout Margins**: Maximum line-width of `120ch` for content containers to maintain optimal readability.
+- **Layout Margins**: Treat `120ch` as a soft maximum for dense reading and working content, not as an outer viewport frame. Backgrounds, header rules, and layout regions may span the available width.
+- **Avoid Editor Chrome**: Do not add decorative command prompts, mode/status lines, outer window frames, or alternating navbar panels solely to imitate Neovim or a terminal.
 - **Layout Lines & Divider Rules**:
   - Do not wrap lists in heavy cards or full boxes.
   - Use **Vertical Guide Rails** (`border-left: 2px solid var(--border-color)`) to group list items or thread components (e.g. comments).
@@ -91,7 +96,7 @@ Use these semantic variables to style interactive components and containers:
 | `--border-color` | Layout dividers, tablines, rails | `#e1e4e8` (light gray) |
 
 ### Key UI Elements
-1. **The Tabline**: Flat, Neovim-style top navigation blocks (e.g. `[ bookmarks.db ] [ settings.json ]`). Responsive horizontally scrolling container on mobile.
+1. **The Tabline**: Quiet inline navigation on one continuous header canvas (e.g. `[ bookmarks.db ] [ settings.json ]`). Use weight and a thin bottom rule for the active destination, not filled blocks or alternating backgrounds. Keep it horizontally scrollable on mobile.
 2. **The "Block Cursor" Selection**: Selection, hover, or active items use a solid background highlight block (`var(--syntax-bg-active)`) rather than shadows or depth transitions:
    ```
    Unselected:   Link Title

@@ -2,12 +2,13 @@
 
 import { shouldHandleOfflineNavigation } from "~/lib/serviceWorkerRouting";
 
-declare const self: ServiceWorkerGlobalScope;
-declare const __PWA_ASSETS__: readonly string[];
+declare const self: ServiceWorkerGlobalScope & {
+  __WB_MANIFEST: Array<{ url: string; revision: string | null }>;
+};
 
 const NAVIGATION_CACHE = "hey-navigation-v1";
 const STATIC_CACHE = "hey-static-v1";
-const STATIC_ASSETS = __PWA_ASSETS__;
+const STATIC_ASSETS = self.__WB_MANIFEST.map(({ url }) => `/${url.replace(/^\/+/, "")}`);
 const scoped = (path: string) => new URL(path, self.registration.scope).toString();
 
 const cacheShell = async () => {
@@ -46,7 +47,7 @@ self.addEventListener("fetch", (event) => {
   if (url.origin === self.location.origin && (url.pathname.startsWith("/assets/") || STATIC_ASSETS.includes(url.pathname))) {
     event.respondWith(
       caches.open(STATIC_CACHE).then(async (cache) => {
-        const cached = await cache.match(event.request);
+        const cached = await cache.match(event.request, { ignoreVary: true });
         if (cached) return cached;
         const response = await fetch(event.request);
         if (response.ok) await cache.put(event.request, response.clone());

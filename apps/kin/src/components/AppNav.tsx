@@ -40,7 +40,10 @@ export default function AppNav(props: AppNavProps) {
 
   return (
     <header class={styles.topbar}>
-      <A href="/" class={styles.title}>tildom</A>
+      <A href="/" class={styles.title}>
+        <img class={styles.logo} src="/icon.svg" alt="" />
+        <span>tildom</span>
+      </A>
 
       <nav class={styles.nav} aria-label="Primary">
         <A href="/" aria-current={props.active === "people" ? "page" : undefined}>[ people.db ]</A>

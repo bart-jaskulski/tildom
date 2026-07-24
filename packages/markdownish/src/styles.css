@@ -2,6 +2,18 @@
   overflow-wrap: anywhere;
 }
 
+.markdownish :is(img, pre, table) {
+  max-width: 100%;
+}
+
+.markdownish :is(pre, table) {
+  overflow-x: auto;
+}
+
+.markdownish table {
+  display: block;
+}
+
 .markdownish :is(strong, em, del)::before,
 .markdownish :is(strong, em, del)::after,
 .markdownish :is(h1, h2, h3, h4, h5, h6)::before,

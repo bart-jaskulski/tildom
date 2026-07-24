@@ -135,23 +135,16 @@ select {
   font-weight: bold;
 }
 
-.tui-brand a {
+.tui-brand,
+.tui-brand:hover {
   color: inherit;
-}
-.tui-brand a:hover {
   text-decoration: none;
 }
 
 .tui-logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--syntax-keyword);
-  color: var(--bg-surface) !important;
   width: 24px;
   height: 24px;
-  font-weight: 900;
-  font-size: 13px;
+  flex: none;
 }
 
 .tui-title {
@@ -338,7 +331,7 @@ select {
   }
   .tui-brand {
     padding: 0.75rem 1.5ch;
-    justify-content: space-between;
+    justify-content: flex-start;
   }
   .tui-nav {
     overflow-x: auto;

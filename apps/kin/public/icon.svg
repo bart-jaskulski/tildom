@@ -1,5 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
-  <rect width="100" height="100" fill="#24292e" />
-  <rect x="10" y="10" width="80" height="80" fill="none" stroke="#d73a49" stroke-width="8" />
-  <text x="50" y="65" font-family="monospace" font-size="55" font-weight="900" fill="#fafafa" text-anchor="middle">K</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="kin.tildom">
+  <rect width="64" height="64" fill="#24292e"/>
+  <rect x="8" y="8" width="48" height="48" fill="#d73a49"/>
+  <path d="m22 22 10 20 10-20M22 22h20" fill="none" stroke="#fff" stroke-width="5"/>
+  <path fill="#fff" d="M17 17h10v10H17zm20 0h10v10H37zM27 37h10v10H27z"/>
 </svg>

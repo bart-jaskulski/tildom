@@ -23,6 +23,9 @@ type AskClarificationResult = {
 
 export type BreakdownTaskResult = CreateTasksResult | AskClarificationResult;
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+  || (import.meta.env.DEV ? "http://localhost:8788" : "https://api.tildom.app");
+
 type TaskPromptProps = {
   visible: boolean;
 };
@@ -158,7 +161,7 @@ export default function TaskPrompt(props: TaskPromptProps) {
     setPending(true);
     setResult(null);
     try {
-      const response = await fetch("/api/breakdown", {
+      const response = await fetch(`${API_BASE_URL}/v1/do/breakdown`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

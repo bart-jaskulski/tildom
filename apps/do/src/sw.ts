@@ -8,14 +8,9 @@ import {
 } from "~/lib/serviceWorkerRouting";
 
 declare const self: ServiceWorkerGlobalScope;
-declare const __PWA_ASSETS__: readonly string[];
 
 const NAVIGATION_CACHE_NAME = "do-tildom-navigation-v1";
 const ROOT_DOCUMENT_PATH = "/";
-const PRECACHE_ASSETS = __PWA_ASSETS__.map((url) => ({
-  url,
-  revision: null,
-}));
 
 const toScopedDocumentUrl = (path: string) => new URL(path, self.registration.scope).toString();
 
@@ -65,7 +60,7 @@ const errorResponse = () =>
     },
   });
 
-precacheAndRoute(PRECACHE_ASSETS);
+precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 
 self.addEventListener("install", (event) => {

@@ -5,9 +5,12 @@ export type TagSuggestionInput = {
   existingTags: string[];
 };
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+  || (import.meta.env.DEV ? "http://localhost:8788" : "https://api.tildom.app");
+
 export const fetchSuggestedTags = async (input: TagSuggestionInput) => {
   try {
-    const response = await fetch("/api/tags", {
+    const response = await fetch(`${API_BASE_URL}/v1/mark/tags`, {
       method: "POST",
       headers: {
         Accept: "application/json",
@@ -26,4 +29,3 @@ export const fetchSuggestedTags = async (input: TagSuggestionInput) => {
     return [];
   }
 };
-

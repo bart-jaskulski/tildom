@@ -66,7 +66,7 @@ describe("entryStore mutations", () => {
     await createEntry("https://example.com/article");
 
     expect(fetch).toHaveBeenCalledWith(
-      "/api/metadata",
+      "http://localhost:8788/v1/mark/metadata",
       expect.objectContaining({
         method: "POST",
         headers: { Accept: "application/json", "Content-Type": "application/json" },

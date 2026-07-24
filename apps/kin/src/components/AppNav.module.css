@@ -13,6 +13,7 @@
 .title {
   display: flex;
   align-items: center;
+  gap: 0.75rem;
   margin-right: 1.5rem;
   color: var(--syntax-keyword);
   font-size: 16px;
@@ -23,6 +24,12 @@
   &:hover {
     text-decoration: none;
   }
+}
+
+.logo {
+  width: 24px;
+  height: 24px;
+  flex: none;
 }
 
 .nav {

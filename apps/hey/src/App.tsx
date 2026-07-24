@@ -30,30 +30,19 @@ import {
   readSettings,
   renameChat,
   titleChat,
+  updateMessage,
   writeMemoryFile,
   writeChatDraft,
   writeSettings,
 } from "./lib/store";
 import type { Chat, MemoryFile, Message, SearchResult, Settings, Surface } from "./lib/types";
 import { pwaInstall } from "./lib/pwaInstall";
+import AppHeader from "./components/AppHeader";
+import ChatWorkspace from "./components/ChatWorkspace";
+import MemoryWorkspace from "./components/MemoryWorkspace";
+import { compactDate } from "./lib/presentation";
 
-const compactDate = (timestamp: number) => {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const minutes = Math.max(0, Math.floor((now.getTime() - timestamp) / 60_000));
-  if (minutes < 1) return "now";
-  if (minutes < 60) return `${minutes}m`;
-  const sameDay = date.toDateString() === now.toDateString();
-  if (sameDay) return `today · ${time(timestamp)}`;
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  if (date.toDateString() === yesterday.toDateString()) return "yesterday";
-  if (minutes < 7 * 24 * 60) return `${Math.floor(minutes / 1_440)}d`;
-  return date.toLocaleDateString([], { month: "short", day: "numeric" });
-};
-
-const time = (timestamp: number) =>
-  new Intl.DateTimeFormat([], { hour: "2-digit", minute: "2-digit" }).format(timestamp);
+const time = (timestamp: number) => new Intl.DateTimeFormat([], { hour: "2-digit", minute: "2-digit" }).format(timestamp);
 
 const searchTerms = (query: string): string[] => query.toLowerCase().match(/[\p{L}\p{N}_/-]+/gu) ?? [];
 
@@ -83,18 +72,21 @@ export default function App() {
   const [chatMenuOpen, setChatMenuOpen] = createSignal(false);
   const [loading, setLoading] = createSignal(true);
   const [sending, setSending] = createSignal(false);
+  const [editingMessage, setEditingMessage] = createSignal<Message>();
+  const [isAtBottom, setIsAtBottom] = createSignal(true);
   const [syncBusy, setSyncBusy] = createSignal(false);
   const [syncError, setSyncError] = createSignal("");
   const [pairUrl, setPairUrl] = createSignal("");
   const [joinSecret, setJoinSecret] = createSignal<string | null>(null);
   const [error, setError] = createSignal("");
   const [toast, setToast] = createSignal("");
-  let searchInput: HTMLInputElement | undefined;
   let renameDialog: HTMLDialogElement | undefined;
   let deleteDialog: HTMLDialogElement | undefined;
   let pairDialog: HTMLDialogElement | undefined;
   let renameInput: HTMLInputElement | undefined;
   let composerInput: HTMLTextAreaElement | undefined;
+  let transcript: HTMLDivElement | undefined;
+  let generation: AbortController | undefined;
 
   const activeChat = createMemo(() => chats().find((chat) => chat.id === activeChatId()));
   const activeMemory = createMemo(() => memoryFiles().find((file) => file.path === activeMemoryPath()));
@@ -143,6 +135,7 @@ export default function App() {
     setMessages(await listMessages(id));
     setDraft(await readChatDraft(id));
     queueMicrotask(() => resizeComposer());
+    queueMicrotask(() => scrollToBottom());
     setMobileChatOpen(true);
     setSearch("");
     setMobileSearchOpen(false);
@@ -194,24 +187,49 @@ export default function App() {
 
   const resizeComposer = () => {
     if (!composerInput) return;
-    composerInput.style.height = "0";
+    composerInput.style.height = draft() ? "0" : "";
+    if (!draft()) return;
     composerInput.style.height = `${Math.min(composerInput.scrollHeight, window.innerHeight * .3)}px`;
+  };
+
+  const scrollToBottom = (behavior: ScrollBehavior = "auto") => {
+    transcript?.scrollTo({ top: transcript.scrollHeight, behavior });
+    setIsAtBottom(true);
+  };
+
+  const stop = () => generation?.abort();
+
+  const beginMessageEdit = (message: Message) => {
+    setEditingMessage(message);
+    setDraft(message.body);
+    queueMicrotask(() => {
+      resizeComposer();
+      composerInput?.focus();
+      composerInput?.setSelectionRange(message.body.length, message.body.length);
+    });
   };
 
   const send = async () => {
     const body = draft().trim();
     const preferences = settings();
     if (!body || !activeChatId() || !preferences || sending()) return;
+    const editedMessage = editingMessage();
     setSending(true);
+    setEditingMessage(undefined);
     setDraft("");
     queueMicrotask(() => resizeComposer());
+    queueMicrotask(() => scrollToBottom());
     await writeChatDraft(activeChatId(), "");
     const chatId = activeChatId();
     let userMessage: Message | undefined;
+    let replyBody = "";
+    let renderFrame = 0;
     const pendingId = crypto.randomUUID();
     try {
       const isFirstUserMessage = !messages().some((message) => message.role === "user");
-      userMessage = await addMessage(chatId, "user", body);
+      userMessage = editedMessage
+        ? await updateMessage(editedMessage, body)
+        : await addMessage(chatId, "user", body);
       if (isFirstUserMessage) {
         void generateChatTitle(body)
           .then(async (title) => {
@@ -220,7 +238,9 @@ export default function App() {
           })
           .catch(() => {});
       }
-      const requestMessages = [...messages(), userMessage];
+      const requestMessages = editedMessage
+        ? messages().map((message) => message.id === editedMessage.id ? userMessage! : message)
+        : [...messages(), userMessage];
       setMessages([...requestMessages, {
         id: pendingId,
         chatId,
@@ -228,13 +248,20 @@ export default function App() {
         body: "",
         createdAt: Date.now(),
       }]);
-      let replyBody = "";
+      queueMicrotask(() => scrollToBottom());
+      generation = new AbortController();
       const memoryWrites = await streamChat(requestMessages, memoryFiles(), preferences, (text) => {
         replyBody += text;
-        setMessages((current) => current.map((message) =>
-          message.id === pendingId ? { ...message, body: replyBody } : message
-        ));
-      });
+        if (renderFrame) return;
+        renderFrame = requestAnimationFrame(() => {
+          renderFrame = 0;
+          setMessages((current) => current.map((message) =>
+            message.id === pendingId ? { ...message, body: replyBody } : message
+          ));
+          if (isAtBottom()) scrollToBottom();
+        });
+      }, generation.signal);
+      if (renderFrame) cancelAnimationFrame(renderFrame);
       if (!replyBody.trim()) throw new Error("Hey returned an empty response.");
       const reply = await addMessage(chatId, "assistant", replyBody);
       setMessages((current) => current.map((message) => message.id === pendingId ? reply : message));
@@ -242,13 +269,22 @@ export default function App() {
       if (memoryWrites.length) setMemoryFiles(await listMemoryFiles());
       await refreshChats(chatId);
     } catch (cause) {
-      setMessages((current) => current.filter((message) => message.id !== pendingId));
+      const wasStopped = generation?.signal.aborted === true;
+      if (wasStopped && replyBody.trim()) {
+        const reply = await addMessage(chatId, "assistant", replyBody);
+        setMessages((current) => current.map((message) => message.id === pendingId ? reply : message));
+        await refreshChats(chatId);
+      } else {
+        setMessages((current) => current.filter((message) => message.id !== pendingId));
+      }
       if (!userMessage) {
         setDraft(body);
         await writeChatDraft(chatId, body);
       }
-      showToast(cause instanceof Error ? cause.message : String(cause));
+      if (!wasStopped) showToast(cause instanceof Error ? cause.message : String(cause));
     } finally {
+      if (renderFrame) cancelAnimationFrame(renderFrame);
+      generation = undefined;
       setSending(false);
     }
   };
@@ -336,41 +372,7 @@ export default function App() {
 
   return (
     <div class="app-shell">
-      <header class="topbar">
-        <button class="wordmark" type="button" onClick={() => setSurface("chats")}>tildom</button>
-        <nav aria-label="Primary">
-          <button classList={{ active: surface() === "chats" }} onClick={() => setSurface("chats")}>[ chats.db ]</button>
-          <button classList={{ active: surface() === "memory" }} onClick={() => setSurface("memory")}>[ memory/ ]</button>
-          <button classList={{ active: surface() === "settings" }} onClick={() => setSurface("settings")}>[ settings.json ]</button>
-        </nav>
-        <div class="global-search" data-open={mobileSearchOpen() || undefined} role="search">
-          <button
-            class="search-toggle"
-            type="button"
-            aria-label={mobileSearchOpen() ? "Close search" : "Search chats and memory"}
-            aria-expanded={mobileSearchOpen()}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => {
-              const open = !mobileSearchOpen();
-              setMobileSearchOpen(open);
-              if (open) queueMicrotask(() => searchInput?.focus());
-            }}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d={mobileSearchOpen() ? "M6 6l12 12M18 6 6 18" : "m21 21-4.35-4.35m2.35-5.15a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"} />
-            </svg>
-          </button>
-          <input
-            ref={searchInput}
-            type="search"
-            value={search()}
-            placeholder="search chats and memory"
-            aria-label="Search chats and memory"
-            onInput={(event) => setSearch(event.currentTarget.value)}
-            onBlur={() => !search() && setMobileSearchOpen(false)}
-          />
-        </div>
-      </header>
+      <AppHeader {...{ surface, setSurface, search, setSearch, mobileSearchOpen, setMobileSearchOpen }} />
 
       <main>
         <Show when={!loading()} fallback={<div class="state">opening hey.sqlite3…</div>}>
@@ -401,149 +403,19 @@ export default function App() {
             </Show>
 
             <Show when={!search().trim() && surface() === "chats"}>
-              <section class="chat-layout" classList={{ "mobile-chat-open": mobileChatOpen() }}>
-                <aside class="chat-ledger" aria-label="Conversations">
-                  <div class="rail-actions">
-                    <button
-                      class="new-chat"
-                      type="button"
-                      onClick={async () => {
-                        const id = await createChat();
-                        await refreshChats(id);
-                        setMobileChatOpen(true);
-                      }}
-                    >+ new chat</button>
-                  </div>
-                  <Show when={chats().length} fallback={<p class="empty">No conversations yet.</p>}>
-                    <For each={chats()}>{(chat, index) =>
-                      <button
-                        class="chat-row"
-                        classList={{ active: chat.id === activeChatId() }}
-                        onClick={() => void openChat(chat.id)}
-                      >
-                        <span class="line-number">{String(index() + 1).padStart(2, "0")}</span>
-                        <strong>{chat.title}</strong>
-                        <time title={new Date(chat.updatedAt).toLocaleString()}>{compactDate(chat.updatedAt)}</time>
-                      </button>
-                    }</For>
-                  </Show>
-                </aside>
-
-                <section class="conversation" aria-label={activeChat()?.title || "Conversation"}>
-                  <header class="conversation-header">
-                    <button class="mobile-back" type="button" aria-label="Back to chats" onClick={() => setMobileChatOpen(false)}>←</button>
-                    <h1>{activeChat()?.title || "New conversation"}</h1>
-                    <div class="conversation-actions">
-                      <button
-                        type="button"
-                        aria-label="Chat actions"
-                        aria-expanded={chatMenuOpen()}
-                        onClick={() => setChatMenuOpen((open) => !open)}
-                      >···</button>
-                      <Show when={chatMenuOpen()}>
-                        <div class="conversation-menu">
-                          <button type="button" onClick={beginRename}>rename</button>
-                          <button
-                            type="button"
-                            class="danger-link"
-                            onClick={() => {
-                              setChatMenuOpen(false);
-                              deleteDialog?.showModal();
-                            }}
-                          >delete</button>
-                        </div>
-                      </Show>
-                    </div>
-                  </header>
-
-                  <div class="transcript" aria-live="polite">
-                    <Show when={messages().length} fallback={
-                      <div class="empty-chat">
-                        <strong>This conversation is empty.</strong>
-                        <p>You can start with what happened, what feels difficult, or simply say hello.</p>
-                      </div>
-                    }>
-                      <For each={messages()}>{(message) =>
-                        <article class={`message ${message.role}`}>
-                          <header><span>{message.role === "user" ? "you" : "hey"}</span><time>{time(message.createdAt)}</time></header>
-                          <Show
-                            when={message.body}
-                            fallback={<p>thinking<span aria-hidden="true">…</span></p>}
-                          >
-                            <For each={message.body.split("\n\n")}>{(paragraph) => <p>{paragraph}</p>}</For>
-                          </Show>
-                        </article>
-                      }</For>
-                    </Show>
-                  </div>
-
-                  <form class="composer" onSubmit={(event) => { event.preventDefault(); void send(); }}>
-                    <label class="visually-hidden" for="message">Write a message</label>
-                    <div>
-                      <textarea
-                        ref={composerInput}
-                        id="message"
-                        value={draft()}
-                        placeholder="Write a message…"
-                        rows="1"
-                        onInput={(event) => {
-                          const body = event.currentTarget.value;
-                          setDraft(body);
-                          resizeComposer();
-                          if (activeChatId()) void writeChatDraft(activeChatId(), body);
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" && !event.shiftKey) {
-                            event.preventDefault();
-                            void send();
-                          }
-                        }}
-                      />
-                      <button type="submit" disabled={!draft().trim() || sending()}>send ↵</button>
-                    </div>
-                  </form>
-                </section>
-              </section>
+              <ChatWorkspace
+                chats={chats} activeChat={activeChat} activeChatId={activeChatId} messages={messages} draft={draft} setDraft={setDraft}
+                sending={sending} editingMessage={editingMessage} mobileOpen={mobileChatOpen} setMobileOpen={setMobileChatOpen}
+                menuOpen={chatMenuOpen} setMenuOpen={setChatMenuOpen} atBottom={isAtBottom} setAtBottom={setIsAtBottom}
+                openChat={openChat} createChat={async () => { const id = await createChat(); await refreshChats(id); setMobileChatOpen(true); }}
+                editMessage={beginMessageEdit} send={send} stop={stop} scrollToBottom={scrollToBottom} openRename={beginRename}
+                openDelete={() => { setChatMenuOpen(false); deleteDialog?.showModal(); }} resizeComposer={resizeComposer}
+                bindTranscript={(element) => { transcript = element; }} bindComposer={(element) => { composerInput = element; }}
+              />
             </Show>
 
             <Show when={!search().trim() && surface() === "memory"}>
-              <section class="memory-layout" classList={{ "mobile-memory-open": mobileMemoryOpen() }}>
-                <aside class="file-list">
-                  <For each={memoryGroups()}>{([directory, files]) =>
-                    <section class="file-group">
-                      <p>{directory ? `▾ ${directory}/` : "memory/"}</p>
-                      <For each={files}>{(file) =>
-                        <button
-                          class="file-row"
-                          classList={{ active: file.path === activeMemoryPath() }}
-                          onClick={() => void openMemory(file.path)}
-                        >
-                          <span aria-hidden="true">·</span>
-                          <span>{directory ? file.path.slice(directory.length + 1) : file.path}</span>
-                        </button>
-                      }</For>
-                    </section>
-                  }</For>
-                </aside>
-                <section class="memory-editor">
-                  <div class="editor-heading">
-                    <button class="mobile-back" type="button" aria-label="Back to memory files" onClick={() => setMobileMemoryOpen(false)}>←</button>
-                    <h1>{activeMemory()?.path}</h1>
-                  </div>
-                  <textarea
-                    aria-label={`Edit ${activeMemory()?.path || "memory file"}`}
-                    value={memoryDraft()}
-                    onInput={(event) => setMemoryDraft(event.currentTarget.value)}
-                  />
-                  <footer>
-                    <button
-                      class="button primary"
-                      disabled={!activeMemory() || memoryDraft() === activeMemory()?.content}
-                      onClick={() => void saveMemory()}
-                    >save file</button>
-                  </footer>
-                </section>
-              </section>
+              <MemoryWorkspace groups={memoryGroups} active={activeMemory} activePath={activeMemoryPath} draft={memoryDraft} setDraft={setMemoryDraft} mobileOpen={mobileMemoryOpen} setMobileOpen={setMobileMemoryOpen} openFile={openMemory} save={saveMemory} />
             </Show>
 
             <Show when={!search().trim() && surface() === "settings" && settings()}>

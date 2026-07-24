@@ -1,9 +1,11 @@
 import { micromark } from "micromark";
 import { gfm, gfmHtml } from "micromark-extension-gfm";
+import remend from "remend";
 import sanitizeHtml from "sanitize-html";
 
 type RenderMarkdownishOptions = {
   hashtags?: boolean;
+  streaming?: boolean;
   tasks?: boolean;
 };
 
@@ -11,7 +13,9 @@ export const renderMarkdownishToHtml = (
   input: string,
   options: RenderMarkdownishOptions = {},
 ) => {
-  const markdown = input.trim();
+  const markdown = options.streaming
+    ? remend(input.trim(), { linkMode: "text-only" })
+    : input.trim();
   if (!markdown) return "";
 
   let taskIndex = 0;

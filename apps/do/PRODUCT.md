@@ -1,27 +1,66 @@
-# Product
+# Do
 
-## Register
+<!-- impeccable:product-schema 1 -->
 
-product
+## Platform
+
+web
 
 ## Users
-Neurodivergent users or anyone needing help breaking down complex tasks into manageable chunks using Generative AI.
+
+People who need a low-friction way to capture and complete tasks, especially neurodivergent users
+and anyone who benefits from breaking complex work into manageable steps.
 
 ## Product Purpose
-A local-first AI task manager designed to help users structure, refine, and complete tasks using offline-first database persistence (cr-sqlite) and AI breakdown assistance.
 
-## Brand Personality
-Modern, light-mode, text-editor TUI inspired. High density, clean, structured, minimalist.
+Do is a local-first task manager for capturing, structuring, refining, and completing work. It
+reduces the effort of turning an unclear or intimidating task into concrete next actions while
+keeping ordinary task management available without a network.
 
-## Anti-references
-SaaS cream-colored, over-rounded ghost cards with heavy drop shadows, over-animated, complex and bloated workflows.
-Verbose utility panels, instructional hints, and technical status copy that do not help the current task, workspace, sync, or pairing decision.
+## Positioning
 
-## Design Principles
-1. Dense but Readable: Mono spacing and high information density.
-2. Structured simplicity: Using clear guide rails and borders rather than nested boxes.
-3. Accessible TUI: Desktop vim bindings combined with solid mobile-friendly touch targets (min 44px hit-box).
-4. Minimal Surface Area: Keep visible labels, metadata, and controls limited to what helps the current action.
+Do makes AI assistance an optional task-breakdown capability inside a browser-local task manager,
+not the storage layer or prerequisite for using the product. The user's task database remains
+canonical even when model access or sync is unavailable.
+
+## Operating Context
+
+Users move between rapid task capture, list navigation, task detail, reordering, and completion on
+desktop and mobile browsers. AI breakdown is used when a task needs help becoming actionable.
+Settings contain optional sync, pairing, local data controls, and keyboard preferences.
+
+## Capabilities and Constraints
+
+- Store and manage tasks in browser SQLite/OPFS.
+- Capture, edit, order, navigate, and complete tasks offline.
+- Request AI-assisted task breakdown through the application server when configured and online.
+- Optionally synchronize an encrypted local vault and pair devices.
+- Keep model credentials server-side and degrade gracefully when network features are unavailable.
+- Preserve keyboard-driven workflows without making shortcuts the only path to an action.
+
+## Brand Commitments
+
+Do belongs to the Tildom family and uses a calm, direct voice. It should help users regain clarity
+without shaming unfinished work, overstating urgency, or turning implementation status into primary
+product content. Visual and interaction commitments are recorded in the root `DESIGN.md`.
+
+## Evidence on Hand
+
+The runnable implementation, tests, and server integration live in `apps/do`. The repository
+demonstrates local task persistence, AI integration, and workspace deployment. It contains no
+customer testimonials, clinical claims, adoption benchmarks, or outcome studies; future work must
+not fabricate them.
+
+## Product Principles
+
+1. **Capture before ceremony:** adding a task should take less effort than holding it in memory.
+2. **Make the next step clearer:** structure exists to reduce overwhelm and support action.
+3. **Local work survives network loss:** task access and ordinary management remain available.
+4. **AI is assistance, not authority:** generated breakdowns remain optional and user-controlled.
+5. **Keep the surface focused:** show only what supports the current task decision.
 
 ## Accessibility & Inclusion
-Full keyboard navigability, clear contrast (light mode GitHub/One Light theme), and minimal motion.
+
+Support full keyboard navigation, touch targets suitable for mobile use, clear contrast and focus,
+minimal motion, and complete access without Vim-style commands. Use neutral, non-judgmental
+language around delay, incompletion, and changing plans.

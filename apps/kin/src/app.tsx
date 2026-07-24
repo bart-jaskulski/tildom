@@ -1,5 +1,5 @@
 import { Router, Route, useLocation, useNavigate } from "@solidjs/router";
-import { MetaProvider, Meta, Title, Link } from "@solidjs/meta";
+import { MetaProvider, Meta, Title } from "@solidjs/meta";
 import { onMount, type ParentProps } from "solid-js";
 import { VimNavigationProvider, type VimKeymap } from "@tildom/ui";
 import Home from "./routes/index";
@@ -45,9 +45,7 @@ export default function App() {
       root={(props) => (
         <MetaProvider>
           <Title>kin.tildom</Title>
-          <Meta name="theme-color" content="#005cc5" />
-          <Link rel="icon" href="/icon.svg" type="image/svg+xml" />
-          <Link rel="manifest" href="/manifest.json" />
+          <Meta name="theme-color" content="#d73a49" />
           <KinVimNavigation>{props.children}</KinVimNavigation>
         </MetaProvider>
       )}

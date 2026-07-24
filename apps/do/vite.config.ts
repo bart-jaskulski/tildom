@@ -1,30 +1,20 @@
 import tailwindcss from "@tailwindcss/vite";
-import { getRequestListener } from "@hono/node-server";
 import solid from "vite-plugin-solid";
 import { defineConfig } from "vite";
 import { fileURLToPath, URL } from "node:url";
-import { app, isApiRequestPath } from "./server/app.ts";
-
-const handleApiRequest = getRequestListener(app.fetch);
+import { tildomPwa } from "@tildom/config/pwa";
 
 export default defineConfig(() => {
   return {
     plugins: [
       solid(),
       tailwindcss(),
-      {
-        name: "server-api",
-        configureServer(server) {
-          server.middlewares.use((request, response, next) => {
-            if (!isApiRequestPath(request.url ?? "/")) {
-              next();
-              return;
-            }
-
-            void handleApiRequest(request, response);
-          });
-        },
-      },
+      tildomPwa({
+        name: "do.tildom",
+        short_name: "do",
+        description: "A local-first task manager.",
+        theme_color: "#d73a49",
+      }),
     ],
     resolve: {
       alias: {
@@ -32,6 +22,12 @@ export default defineConfig(() => {
       },
     },
     server: {
+      headers: {
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+      },
+    },
+    preview: {
       headers: {
         "Cross-Origin-Opener-Policy": "same-origin",
         "Cross-Origin-Embedder-Policy": "require-corp",

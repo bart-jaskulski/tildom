@@ -1,12 +1,9 @@
 import tailwindcss from "@tailwindcss/vite";
-import { getRequestListener } from "@hono/node-server";
 import solid from "vite-plugin-solid";
 import { defineConfig } from "vite";
 import { fileURLToPath, URL } from "node:url";
 import { existsSync, readFileSync } from "node:fs";
-import { app, isApiRequestPath } from "./server/app.ts";
-
-const handleApiRequest = getRequestListener(app.fetch);
+import { tildomPwa } from "@tildom/config/pwa";
 
 const readLocalHttpsConfig = () => {
   const keyPath = fileURLToPath(new URL("./localhost-key.pem", import.meta.url));
@@ -29,19 +26,17 @@ export default defineConfig(({ mode }) => {
     plugins: [
       solid(),
       tailwindcss(),
-      {
-        name: "server-api",
-        configureServer(server) {
-          server.middlewares.use((request, response, next) => {
-            if (!isApiRequestPath(request.url ?? "/")) {
-              next();
-              return;
-            }
-
-            void handleApiRequest(request, response);
-          });
+      tildomPwa({
+        name: "mark.tildom",
+        short_name: "mark",
+        description: "A local-first bookmark and note manager.",
+        theme_color: "#d73a49",
+        share_target: {
+          action: "/share-target",
+          method: "GET",
+          params: { title: "title", text: "text", url: "url" },
         },
-      },
+      }),
     ],
     resolve: {
       alias: {
@@ -61,6 +56,12 @@ export default defineConfig(({ mode }) => {
         },
       },
       ...(https ? { https } : {}),
+    },
+    preview: {
+      headers: {
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+      },
     },
     optimizeDeps: {
       exclude: ["@sqlite.org/sqlite-wasm"],

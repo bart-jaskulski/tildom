@@ -23,21 +23,16 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 ARG VITE_SYNC_BASE_URL=https://sync.tildom.app
 ENV VITE_SYNC_BASE_URL=$VITE_SYNC_BASE_URL
+ARG VITE_API_BASE_URL=https://api.tildom.app
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 COPY apps/mark apps/mark
 COPY packages packages
 RUN pnpm --filter mark.tildom build
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter mark.tildom deploy --prod --legacy /app
 
-FROM gcr.io/distroless/nodejs22-debian12:nonroot AS runtime
+FROM nginxinc/nginx-unprivileged:1.28-alpine AS runtime
 
-WORKDIR /app
-
-ENV NODE_ENV=production
-ENV PORT=3000
-
-COPY --from=build --chown=65532:65532 /app ./
+COPY docker/static-spa.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /repo/apps/mark/dist /usr/share/nginx/html
 
 EXPOSE 3000
-
-CMD ["server-dist/index.js"]

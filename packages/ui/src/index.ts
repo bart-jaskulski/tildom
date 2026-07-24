@@ -2,6 +2,7 @@ export * from "./keyboard.ts";
 export * from "./VimNavigationProvider.tsx";
 export * from "./preferences.ts";
 export * from "./pwaInstall.ts";
+export * from "./pwa.ts";
 export { default as Checkbox } from "./components/Checkbox";
 export * from "./components/Checkbox";
 export { default as RadioButton } from "./components/RadioButton";

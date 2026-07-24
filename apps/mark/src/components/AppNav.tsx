@@ -51,7 +51,10 @@ export default function AppNav(props: AppNavProps) {
   return (
     <header class={styles.topbar}>
       <div class={styles.brand}>
-        <A href="/" class={styles.title}>tildom</A>
+        <A href="/" class={styles.title}>
+          <img class={styles.logo} src="/icon.svg" alt="" />
+          <span>tildom</span>
+        </A>
       </div>
 
       <nav class={styles.nav} aria-label="Primary">

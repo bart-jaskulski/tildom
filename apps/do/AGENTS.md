@@ -17,7 +17,8 @@ This is a **Local-First AI Task Manager** built with **SolidStart**. It is desig
 - **Framework**: SolidStart (SolidJS meta-framework) using `vinxi`.
 - **Language**: TypeScript.
 - **Data Layer (Local-First)**: **cr-sqlite** for structured queries with CRDTs, persisted via **OPFS** (Origin Private File System) with IndexedDB fallback. Tasks stored in SQL tables. There is **no** traditional backend database (Postgres/MySQL).
-- **AI Layer**: Vercel AI SDK (`ai`, `@ai-sdk/google`) running on Server Actions to interface with Gemini.
+- **AI Layer**: `services/api` uses Vercel AI SDK 7 and Gemini; the static app calls
+  `api.tildom.app/v1/do/*`.
 - **Styling**: **Tailwind CSS v4** with utility classes. Stone color palette, Outfit font. Component-level styling via Tailwind utilities inline in JSX.
 - **Ordering**: `lexorank` for efficient drag-and-drop sorting.
 - **Sync Architecture**: File-based encrypted changesets stored in **Cloudflare R2**. Sync is pull-to-refresh (no real-time WebSocket). Device-to-device pairing via QR codes with end-to-end encryption.

@@ -9,13 +9,14 @@ import {
 } from "~/lib/syncState";
 import { createSyncWorker } from "@tildom/sync-client/service-worker";
 
-declare const self: ServiceWorkerGlobalScope;
-declare const __PWA_ASSETS__: readonly string[];
+declare const self: ServiceWorkerGlobalScope & {
+  __WB_MANIFEST: Array<{ url: string; revision: string | null }>;
+};
 
 const NAVIGATION_CACHE_NAME = "hn-links-navigation-v1";
 const STATIC_CACHE_NAME = "hn-links-static-v1";
 const ROOT_DOCUMENT_PATH = "/";
-const STATIC_PWA_ASSET_PATHS = __PWA_ASSETS__;
+const STATIC_PWA_ASSET_PATHS = self.__WB_MANIFEST.map(({ url }) => `/${url.replace(/^\/+/, "")}`);
 
 const toScopedDocumentUrl = (path: string) => new URL(path, self.registration.scope).toString();
 

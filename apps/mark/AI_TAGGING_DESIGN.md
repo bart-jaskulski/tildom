@@ -40,7 +40,8 @@ This design is scoped to `apps/mark`. It borrows the existing server-side AI pat
 1. The user pastes a URL and saves it.
 2. Mark creates the local entry.
 3. Mark fetches metadata using the existing metadata flow.
-4. Mark sends `title`, `url`, `excerpt`, and the current local tag vocabulary to `/api/tags`.
+4. Mark sends `title`, `url`, `excerpt`, and the current local tag vocabulary to
+   `https://api.tildom.app/v1/mark/tags`.
 5. If the endpoint returns valid tags, the client normalizes and applies them.
 6. If any step fails, the save remains successful and no user-facing error appears.
 
@@ -174,7 +175,7 @@ The search index should include tag text in a way that supports both:
 Add a separate Mark server endpoint:
 
 ```txt
-POST /api/tags
+POST /v1/mark/tags
 ```
 
 Request body:
@@ -231,7 +232,7 @@ The client remains the final authority. It normalizes, deduplicates, enforces ca
 
 ## Rate Limiting
 
-`/api/tags` should have server-side rate limiting scoped inside `apps/mark`.
+`/v1/mark/tags` has server-side rate limiting in `services/api`.
 
 Suggested policy:
 
@@ -258,22 +259,22 @@ Rate-limit failures are normal endpoint errors. The client ignores them during b
    - replace tags for an entry;
    - apply AI tags to a newly created link entry;
    - prune orphan tags after deletes/replacements.
-6. Add `/api/tags` to `apps/mark/server/app.ts` or a small server module imported by it.
-7. Add a client helper for `/api/tags`.
+6. Add `/v1/mark/tags` under `services/api`.
+7. Add a client helper for the versioned API endpoint.
 8. Chain background AI tagging after link metadata is available during link creation.
 9. Update search behavior:
    - strict `#tag` filtering;
    - weak normal tag matching.
 10. Update `EntryCard` and item detail UI to display clickable tags.
 11. Add a `tags` field to the existing item edit form.
-12. Add minimal README documentation for optional AI tagging and `GOOGLE_API_KEY`.
+12. Document AI tagging and the API service's `GOOGLE_API_KEY`.
 
 ## Acceptance Criteria
 
-- Saving a link succeeds even if metadata fetching fails, AI tagging fails, the app is offline, the server is missing `GOOGLE_API_KEY`, or `/api/tags` is rate-limited.
+- Saving a link succeeds even if metadata fetching fails, AI tagging fails, the app is offline, the server is missing `GOOGLE_API_KEY`, or `/v1/mark/tags` is rate-limited.
 - AI tagging happens only for link entries created from URL-only input.
 - AI tagging sends only title, URL, excerpt, and existing tag names to the server.
-- Notes are never sent to `/api/tags`.
+- Notes are never sent to `/v1/mark/tags`.
 - AI suggestions are normalized and capped at `5` tags per entry.
 - The local instance never exceeds `50` currently used tags from AI output.
 - Once the `50` tag cap is full, AI can still apply existing tags but cannot create new tags.
@@ -287,7 +288,7 @@ Rate-limit failures are normal endpoint errors. The client ignores them during b
 - Normal search can weakly match tag names.
 - No visible background tagging status appears.
 - No AI tagging setting is added.
-- `apps/mark/README.md` documents optional AI tagging and `GOOGLE_API_KEY`.
+- `apps/mark/README.md` documents AI tagging and the API service's `GOOGLE_API_KEY`.
 
 ## Open Implementation Details
 

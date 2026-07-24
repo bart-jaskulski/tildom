@@ -1,4 +1,4 @@
-import { Link, Meta, MetaProvider, Title } from "@solidjs/meta";
+import { Meta, MetaProvider, Title } from "@solidjs/meta";
 import { Route, Router, useLocation, useNavigate } from "@solidjs/router";
 import { Suspense, onMount, type ParentProps } from "solid-js";
 import { VimNavigationProvider, type VimKeymap } from "@tildom/ui";
@@ -62,8 +62,6 @@ export default function App() {
         <MetaProvider>
           <Title>mark.tildom</Title>
           <Meta name="theme-color" content="#d73a49" />
-          <Link rel="icon" href="/icon.svg" type="image/svg+xml" />
-          <Link rel="manifest" href="/manifest.json" />
           <MarkVimNavigation>
             <Suspense>{props.children}</Suspense>
             <KeybindHelp />

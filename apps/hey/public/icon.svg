@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="hey.tildom">
   <rect width="64" height="64" fill="#24292e"/>
   <rect x="8" y="8" width="48" height="48" fill="#d73a49"/>
-  <path fill="#fff" d="M18 17h7v11h14V17h7v30h-7V35H25v12h-7Z"/>
+  <path fill="#fff" d="m17 20 14 12-14 12v-8l5-4-5-4zm17 18h13v6H34z"/>
 </svg>

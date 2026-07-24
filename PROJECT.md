@@ -31,7 +31,7 @@ tildom/
     kin/       # kin.tildom.app
   services/
     sync/      # sync.tildom.app
-    api/       # optional shared feature API
+    api/       # shared network feature API
   packages/
     ui/
     server/
@@ -46,6 +46,8 @@ Current foundation:
 tildom/
   apps/
     do/
+    hey/
+    home/
     kin/
     mark/
   packages/
@@ -150,13 +152,17 @@ Change-based sync can come later. Snapshot sync is easier to reason about, easie
 
 ### Feature API
 
-`services/api` is optional. It may eventually host network-required features such as:
+`services/api` is the shared server for network-required product features:
 
 - bookmark title and metadata fetching;
 - AI task breakdown;
 - personal AI chat.
 
-Keep it separate from the sync service unless there is a strong operational reason to combine them. Sync has a stricter privacy boundary than feature APIs.
+Its routes remain product-owned under `/v1/mark/*`, `/v1/do/*`, and `/v1/hey/*`; it is not a
+generic LLM endpoint. Static apps call `api.tildom.app` directly. Their local-first cores remain
+available offline, while full network-assisted feature parity requires this service.
+
+Keep it separate from the sync service. Sync has a stricter privacy boundary than feature APIs.
 
 ## Deployment Model
 
@@ -170,7 +176,7 @@ mark.tildom.app     -> apps/mark
 do.tildom.app       -> apps/do
 kin.tildom.app      -> apps/kin
 sync.tildom.app     -> services/sync
-api.tildom.app      -> services/api, optional
+api.tildom.app      -> services/api
 ```
 
 For self-hosting, provide a root `compose.yaml` that can run the useful default stack. The default stack currently runs Mark and sync. Later it should grow to include the home app and the other apps.
@@ -182,11 +188,13 @@ ghcr.io/bart-jaskulski/tildom/mark -> apps/mark
 ghcr.io/bart-jaskulski/tildom/sync -> services/sync
 ```
 
-Keep image construction boring and small: multi-stage Dockerfiles, pnpm 11, production-only deploy output, and nonroot runtime images. Deployment topology is an operator concern and should live outside this application repository.
+App images build with pnpm and serve only static assets from unprivileged nginx. Server-backed
+services use multi-stage Node 22 images with production-only deploy output and nonroot runtimes.
+Deployment topology is an operator concern and should live outside this application repository.
 
 Required deployment properties:
 
-- Node 22+ runtime for server-backed apps and services.
+- Node 22+ runtime for services.
 - Persistent Docker volumes for service storage.
 - COOP/COEP headers for browser SQLite/OPFS support.
 - No hosted dependency for basic local-first use.
@@ -225,7 +233,7 @@ Recommended order:
 3. Normalize Mark Docker deployment from the monorepo root. Done.
 4. Add a root Compose profile for running `do` separately from the default Mark service. Done.
 5. Fix the current `do` server split before treating its sync routes as production architecture.
-6. Add `apps/home`.
+6. Add `apps/home`. Done.
 7. Extract `packages/ui` from actual shared styles.
 8. Extract `packages/server`.
 9. Build `services/sync`.

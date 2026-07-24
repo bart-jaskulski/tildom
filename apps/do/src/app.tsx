@@ -1,4 +1,4 @@
-import { Link, Meta, MetaProvider, Title } from "@solidjs/meta";
+import { Meta, MetaProvider, Title } from "@solidjs/meta";
 import { Route, Router } from "@solidjs/router";
 import { Show, Suspense, onMount } from "solid-js";
 import { isOnline } from "~/stores/networkStore";
@@ -29,8 +29,7 @@ export default function App() {
       root={props => (
         <MetaProvider>
           <Title>do.tildom</Title>
-          <Meta name="theme-color" content="#24292e" />
-          <Link rel="manifest" href="/manifest.json" />
+          <Meta name="theme-color" content="#d73a49" />
           <Show when={!isOnline()}>
             <div class="offline-banner" role="status">
               Offline. Local tasks still work. AI breakdown and sync will reconnect later.
