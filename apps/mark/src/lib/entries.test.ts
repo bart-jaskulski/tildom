@@ -32,6 +32,13 @@ describe("entry helpers", () => {
     });
   });
 
+  it("consumes one optional blank separator after the title", () => {
+    expect(splitNoteIntoTitleAndBody("My note title\n\nBody starts here")).toEqual({
+      title: "My note title",
+      body: "Body starts here",
+    });
+  });
+
   it("only treats standalone URLs as links", () => {
     expect(isUrlOnlyInput(" https://example.com/post?x=1 ")).toBe(true);
     expect(isUrlOnlyInput("example.com/post")).toBe(true);

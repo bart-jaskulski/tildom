@@ -1,0 +1,25 @@
+{
+  "name": "@tildom/markdownish",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "micromark": "^4.0.2",
+    "micromark-extension-gfm": "^3.0.0",
+    "sanitize-html": "^2.17.4"
+  },
+  "devDependencies": {
+    "@tildom/config": "workspace:*",
+    "@types/sanitize-html": "^2.16.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7"
+  }
+}

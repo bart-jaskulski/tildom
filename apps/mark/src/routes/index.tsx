@@ -2,6 +2,7 @@ import { Title } from "@solidjs/meta";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { For, Show, createEffect, createMemo, createResource, createSignal } from "solid-js";
 import { isServer } from "solid-js/web";
+import { handleMarkdownishEnter } from "@tildom/markdownish";
 import { useVimKeymaps } from "@tildom/ui";
 import styles from "./index.module.css";
 import AppNav from "~/components/AppNav";
@@ -175,7 +176,9 @@ export default function Home() {
                   setEntryBody(event.currentTarget.value);
                   resizeTextareaToFitContent(event.currentTarget);
                 }}
-                onKeyDown={handleTextareaKeyboardSubmit}
+                onKeyDown={(event) => {
+                  if (!handleMarkdownishEnter(event)) handleTextareaKeyboardSubmit(event);
+                }}
                 rows={5}
                 placeholder="Paste a link or write a note"
                 class="hn-textarea"

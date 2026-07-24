@@ -3,6 +3,7 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @import "@tildom/ui/base.css" layer(tildom-base);
+@import "@tildom/markdownish/styles.css" layer(components);
 
 @layer app {
   /* App shell */

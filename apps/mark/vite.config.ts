@@ -1,10 +1,12 @@
 import tailwindcss from "@tailwindcss/vite";
+import { getRequestListener } from "@hono/node-server";
 import solid from "vite-plugin-solid";
 import { defineConfig } from "vite";
 import { fileURLToPath, URL } from "node:url";
 import { existsSync, readFileSync } from "node:fs";
-import { handleApiRequest, isApiRequestPath } from "./server/app.ts";
-import { getRequestOrigin, handleNodeRequestWithFetch } from "./server/node-http.ts";
+import { app, isApiRequestPath } from "./server/app.ts";
+
+const handleApiRequest = getRequestListener(app.fetch);
 
 const readLocalHttpsConfig = () => {
   const keyPath = fileURLToPath(new URL("./localhost-key.pem", import.meta.url));
@@ -31,17 +33,12 @@ export default defineConfig(({ mode }) => {
         name: "server-api",
         configureServer(server) {
           server.middlewares.use((request, response, next) => {
-            const origin = getRequestOrigin(request, "127.0.0.1:5173");
-            const url = new URL(request.url ?? "/", origin);
-
-            if (!isApiRequestPath(url.pathname)) {
+            if (!isApiRequestPath(request.url ?? "/")) {
               next();
               return;
             }
 
-            void handleNodeRequestWithFetch(request, response, origin, handleApiRequest).catch((error) => {
-              next(error as Error);
-            });
+            void handleApiRequest(request, response);
           });
         },
       },

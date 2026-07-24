@@ -125,9 +125,8 @@
 
   & :global(.kin-button),
   & :global(.kin-primary-button) {
-    min-height: 28px;
+    min-height: 32px;
     padding: 0 1ch;
-    border-width: 0;
   }
 }
 
@@ -246,17 +245,47 @@
 
 .composer {
   display: grid;
-  justify-items: end;
   gap: 0.5rem;
   margin-bottom: 2rem;
 
   & :global(.kin-textarea) {
-    justify-self: stretch;
+    min-height: 100px;
   }
 
   & :global(.kin-primary-button) {
-    min-height: 32px;
-    padding: 0 2ch;
+    min-height: 36px;
+    padding: 0 1.5ch;
+  }
+}
+
+.composerActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1ch;
+}
+
+.dateField {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  color: var(--fg-muted);
+  font-size: 11px;
+
+  & input {
+    min-height: 36px;
+    padding: 0 0.75ch;
+    border: 0;
+    border-bottom: 1px solid var(--border-color);
+    outline: 0;
+    background: transparent;
+    color: var(--fg-muted);
+
+    &:hover,
+    &:focus {
+      border-bottom-color: var(--fg-default);
+      color: var(--fg-default);
+    }
   }
 }
 
@@ -285,13 +314,20 @@
 .timelineItem {
   position: relative;
   max-width: 75ch;
+}
 
-  & p {
-    margin: 0.3rem 0 0;
-    font-size: 13px;
-    line-height: 1.55;
-    overflow-wrap: anywhere;
-    white-space: pre-wrap;
+.noteBody {
+  margin-top: 0.3rem;
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+
+  & > :first-child {
+    margin-top: 0;
+  }
+
+  & > :last-child {
+    margin-bottom: 0;
   }
 }
 
@@ -328,7 +364,62 @@
   }
 }
 
-.inlineTag {
+.timelineDate {
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px dashed transparent;
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  font: inherit;
+
+  &:hover,
+  &:focus-visible {
+    border-bottom-color: var(--fg-muted);
+    color: var(--fg-default);
+  }
+}
+
+.timelineDateInput {
+  width: 15ch;
+  min-height: 28px;
+  padding: 0 0.5ch;
+  border: 1px solid var(--fg-default);
+  outline: 0;
+  background: var(--bg-surface);
+  color: var(--fg-default);
+  font: inherit;
+}
+
+.noteEditForm {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+
+  & :global(.kin-textarea) {
+    min-height: 6rem;
+  }
+}
+
+.noteEditActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1ch;
+
+  & :global(.kin-primary-button) {
+    min-height: 32px;
+    padding: 0 1.5ch;
+  }
+
+  & :global(.kin-link-button) {
+    min-height: 32px;
+    font-size: 11px;
+  }
+}
+
+:global(.markdownish-tag) {
   display: inline;
   padding: 0;
   border: 0;

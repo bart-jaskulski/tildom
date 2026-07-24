@@ -137,5 +137,3 @@ ${
     return context.json({ error: error instanceof Error ? error.message : "AI generation failed" }, 500);
   }
 });
-
-export const handleApiRequest = (request: Request) => app.fetch(request);

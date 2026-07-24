@@ -1,0 +1,24 @@
+{
+  "name": "hey.tildom",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@sqlite.org/sqlite-wasm": "3.53.0-build1",
+    "@tildom/ui": "workspace:*",
+    "solid-js": "^1.9.13",
+    "vite": "^8.0.14"
+  },
+  "devDependencies": {
+    "@tildom/config": "workspace:*",
+    "@types/node": "^22.19.19",
+    "typescript": "^6.0.3",
+    "vite-plugin-solid": "^2.11.12",
+    "vitest": "^4.1.7"
+  }
+}

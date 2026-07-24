@@ -91,5 +91,3 @@ app.all(TAGS_PATH, async (context) => {
     return context.json({ error: message }, message === "AI tagging is not configured" ? 503 : 500);
   }
 });
-
-export const handleApiRequest = (request: Request) => app.fetch(request);

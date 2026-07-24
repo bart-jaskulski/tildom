@@ -1,4 +1,5 @@
 @import "@tildom/ui/base.css";
+@import "@tildom/markdownish/styles.css";
 
 .kin-page {
   display: flex;
@@ -29,11 +30,17 @@
   font-weight: bold;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  transition: background-color 0.15s ease-out, color 0.15s ease-out, border-color 0.15s ease-out;
 
   &:hover:not(:disabled) {
     background: var(--fg-default);
     color: var(--bg-surface);
     text-decoration: none;
+  }
+
+  &:active:not(:disabled) {
+    background: var(--syntax-bg-active);
+    color: var(--fg-default);
   }
 
   &:disabled {
@@ -45,14 +52,9 @@
 }
 
 .kin-primary-button {
-  border-color: var(--syntax-keyword);
-  background: var(--syntax-keyword);
-  color: var(--bg-surface);
-
-  &:hover:not(:disabled) {
-    border-color: #b92536;
-    background: #b92536;
-  }
+  border-color: var(--fg-default);
+  background: var(--bg-surface);
+  color: var(--fg-default);
 }
 
 .kin-danger-button {
@@ -72,13 +74,19 @@
   padding: 0 0.5ch;
   border: 0;
   background: transparent;
-  color: var(--syntax-string);
+  color: var(--fg-default);
   cursor: pointer;
   font-weight: bold;
 
   &:hover:not(:disabled) {
     color: var(--syntax-keyword);
     text-decoration: underline;
+  }
+
+  &:disabled {
+    color: var(--fg-muted);
+    cursor: not-allowed;
+    opacity: 0.5;
   }
 }
 
@@ -90,15 +98,18 @@
 .kin-textarea,
 .kin-select {
   width: 100%;
-  padding: 0.65rem 1ch;
+  padding: 0.75rem 1.5ch;
   border: 1px solid var(--border-color);
   outline: 0;
   background: var(--bg-surface);
   color: var(--fg-default);
   font-size: 13px;
+  line-height: 1.5;
+  transition: border-color 0.1s ease-out;
 
   &:focus {
-    border-color: var(--syntax-keyword);
+    padding: calc(0.75rem - 1px) calc(1.5ch - 1px);
+    border: 2px solid var(--fg-default);
   }
 
   &::placeholder {

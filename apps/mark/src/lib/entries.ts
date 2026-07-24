@@ -110,7 +110,7 @@ export const splitNoteIntoTitleAndBody = (input: string) => {
   }
 
   const title = normalized.slice(0, firstLineBreak).trim() || NOTE_TITLE_FALLBACK;
-  const body = normalized.slice(firstLineBreak + 1);
+  const body = normalized.slice(firstLineBreak + 1).replace(/^\n/, "");
   return { title, body };
 };
 

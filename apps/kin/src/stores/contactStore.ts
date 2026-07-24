@@ -249,7 +249,7 @@ export const fetchNotes = async (contactId: string): Promise<ContactNote[]> => {
   );
 };
 
-export const createNote = async (contactId: string, body: string, isPinned: boolean): Promise<string> => {
+export const createNote = async (contactId: string, body: string, isPinned: boolean, createdAt = Date.now()): Promise<string> => {
   const id = crypto.randomUUID();
   const now = Date.now();
   const tags = parseTags(body);
@@ -258,21 +258,21 @@ export const createNote = async (contactId: string, body: string, isPinned: bool
       INSERT INTO notes (id, contact_id, body, tags, is_pinned, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `,
-    [id, contactId, body.trim(), tags, isPinned ? 1 : 0, now, now]
+    [id, contactId, body.trim(), tags, isPinned ? 1 : 0, createdAt, now]
   );
   return id;
 };
 
-export const updateNote = async (noteId: string, body: string, isPinned: boolean): Promise<void> => {
+export const updateNote = async (noteId: string, body: string, isPinned: boolean, createdAt?: number): Promise<void> => {
   const now = Date.now();
   const tags = parseTags(body);
   await exec(
     `
       UPDATE notes
-      SET body = ?, tags = ?, is_pinned = ?, updated_at = ?
+      SET body = ?, tags = ?, is_pinned = ?, created_at = COALESCE(?, created_at), updated_at = ?
       WHERE id = ?
     `,
-    [body.trim(), tags, isPinned ? 1 : 0, now, noteId]
+    [body.trim(), tags, isPinned ? 1 : 0, createdAt ?? null, now, noteId]
   );
 };
 

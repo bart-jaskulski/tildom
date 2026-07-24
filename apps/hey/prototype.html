@@ -1,0 +1,1769 @@
+<!doctype html>
+<!--
+THESIS: A private conversation ledger with durable memory available for inspection, never competing with the conversation.
+OWN-WORLD: The suite’s red tildom header, light canvas, system monospace, square controls, thin rules, numbered rows, and restrained selection blocks.
+STORY: Search or resume a conversation, talk naturally, and inspect or correct memory from its own buffer when wanted.
+FIRST VIEWPORT: Suite navigation and global search above a two-pane chat ledger; compact chat rail at left, readable transcript and grounded composer at right.
+FORM: Conversation ledger, fourth structural candidate, staged as a discoverable two-pane workspace that becomes route-like screens on mobile; seed 6614b2bb.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fafafa">
+  <title>hey.tildom — prototype</title>
+  <style>
+    :root {
+      --bg-canvas: #fafafa;
+      --bg-surface: #ffffff;
+      --fg-default: #24292e;
+      --fg-muted: #6a737d;
+      --syntax-keyword: #d73a49;
+      --syntax-string: #032f62;
+      --syntax-bg-active: #e1e4e8;
+      --border-color: #e1e4e8;
+      --highlight-blue: #005cc5;
+      --rail-width: 31ch;
+      --tap: 44px;
+      --ease-out: cubic-bezier(.16, 1, .3, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      border-radius: 0;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg-canvas);
+      color: var(--fg-default);
+      font: 14px/1.5 ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+      color: inherit;
+    }
+
+    button {
+      min-height: var(--tap);
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    button:focus-visible, input:focus-visible, textarea:focus-visible {
+      outline: 2px solid var(--fg-default);
+      outline-offset: -2px;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: .5;
+    }
+
+    .app {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      height: 100dvh;
+      max-width: 120ch;
+      margin: 0 auto;
+      background: var(--bg-canvas);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: stretch;
+      min-width: 0;
+      min-height: 48px;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-canvas);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      flex: 0 0 auto;
+      min-height: 48px;
+      padding: 0 2.5ch 0 1.5rem;
+      color: var(--syntax-keyword);
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: -.02em;
+      text-decoration: none;
+    }
+
+    .tabs {
+      display: flex;
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tab {
+      flex: 0 0 auto;
+      min-height: 48px;
+      padding: 0 2.2ch;
+      color: var(--fg-muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .tab[aria-selected="true"] {
+      border-bottom: 2px solid var(--syntax-keyword);
+      background: var(--bg-surface);
+      color: var(--fg-default);
+      font-weight: 700;
+    }
+
+    .tab[aria-selected="true"]::before {
+      content: none;
+    }
+
+    .global-search {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 24ch;
+      min-width: 24ch;
+      margin-left: auto;
+      border-left: 1px solid var(--border-color);
+      background: var(--bg-surface);
+      transition: width 200ms var(--ease-out);
+    }
+
+    .global-search:focus-within {
+      width: min(44ch, 42vw);
+    }
+
+    .global-search::before {
+      position: absolute;
+      left: 1.25ch;
+      color: var(--syntax-keyword);
+      content: ">";
+      font-weight: 700;
+      pointer-events: none;
+    }
+
+    .global-search input {
+      width: 100%;
+      min-height: 48px;
+      padding: 0 1.5ch 0 3.5ch;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      font-size: 13px;
+    }
+
+    .global-search input::-webkit-search-cancel-button {
+      display: none;
+    }
+
+    .global-search input:focus {
+      box-shadow: inset 2px 0 0 var(--syntax-keyword);
+    }
+
+    .search-toggle {
+      display: none;
+    }
+
+    .workspace {
+      min-height: 0;
+    }
+
+    .surface {
+      display: none;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .surface.active {
+      display: grid;
+      animation: surface-in 180ms var(--ease-out);
+    }
+
+    @keyframes surface-in {
+      from { opacity: .72; clip-path: inset(0 0 2% 0); }
+      to { opacity: 1; clip-path: inset(0); }
+    }
+
+    .chats-surface {
+      grid-template-columns: var(--rail-width) minmax(0, 1fr);
+    }
+
+    .chat-rail {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      min-width: 0;
+      min-height: 0;
+      border-right: 1px solid var(--border-color);
+      background: var(--bg-canvas);
+    }
+
+    .rail-actions {
+      display: flex;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .new-chat {
+      flex: 1;
+      padding: 0 2ch;
+      color: var(--syntax-string);
+      text-align: left;
+      font-weight: 700;
+    }
+
+    .new-chat:hover {
+      background: var(--syntax-bg-active);
+    }
+
+    .chat-list {
+      margin: 0;
+      padding: .5rem 0 2rem;
+      overflow-y: auto;
+      list-style: none;
+      counter-reset: chat;
+    }
+
+    .chat-row {
+      counter-increment: chat;
+    }
+
+    .chat-button {
+      display: grid;
+      grid-template-columns: 3ch minmax(0, 1fr) auto;
+      align-items: center;
+      width: 100%;
+      padding: .5rem 1.5ch;
+      text-align: left;
+    }
+
+    .chat-button::before {
+      content: counter(chat, decimal-leading-zero);
+      color: var(--fg-muted);
+      font-size: 12px;
+    }
+
+    .chat-button:hover, .chat-button[aria-current="true"] {
+      background: var(--syntax-bg-active);
+    }
+
+    .chat-button[aria-current="true"] {
+      box-shadow: inset 2px 0 0 var(--syntax-keyword);
+      font-weight: 700;
+    }
+
+    .chat-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .chat-time {
+      padding-left: 1ch;
+      color: var(--fg-muted);
+      font-size: 12px;
+      font-weight: 400;
+    }
+
+    .conversation {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      min-width: 0;
+      min-height: 0;
+      background: var(--bg-surface);
+    }
+
+    .conversation-head {
+      display: flex;
+      align-items: center;
+      min-height: var(--tap);
+      padding: 0 2ch;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .mobile-back {
+      display: none;
+      min-width: var(--tap);
+      margin-left: -1ch;
+      padding: 0 1ch;
+      color: var(--syntax-string);
+    }
+
+    .conversation-title {
+      flex: 1;
+      min-width: 0;
+      margin: 0;
+      overflow: hidden;
+      font-size: 14px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .conversation-meta {
+      padding-left: 2ch;
+      color: var(--fg-muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .conversation-actions {
+      position: relative;
+      display: flex;
+      margin-left: 1ch;
+    }
+
+    .conversation-action {
+      min-width: var(--tap);
+      padding: 0 1.5ch;
+      color: var(--fg-muted);
+    }
+
+    .conversation-action:hover {
+      background: var(--syntax-bg-active);
+      color: var(--fg-default);
+    }
+
+    .conversation-menu {
+      position: absolute;
+      top: calc(100% - 1px);
+      right: 0;
+      z-index: 4;
+      width: 18ch;
+      border: 1px solid var(--fg-default);
+      background: var(--bg-surface);
+    }
+
+    .conversation-menu button {
+      width: 100%;
+      padding: 0 1.5ch;
+      text-align: left;
+    }
+
+    .conversation-menu button:hover {
+      background: var(--syntax-bg-active);
+    }
+
+    .transcript {
+      min-height: 0;
+      padding: 1.75rem clamp(2ch, 5vw, 7ch) 3rem;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      overscroll-behavior: contain;
+    }
+
+    .messages {
+      width: min(100%, 74ch);
+      margin: 0 auto;
+    }
+
+    .message {
+      position: relative;
+      margin: 0 0 2rem;
+      padding-left: 2ch;
+      border-left: 1px solid var(--border-color);
+    }
+
+    .message.user {
+      border-left-color: var(--highlight-blue);
+    }
+
+    .message.assistant {
+      border-left-color: var(--syntax-keyword);
+    }
+
+    .message-head {
+      display: flex;
+      align-items: baseline;
+      gap: 1ch;
+      margin-bottom: .45rem;
+      color: var(--fg-muted);
+      font-size: 12px;
+    }
+
+    .message-role {
+      color: var(--highlight-blue);
+      font-weight: 700;
+    }
+
+    .assistant .message-role {
+      color: var(--syntax-keyword);
+    }
+
+    .message p {
+      margin: 0 0 .8rem;
+    }
+
+    .message p:last-child {
+      margin-bottom: 0;
+    }
+
+    .message ul {
+      margin: .5rem 0 0;
+      padding-left: 2.5ch;
+    }
+
+    summary {
+      min-height: var(--tap);
+      padding: .7rem 2ch;
+      cursor: pointer;
+      color: var(--fg-muted);
+      list-style: none;
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    summary::before {
+      content: "›";
+      display: inline-block;
+      width: 2ch;
+      color: var(--fg-muted);
+      transition: transform 160ms var(--ease-out);
+    }
+
+    details[open] > summary::before {
+      transform: rotate(90deg);
+    }
+
+    .state-event {
+      width: min(100%, 74ch);
+      margin: -1rem auto 2rem;
+      padding: .8rem 2ch;
+      border-block: 1px solid var(--border-color);
+      background: var(--bg-canvas);
+      color: var(--fg-muted);
+    }
+
+    .state-event.error {
+      border-color: #efb3b9;
+      color: var(--syntax-keyword);
+    }
+
+    .inline-actions {
+      display: flex;
+      gap: 1ch;
+      margin-top: .8rem;
+    }
+
+    .text-action {
+      min-height: 32px;
+      padding: 0 .5ch;
+      color: var(--syntax-string);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .text-action:hover {
+      text-decoration: underline;
+    }
+
+    .composer {
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-canvas);
+    }
+
+    .composer-inner {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      width: min(100%, 86ch);
+      margin: 0 auto;
+      padding: .8rem 2ch;
+      background: var(--bg-surface);
+    }
+
+    .composer textarea {
+      width: 100%;
+      min-height: var(--tap);
+      max-height: 22vh;
+      padding: .7rem 1ch;
+      resize: none;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      line-height: 1.5;
+    }
+
+    .composer textarea::placeholder, .global-search input::placeholder {
+      color: var(--fg-muted);
+      opacity: 1;
+    }
+
+    .send {
+      align-self: end;
+      min-width: 7ch;
+      padding: 0 1.5ch;
+      color: var(--syntax-string);
+      font-weight: 700;
+    }
+
+    .send:hover {
+      background: var(--syntax-bg-active);
+    }
+
+    .send.stop {
+      color: var(--syntax-keyword);
+    }
+
+    .offline-note {
+      display: none;
+      padding: .5rem 3ch;
+      border-top: 1px solid var(--border-color);
+      color: var(--syntax-keyword);
+      font-size: 12px;
+    }
+
+    .offline .offline-note {
+      display: block;
+    }
+
+    .memory-surface {
+      grid-template-columns: var(--rail-width) minmax(0, 1fr);
+    }
+
+    .file-rail {
+      min-height: 0;
+      overflow-y: auto;
+      border-right: 1px solid var(--border-color);
+      background: var(--bg-canvas);
+    }
+
+    .section-label {
+      margin: 0;
+      padding: .8rem 2ch .4rem;
+      color: var(--fg-muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    .file-button {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      padding: .5rem 2ch;
+      text-align: left;
+    }
+
+    .file-button:hover, .file-button[aria-current="true"] {
+      background: var(--syntax-bg-active);
+    }
+
+    .file-button[aria-current="true"] {
+      box-shadow: inset 3px 0 0 var(--syntax-keyword);
+      font-weight: 700;
+    }
+
+    .file-button::before {
+      content: "·";
+      width: 2ch;
+      color: var(--fg-muted);
+    }
+
+    .file-button.folder::before {
+      content: "▾";
+    }
+
+    .memory-editor, .config-panel {
+      min-width: 0;
+      min-height: 0;
+      overflow-y: auto;
+      padding: clamp(1.5rem, 5vw, 4rem) clamp(2ch, 7vw, 10ch);
+    }
+
+    .document {
+      width: min(100%, 78ch);
+      margin: 0 auto;
+    }
+
+    .document-head {
+      display: flex;
+      align-items: center;
+      min-height: var(--tap);
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .document h1 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .revision {
+      margin-left: auto;
+      color: var(--fg-muted);
+      font-size: 12px;
+    }
+
+    .memory-text {
+      width: 100%;
+      min-height: 50vh;
+      padding: 1rem 2ch;
+      resize: vertical;
+      border: 1px solid var(--border-color);
+      background: var(--bg-canvas);
+      line-height: 1.65;
+    }
+
+    .memory-text:focus {
+      border: 2px solid var(--fg-default);
+      outline: 0;
+    }
+
+    .editor-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1ch;
+      margin-top: 1rem;
+    }
+
+    .revision-panel {
+      margin-top: 1rem;
+      border-block: 1px solid var(--border-color);
+      background: var(--bg-canvas);
+    }
+
+    .revision-panel pre {
+      margin: 0;
+      padding: 0 2ch 1rem 4ch;
+      overflow-x: auto;
+      color: var(--fg-muted);
+      font: inherit;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+
+    .solid-button {
+      min-height: var(--tap);
+      padding: 0 2ch;
+      border: 2px solid var(--fg-default);
+      background: var(--bg-surface);
+      font-weight: 700;
+    }
+
+    .solid-button:hover {
+      background: var(--fg-default);
+      color: var(--bg-surface);
+    }
+
+    .config-surface {
+      grid-template-columns: 1fr;
+    }
+
+    .config-panel {
+      background: var(--bg-canvas);
+    }
+
+    .config-form {
+      width: min(100%, 78ch);
+      margin: 0 auto;
+    }
+
+    .config-form h1 {
+      margin: 0 0 .35rem;
+      font-size: 18px;
+    }
+
+    .lede {
+      margin: 0 0 2.5rem;
+      color: var(--fg-muted);
+    }
+
+    .config-group {
+      display: grid;
+      gap: .75rem;
+      padding: 1.5rem 0;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .config-group > label, .config-key {
+      padding-top: 0;
+      color: var(--fg-muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .choice-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem 1ch;
+    }
+
+    .choice {
+      position: relative;
+      min-height: var(--tap);
+      padding: 0 1.5ch;
+      border: 1px solid var(--border-color);
+      background: var(--bg-canvas);
+    }
+
+    .choice:hover {
+      background: var(--syntax-bg-active);
+    }
+
+    .choice[aria-pressed="true"] {
+      border-color: var(--fg-default);
+      background: var(--syntax-bg-active);
+      font-weight: 700;
+    }
+
+    .choice[aria-pressed="true"]::before {
+      content: "(*) ";
+      color: var(--syntax-keyword);
+    }
+
+    .choice[aria-pressed="false"]::before {
+      content: "( ) ";
+      color: var(--fg-muted);
+    }
+
+    .config-textarea {
+      width: 100%;
+      min-height: 9rem;
+      padding: .8rem 1.5ch;
+      resize: vertical;
+      border: 1px solid var(--border-color);
+      background: var(--bg-canvas);
+      line-height: 1.6;
+    }
+
+    .toggle {
+      min-height: var(--tap);
+      padding: 0 .5ch;
+      text-align: left;
+    }
+
+    .toggle::before {
+      content: "[ ]";
+      display: inline-block;
+      width: 4ch;
+      color: var(--fg-muted);
+    }
+
+    .toggle[aria-pressed="true"]::before {
+      content: "[x]";
+      color: var(--fg-default);
+      font-weight: 700;
+    }
+
+    .config-help {
+      margin: .35rem 0 0;
+      color: var(--fg-muted);
+      font-size: 13px;
+    }
+
+    .config-help kbd {
+      padding: 0 .4ch;
+      border: 1px solid var(--border-color);
+      background: var(--bg-surface);
+      color: var(--syntax-string);
+      font: inherit;
+    }
+
+    .sync-status {
+      display: grid;
+      max-width: 75ch;
+      margin: 0;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .sync-status div {
+      display: grid;
+      grid-template-columns: minmax(10ch, 16ch) 1fr;
+      align-items: center;
+      gap: 2ch;
+      min-height: var(--tap);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sync-status dt, .sync-status dd {
+      margin: 0;
+      font-size: 13px;
+    }
+
+    .sync-status dt {
+      color: var(--fg-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    dialog {
+      width: min(48ch, calc(100vw - 2rem));
+      padding: 0;
+      border: 1px solid var(--fg-default);
+      background: var(--bg-surface);
+      color: var(--fg-default);
+    }
+
+    dialog::backdrop {
+      background: rgb(36 41 46 / 24%);
+    }
+
+    .dialog-form {
+      display: grid;
+      gap: 1rem;
+      padding: 1.25rem 2ch;
+    }
+
+    .dialog-head {
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .dialog-head h2 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .dialog-head button {
+      margin-left: auto;
+      padding: 0 1ch;
+      font-size: 18px;
+    }
+
+    .dialog-input {
+      min-height: var(--tap);
+      padding: 0 1.5ch;
+      border: 1px solid var(--border-color);
+      background: var(--bg-canvas);
+    }
+
+    .dialog-input:focus {
+      border: 2px solid var(--fg-default);
+      outline: 0;
+    }
+
+    .dialog-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1ch;
+    }
+
+    .danger-button {
+      border-color: var(--syntax-keyword);
+      color: var(--syntax-keyword);
+    }
+
+    .danger-button:hover {
+      background: var(--syntax-keyword);
+      color: var(--bg-surface);
+    }
+
+    .pair-code {
+      display: block;
+      padding: 1rem 2ch;
+      border-block: 1px solid var(--border-color);
+      background: var(--bg-canvas);
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-align: center;
+    }
+
+    .toast {
+      position: fixed;
+      right: 2ch;
+      bottom: 2ch;
+      z-index: 10;
+      max-width: min(44ch, calc(100vw - 4ch));
+      padding: .75rem 1.5ch;
+      border: 1px solid var(--fg-default);
+      background: var(--fg-default);
+      color: var(--bg-surface);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(8px);
+      transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 760px) {
+      .topbar {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 48px;
+        grid-template-rows: 48px 48px;
+        min-height: 96px;
+      }
+
+      .brand {
+        grid-column: 1;
+        grid-row: 1;
+        padding-left: 1.5ch;
+      }
+
+      .tabs {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        width: 100%;
+      }
+
+      .tab {
+        flex: 1 0 auto;
+        justify-content: center;
+        padding: 0 1.5ch;
+      }
+
+      .global-search {
+        position: absolute;
+        top: 0;
+        right: 0;
+        z-index: 5;
+        width: 48px;
+        min-width: 48px;
+        height: 48px;
+        border-left: 0;
+        overflow: hidden;
+      }
+
+      .global-search::before, .global-search input {
+        display: none;
+      }
+
+      .global-search[data-open] {
+        width: 100%;
+      }
+
+      .global-search[data-open] input {
+        display: block;
+        min-height: 48px;
+        padding: 0 48px 0 1.5ch;
+      }
+
+      .search-toggle {
+        display: grid;
+        width: 48px;
+        height: 48px;
+        margin-left: auto;
+        padding: 0;
+        place-items: center;
+      }
+
+      .global-search[data-open] .search-toggle {
+        position: absolute;
+        right: 0;
+      }
+
+      .search-toggle svg {
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: square;
+        stroke-width: 2;
+      }
+
+      .chats-surface, .memory-surface {
+        grid-template-columns: 1fr;
+      }
+
+      .chat-rail, .file-rail {
+        border-right: 0;
+      }
+
+      .conversation, .memory-editor {
+        display: none;
+      }
+
+      .chats-surface.mobile-detail .chat-rail,
+      .memory-surface.mobile-detail .file-rail {
+        display: none;
+      }
+
+      .chats-surface.mobile-detail .conversation {
+        display: grid;
+      }
+
+      .memory-surface.mobile-detail .memory-editor {
+        display: block;
+      }
+
+      .mobile-back {
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .transcript {
+        padding: 1.25rem 2ch 2rem;
+      }
+
+      .composer-inner {
+        padding: .5rem 1ch;
+      }
+
+      .memory-editor, .config-panel {
+        padding: 1.5rem 2ch 3rem;
+      }
+
+      .config-group {
+        gap: .5rem;
+      }
+
+      .config-group > label, .config-key {
+        padding-top: 0;
+      }
+
+      .conversation-meta {
+        display: none;
+      }
+
+      .conversation-actions {
+        margin-left: 0;
+      }
+
+      .sync-status div {
+        grid-template-columns: 1fr;
+        gap: .25rem;
+        padding: .75rem 0;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" id="app">
+    <header class="topbar">
+      <a class="brand" id="brand-link" href="#chats">tildom</a>
+      <nav class="tabs" aria-label="App sections" role="tablist">
+        <button class="tab" role="tab" aria-selected="true" data-surface="chats">[ chats.db ]</button>
+        <button class="tab" role="tab" aria-selected="false" data-surface="memory">[ memory/ ]</button>
+        <button class="tab" role="tab" aria-selected="false" data-surface="config">[ settings.json ]</button>
+      </nav>
+      <div class="global-search" id="global-search" role="search">
+        <button class="search-toggle" id="search-toggle" aria-label="Search chats and memory" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path id="search-icon-path" d="m21 21-4.35-4.35m2.35-5.15a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"/></svg>
+        </button>
+        <input id="global-search-input" type="search" placeholder="search chats and memory" aria-label="Search chats and memory" autocomplete="off">
+      </div>
+    </header>
+
+    <div class="workspace">
+      <section class="surface chats-surface active" id="surface-chats" aria-label="Chats">
+        <aside class="chat-rail" aria-label="Conversation list">
+          <div class="rail-actions">
+            <button class="new-chat" id="new-chat">+ new chat</button>
+          </div>
+          <ol class="chat-list" id="chat-list"></ol>
+        </aside>
+
+        <article class="conversation" aria-label="Active conversation">
+          <header class="conversation-head">
+            <button class="mobile-back" data-mobile-back="chats" aria-label="Back to conversations">←</button>
+            <h1 class="conversation-title" id="conversation-title">Getting unstuck</h1>
+            <span class="conversation-meta" id="conversation-meta">today · 5 messages</span>
+            <div class="conversation-actions">
+              <button class="conversation-action" id="conversation-actions-toggle" aria-expanded="false" aria-controls="conversation-menu" aria-label="Conversation actions">···</button>
+              <div class="conversation-menu" id="conversation-menu" hidden>
+                <button id="rename-chat">rename</button>
+                <button id="archive-chat">archive</button>
+                <button id="delete-chat">delete</button>
+              </div>
+            </div>
+          </header>
+
+          <div class="transcript" id="transcript" tabindex="0">
+            <div class="messages">
+              <article class="message user">
+                <header class="message-head">
+                  <span class="message-role">you</span>
+                  <time>14:32</time>
+                </header>
+                <p>I have to call the clinic and I’m freezing. I keep rehearsing every possible branch of the conversation.</p>
+              </article>
+
+              <article class="message assistant">
+                <header class="message-head">
+                  <span class="message-role">hey</span>
+                  <time>14:32</time>
+                </header>
+                <p>Let’s make the job smaller. You don’t need to handle every branch right now—only decide what the first sentence is.</p>
+                <p>Something plain would work: “Hi, I’m calling to ask about rescheduling my appointment.”</p>
+              </article>
+
+              <article class="message user">
+                <header class="message-head">
+                  <span class="message-role">you</span>
+                  <time>14:34</time>
+                </header>
+                <p>That helps. The hard part is when they ask why.</p>
+              </article>
+
+              <article class="message assistant">
+                <header class="message-head">
+                  <span class="message-role">hey</span>
+                  <time>14:34</time>
+                </header>
+                <p>You can keep that answer just as short: “The current time no longer works for me.” You don’t owe them a detailed defense.</p>
+                <p>If they press, repeat the practical request: “Could you tell me what other times are available?”</p>
+              </article>
+
+            </div>
+          </div>
+
+          <form class="composer" id="composer">
+            <div class="composer-inner">
+              <label class="visually-hidden" for="message-input">Write a message</label>
+              <textarea id="message-input" rows="1" placeholder="Write a message..." maxlength="6000"></textarea>
+              <button class="send" id="send-button" type="submit">send ↵</button>
+            </div>
+            <div class="offline-note">Offline — your message is saved. Send when connected.</div>
+          </form>
+        </article>
+      </section>
+
+      <section class="surface memory-surface" id="surface-memory" aria-label="Memory">
+        <aside class="file-rail" aria-label="Memory files">
+          <p class="section-label">memory/</p>
+          <button class="file-button" aria-current="false" data-file="memory_summary.md">memory_summary.md</button>
+          <button class="file-button" aria-current="false" data-file="MEMORY.md">MEMORY.md</button>
+          <p class="section-label">topics/</p>
+          <button class="file-button" aria-current="true" data-file="topics/communication.md">communication.md</button>
+          <button class="file-button" aria-current="false" data-file="topics/people.md">people.md</button>
+          <button class="file-button" aria-current="false" data-file="topics/current.md">current.md</button>
+        </aside>
+
+        <article class="memory-editor">
+          <div class="document">
+            <header class="document-head">
+              <button class="mobile-back" data-mobile-back="memory" aria-label="Back to memory files">←</button>
+              <h1 id="file-title">topics/communication.md</h1>
+              <span class="revision" id="file-revision">rev 7 · today</span>
+            </header>
+            <label class="visually-hidden" for="memory-text">Memory file content</label>
+            <textarea class="memory-text" id="memory-text" spellcheck="true"></textarea>
+            <div class="editor-actions">
+              <button class="solid-button" id="save-memory">save changes</button>
+              <button class="text-action" id="show-history">revision history</button>
+            </div>
+            <details class="revision-panel" id="revision-panel">
+              <summary>revision 7 · automatic memory update</summary>
+              <pre>+ Phone calls are easier when the first sentence is prepared.
++ A fallback response helps when someone asks for more explanation.</pre>
+            </details>
+          </div>
+        </article>
+      </section>
+
+      <section class="surface config-surface" id="surface-config" aria-label="Buddy configuration">
+        <div class="config-panel">
+          <form class="config-form" id="config-form">
+            <h1>settings.json</h1>
+            <p class="lede">Tune how hey responds and how this device participates in your local vault.</p>
+
+            <section class="config-group">
+              <span class="config-key">tone</span>
+              <div>
+                <div class="choice-row" data-choice-group="tone">
+                  <button type="button" class="choice" aria-pressed="true" data-value="warm">warm</button>
+                  <button type="button" class="choice" aria-pressed="false" data-value="balanced">balanced</button>
+                  <button type="button" class="choice" aria-pressed="false" data-value="direct">direct</button>
+                </div>
+                <p class="config-help">Warm is supportive without becoming sugary or evasive.</p>
+              </div>
+            </section>
+
+            <section class="config-group">
+              <span class="config-key">response length</span>
+              <div>
+                <div class="choice-row" data-choice-group="length">
+                  <button type="button" class="choice" aria-pressed="false" data-value="concise">concise</button>
+                  <button type="button" class="choice" aria-pressed="true" data-value="balanced">balanced</button>
+                  <button type="button" class="choice" aria-pressed="false" data-value="thorough">thorough</button>
+                </div>
+                <p class="config-help">A preference, not a hard limit. Complex answers may still need room.</p>
+              </div>
+            </section>
+
+            <section class="config-group">
+              <label for="custom-instructions">instructions</label>
+              <div>
+                <textarea class="config-textarea" id="custom-instructions">Help me think without infantilizing me.
+When I am overwhelmed, reduce the next action.
+Do not turn every conversation into a checklist.</textarea>
+                <p class="config-help">Plain-language guidance is enough. No prompt syntax required.</p>
+              </div>
+            </section>
+
+            <section class="config-group">
+              <span class="config-key">memory</span>
+              <div>
+                <button type="button" class="toggle" aria-pressed="true" id="use-memory">Use memories in conversations</button>
+                <button type="button" class="toggle" aria-pressed="true" id="create-memory">Create memories automatically</button>
+                <p class="config-help">Inspect and edit generated memory from the memory buffer.</p>
+              </div>
+            </section>
+
+            <section class="config-group">
+              <span class="config-key">keyboard</span>
+              <div>
+                <button type="button" class="toggle" aria-pressed="true" id="vim-keys">Enable Vim keys</button>
+                <p class="config-help">Wide screens with a hardware keyboard. Use <kbd>j</kbd>/<kbd>k</kbd> to move, <kbd>e</kbd> to open, <kbd>/</kbd> to search, <kbd>i</kbd> to write, and <kbd>Esc</kbd> to return.</p>
+              </div>
+            </section>
+
+            <section class="config-group">
+              <span class="config-key">sync</span>
+              <div>
+                <dl class="sync-status">
+                  <div><dt>state</dt><dd>synced</dd></div>
+                  <div><dt>revision</dt><dd>42</dd></div>
+                  <div><dt>local</dt><dd>clean</dd></div>
+                </dl>
+                <div class="editor-actions">
+                  <button type="button" class="solid-button" id="sync-now">sync now</button>
+                  <button type="button" class="solid-button" id="pair-device">pair another device</button>
+                  <button type="button" class="text-action" id="disconnect-sync">disconnect</button>
+                </div>
+                <p class="config-help">Chats, settings, and the virtual memory filesystem share one encrypted vault.</p>
+              </div>
+            </section>
+
+            <section class="config-group">
+              <span class="config-key">prototype</span>
+              <div>
+                <button type="button" class="toggle" aria-pressed="false" id="offline-toggle">Simulate offline mode</button>
+                <button type="button" class="text-action" id="simulate-failure">show failed response</button>
+                <button type="button" class="text-action" id="simulate-conflict">show memory conflict</button>
+                <p class="config-help">Useful for checking saved drafts and unavailable generation.</p>
+              </div>
+            </section>
+
+            <div class="editor-actions">
+              <button class="solid-button" type="submit">save configuration</button>
+              <button class="text-action" type="reset">reset</button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+
+  </main>
+
+  <dialog id="rename-dialog" aria-labelledby="rename-title">
+    <form method="dialog" class="dialog-form" id="rename-form">
+      <header class="dialog-head">
+        <h2 id="rename-title">Rename conversation</h2>
+        <button value="cancel" aria-label="Close">×</button>
+      </header>
+      <label for="rename-input">name</label>
+      <input class="dialog-input" id="rename-input" maxlength="80" autocomplete="off">
+      <div class="dialog-actions">
+        <button class="solid-button" value="rename">rename</button>
+        <button class="text-action" value="cancel">cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="delete-dialog" aria-labelledby="delete-title">
+    <form method="dialog" class="dialog-form" id="delete-form">
+      <header class="dialog-head">
+        <h2 id="delete-title">Delete conversation?</h2>
+        <button value="cancel" aria-label="Close">×</button>
+      </header>
+      <p id="delete-copy">This removes the chat from this vault. This cannot be undone.</p>
+      <div class="dialog-actions">
+        <button class="solid-button danger-button" value="delete">delete</button>
+        <button class="text-action" value="cancel">cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="pair-dialog" aria-labelledby="pair-title">
+    <form method="dialog" class="dialog-form">
+      <header class="dialog-head">
+        <h2 id="pair-title">Pair another device</h2>
+        <button value="close" aria-label="Close">×</button>
+      </header>
+      <p>Open hey on the other device and enter this one-time pairing code.</p>
+      <output class="pair-code">HEY4-K7M2-PQ9L</output>
+      <p class="config-help">Pairing replaces the other device with the latest encrypted vault snapshot.</p>
+      <div class="dialog-actions">
+        <button type="button" class="solid-button" id="copy-pair-code">copy code</button>
+        <button class="text-action" value="close">done</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const app = document.querySelector("#app");
+    const transcript = document.querySelector("#transcript");
+    const messages = document.querySelector(".messages");
+    const input = document.querySelector("#message-input");
+    const sendButton = document.querySelector("#send-button");
+    const chatList = document.querySelector("#chat-list");
+    const search = document.querySelector("#global-search-input");
+    const globalSearch = document.querySelector("#global-search");
+    const toast = document.querySelector("#toast");
+    const offlineToggle = document.querySelector("#offline-toggle");
+    const chatSurface = document.querySelector("#surface-chats");
+    const memorySurface = document.querySelector("#surface-memory");
+
+    const chats = [
+      ["Getting unstuck", "now"],
+      ["After the team meeting", "11:08"],
+      ["Sunday reset", "yesterday"],
+      ["Planning the clinic call", "Wed"],
+      ["A weird social moment", "Tue"],
+      ["Books for the train", "Jul 18"],
+      ["Sleep and transitions", "Jul 16"],
+      ["Just talking", "Jul 12"]
+    ];
+
+    const transcriptFor = (title, index) => `<article class="message user">
+      <header class="message-head"><span class="message-role">you</span><time>${index % 2 ? "11:08" : "09:16"}</time></header>
+      <p>${index % 2 ? "I keep replaying this and I can’t tell whether I’m being fair." : `Can we pick up where we left off with ${title.toLowerCase()}?`}</p>
+    </article>
+    <article class="message assistant">
+      <header class="message-head"><span class="message-role">hey</span><time>${index % 2 ? "11:09" : "09:16"}</time></header>
+      <p>${index % 2 ? "We can separate what happened from the story your brain is building around it. What is the smallest part you know for certain?" : "Yes. I have the recent conversation and the relevant memory here. What changed since we last talked?"}</p>
+    </article>`;
+
+    const transcripts = [
+      messages.innerHTML,
+      ...chats.slice(1).map(([title], index) => transcriptFor(title, index + 1))
+    ];
+
+    const files = {
+      "memory_summary.md": `# Memory summary
+
+The user prefers warm, direct language without infantilizing reassurance.
+When overwhelmed, reduce the immediate action without turning everything into a checklist.
+
+Search communication.md for phone calls and difficult conversations.
+Search current.md for active situations.`,
+      "MEMORY.md": `# Durable memory
+
+## Communication
+- Direct reassurance is more useful than vague positivity.
+- Ask before turning an emotional conversation into a plan.
+
+## Support
+- Breaking a blocked task down to the first sentence or physical action often helps.
+- Avoid treating autism or ADHD as the explanation for every difficulty.`,
+      "topics/communication.md": `# Communication
+
+## Phone calls
+
+- Phone calls are easier when the first sentence is prepared.
+- A fallback response helps when someone asks for more explanation than expected.
+- Short, factual answers feel safer than rehearsing every possible branch.
+
+## Response style
+
+- Be warm, but do not overpraise ordinary actions.
+- Prefer one useful next step over a long numbered list when the user is overwhelmed.`,
+      "topics/people.md": `# People
+
+Keep relationship context here only when it is likely to matter again.
+
+No durable entries yet.`,
+      "topics/current.md": `# Current
+
+- Reschedule the clinic appointment.
+- Recovering from a tiring team meeting; avoid pushing for immediate interpretation.`
+    };
+
+    let activeChat = 0;
+    let currentFile = "topics/communication.md";
+    let streamingTimer = null;
+    let toastTimer = null;
+    let isOffline = false;
+    let revision = 7;
+
+    const escapeHtml = value => value.replace(/[&<>"']/g, character => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+    })[character]);
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
+    }
+
+    function renderChats(query = "") {
+      const normalized = query.trim().toLowerCase();
+      chatList.innerHTML = "";
+      chats.forEach(([title, time], index) => {
+        if (normalized && !title.toLowerCase().includes(normalized)) return;
+        const item = document.createElement("li");
+        item.className = "chat-row";
+        item.innerHTML = `<button class="chat-button" aria-current="${index === activeChat}">
+          <span class="chat-title">${escapeHtml(title)}</span>
+          <time class="chat-time">${escapeHtml(time)}</time>
+        </button>`;
+        item.querySelector("button").addEventListener("click", () => selectChat(index));
+        chatList.append(item);
+      });
+      if (normalized) {
+        Object.entries(files).forEach(([path, content]) => {
+          if (!path.toLowerCase().includes(normalized) && !content.toLowerCase().includes(normalized)) return;
+          const item = document.createElement("li");
+          item.className = "chat-row";
+          item.innerHTML = `<button class="chat-button">
+            <span class="chat-title">${escapeHtml(path)}</span>
+            <span class="chat-time">memory</span>
+          </button>`;
+          item.querySelector("button").addEventListener("click", () => {
+            setSurface("memory");
+            openFile(path);
+          });
+          chatList.append(item);
+        });
+      }
+    }
+
+    function selectChat(index) {
+      transcripts[activeChat] = messages.innerHTML;
+      activeChat = index;
+      document.querySelector("#conversation-title").textContent = chats[index][0];
+      document.querySelector("#conversation-meta").textContent = index === 0 ? "today · 5 messages" : "saved locally";
+      messages.innerHTML = transcripts[index];
+      renderChats(search.value);
+      chatSurface.classList.add("mobile-detail");
+      transcript.scrollTop = transcript.scrollHeight;
+    }
+
+    function setSurface(name) {
+      document.querySelectorAll(".tab").forEach(tab => {
+        tab.setAttribute("aria-selected", String(tab.dataset.surface === name));
+      });
+      document.querySelectorAll(".surface").forEach(surface => surface.classList.remove("active"));
+      document.querySelector(`#surface-${name}`).classList.add("active");
+    }
+
+    function resizeInput() {
+      input.style.height = "auto";
+      input.style.height = `${Math.min(input.scrollHeight, window.innerHeight * .22)}px`;
+    }
+
+    function appendMessage(role, body, pending = false) {
+      const article = document.createElement("article");
+      article.className = `message ${role}`;
+      article.innerHTML = `<header class="message-head">
+        <span class="message-role">${role === "user" ? "you" : "hey"}</span>
+        <time>${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time>
+      </header><p>${escapeHtml(body)}</p>`;
+      if (pending) article.dataset.pending = "true";
+      messages.append(article);
+      transcript.scrollTop = transcript.scrollHeight;
+      return article.querySelector("p");
+    }
+
+    function stopStreaming() {
+      if (!streamingTimer) return;
+      clearInterval(streamingTimer);
+      streamingTimer = null;
+      sendButton.textContent = "send ↵";
+      sendButton.classList.remove("stop");
+      sendButton.type = "submit";
+      input.disabled = false;
+      input.focus();
+      showToast("Response stopped");
+    }
+
+    function streamReply() {
+      const reply = "You do not have to solve the whole situation at once. Tell me the part that feels most tangled, and we can stay with just that.";
+      const target = appendMessage("assistant", "", true);
+      let position = 0;
+      input.disabled = true;
+      sendButton.textContent = "stop ■";
+      sendButton.classList.add("stop");
+      sendButton.type = "button";
+      sendButton.onclick = stopStreaming;
+
+      streamingTimer = setInterval(() => {
+        position += 2;
+        target.textContent = reply.slice(0, position) + (position < reply.length ? "█" : "");
+        transcript.scrollTop = transcript.scrollHeight;
+        if (position >= reply.length) {
+          clearInterval(streamingTimer);
+          streamingTimer = null;
+          sendButton.textContent = "send ↵";
+          sendButton.classList.remove("stop");
+          sendButton.type = "submit";
+          sendButton.onclick = null;
+          input.disabled = false;
+          input.focus();
+        }
+      }, 28);
+    }
+
+    function setOffline(next) {
+      isOffline = next;
+      app.classList.toggle("offline", isOffline);
+      offlineToggle.setAttribute("aria-pressed", String(isOffline));
+      sendButton.disabled = isOffline;
+      if (isOffline) stopStreaming();
+      showToast(isOffline ? "Offline simulation enabled" : "Connection restored · draft kept");
+    }
+
+    function openFile(path) {
+      currentFile = path;
+      document.querySelector("#file-title").textContent = path;
+      document.querySelector("#memory-text").value = files[path];
+      document.querySelector("#file-revision").textContent = `rev ${revision} · today`;
+      document.querySelectorAll("[data-file]").forEach(button => {
+        button.setAttribute("aria-current", String(button.dataset.file === path));
+      });
+      memorySurface.classList.add("mobile-detail");
+    }
+
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => setSurface(tab.dataset.surface));
+    });
+
+    document.querySelector("#brand-link").addEventListener("click", event => {
+      event.preventDefault();
+      setSurface("chats");
+      chatSurface.classList.remove("mobile-detail");
+    });
+
+    document.querySelectorAll("[data-mobile-back]").forEach(button => {
+      button.addEventListener("click", () => {
+        document.querySelector(`#surface-${button.dataset.mobileBack}`).classList.remove("mobile-detail");
+      });
+    });
+
+    document.querySelector("#new-chat").addEventListener("click", () => {
+      transcripts[activeChat] = messages.innerHTML;
+      chats.unshift(["New conversation", "draft"]);
+      transcripts.unshift(`<div class="state-event">
+        <strong>New conversation</strong><br>
+        Start anywhere. Nothing is saved until you send the first message.
+      </div>`);
+      activeChat = 0;
+      renderChats();
+      document.querySelector("#conversation-title").textContent = "New conversation";
+      document.querySelector("#conversation-meta").textContent = "not saved yet";
+      messages.innerHTML = transcripts[0];
+      chatSurface.classList.add("mobile-detail");
+      input.value = "";
+      input.focus();
+    });
+
+    search.addEventListener("input", event => {
+      setSurface("chats");
+      chatSurface.classList.remove("mobile-detail");
+      renderChats(event.currentTarget.value);
+    });
+
+    document.querySelector("#search-toggle").addEventListener("click", () => {
+      const open = !globalSearch.hasAttribute("data-open");
+      globalSearch.toggleAttribute("data-open", open);
+      document.querySelector("#search-toggle").setAttribute("aria-expanded", String(open));
+      document.querySelector("#search-icon-path").setAttribute("d", open ? "M6 6l12 12M18 6 6 18" : "m21 21-4.35-4.35m2.35-5.15a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z");
+      if (open) search.focus();
+    });
+
+    document.querySelector("#conversation-actions-toggle").addEventListener("click", event => {
+      const menu = document.querySelector("#conversation-menu");
+      menu.hidden = !menu.hidden;
+      event.currentTarget.setAttribute("aria-expanded", String(!menu.hidden));
+    });
+
+    document.querySelector("#rename-chat").addEventListener("click", () => {
+      document.querySelector("#conversation-menu").hidden = true;
+      document.querySelector("#conversation-actions-toggle").setAttribute("aria-expanded", "false");
+      document.querySelector("#rename-input").value = chats[activeChat][0];
+      document.querySelector("#rename-dialog").showModal();
+      document.querySelector("#rename-input").select();
+    });
+
+    document.querySelector("#archive-chat").addEventListener("click", () => {
+      document.querySelector("#conversation-menu").hidden = true;
+      document.querySelector("#conversation-actions-toggle").setAttribute("aria-expanded", "false");
+      showToast(`Archived “${chats[activeChat][0]}” · undo`);
+    });
+
+    document.querySelector("#delete-chat").addEventListener("click", () => {
+      document.querySelector("#conversation-menu").hidden = true;
+      document.querySelector("#conversation-actions-toggle").setAttribute("aria-expanded", "false");
+      document.querySelector("#delete-copy").textContent = `Delete “${chats[activeChat][0]}” from this vault? This cannot be undone.`;
+      document.querySelector("#delete-dialog").showModal();
+    });
+
+    input.addEventListener("input", resizeInput);
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        document.querySelector("#composer").requestSubmit();
+      }
+      if (event.key === "Escape") input.blur();
+    });
+
+    document.querySelector("#composer").addEventListener("submit", event => {
+      event.preventDefault();
+      const body = input.value.trim();
+      if (!body || isOffline || streamingTimer) return;
+      appendMessage("user", body);
+      input.value = "";
+      resizeInput();
+      setTimeout(streamReply, 350);
+    });
+
+    messages.addEventListener("click", event => {
+      if (event.target.closest("[data-open-memory]")) {
+        setSurface("memory");
+        openFile("topics/communication.md");
+      }
+      if (event.target.closest("[data-retry]")) {
+        event.target.closest(".state-event")?.remove();
+        streamReply();
+      }
+    });
+
+    document.querySelectorAll("[data-file]").forEach(button => {
+      button.addEventListener("click", () => openFile(button.dataset.file));
+    });
+
+    document.querySelector("#save-memory").addEventListener("click", () => {
+      files[currentFile] = document.querySelector("#memory-text").value;
+      revision += 1;
+      document.querySelector("#file-revision").textContent = `rev ${revision} · just now`;
+      showToast(`${currentFile} saved`);
+    });
+
+    document.querySelector("#show-history").addEventListener("click", () => {
+      document.querySelector("#revision-panel").open = true;
+      document.querySelector("#revision-panel").scrollIntoView({ block: "nearest" });
+    });
+
+    document.querySelectorAll("[data-choice-group]").forEach(group => {
+      group.addEventListener("click", event => {
+        const choice = event.target.closest(".choice");
+        if (!choice) return;
+        group.querySelectorAll(".choice").forEach(button => button.setAttribute("aria-pressed", String(button === choice)));
+      });
+    });
+
+    document.querySelectorAll(".toggle").forEach(toggle => {
+      toggle.addEventListener("click", () => {
+        if (toggle === offlineToggle) return setOffline(!isOffline);
+        toggle.setAttribute("aria-pressed", String(toggle.getAttribute("aria-pressed") !== "true"));
+      });
+    });
+
+    document.querySelector("#config-form").addEventListener("submit", event => {
+      event.preventDefault();
+      showToast("Configuration saved locally");
+    });
+
+    document.querySelector("#config-form").addEventListener("reset", () => {
+      setTimeout(() => {
+        document.querySelectorAll('[data-choice-group="tone"] .choice').forEach(button => {
+          button.setAttribute("aria-pressed", String(button.dataset.value === "warm"));
+        });
+        document.querySelectorAll('[data-choice-group="length"] .choice').forEach(button => {
+          button.setAttribute("aria-pressed", String(button.dataset.value === "balanced"));
+        });
+        document.querySelector("#use-memory").setAttribute("aria-pressed", "true");
+        document.querySelector("#create-memory").setAttribute("aria-pressed", "true");
+        if (isOffline) setOffline(false);
+        showToast("Configuration reset");
+      }, 0);
+    });
+
+    document.querySelector("#rename-dialog").addEventListener("close", event => {
+      if (event.currentTarget.returnValue !== "rename") return;
+      const title = document.querySelector("#rename-input").value.trim();
+      if (!title) return;
+      chats[activeChat][0] = title;
+      document.querySelector("#conversation-title").textContent = title;
+      renderChats(search.value);
+      showToast("Conversation renamed");
+    });
+
+    document.querySelector("#delete-dialog").addEventListener("close", event => {
+      if (event.currentTarget.returnValue !== "delete") return;
+      chats.splice(activeChat, 1);
+      transcripts.splice(activeChat, 1);
+      activeChat = Math.max(0, activeChat - 1);
+      messages.innerHTML = transcripts[activeChat];
+      document.querySelector("#conversation-title").textContent = chats[activeChat][0];
+      renderChats(search.value);
+      showToast("Conversation deleted");
+    });
+
+    document.querySelector("#pair-device").addEventListener("click", () => {
+      document.querySelector("#pair-dialog").showModal();
+    });
+
+    document.querySelector("#copy-pair-code").addEventListener("click", () => {
+      navigator.clipboard.writeText("HEY4-K7M2-PQ9L").catch(() => {});
+      showToast("Pairing code copied");
+    });
+
+    document.querySelector("#sync-now").addEventListener("click", () => showToast("Vault is already up to date"));
+    document.querySelector("#disconnect-sync").addEventListener("click", () => showToast("Disconnect requires confirmation in the real app"));
+
+    document.querySelector("#simulate-failure").addEventListener("click", () => {
+      setSurface("chats");
+      messages.insertAdjacentHTML("beforeend", `<div class="state-event error">
+        Response failed · Gemini quota unavailable.
+        <button class="text-action" data-retry>retry</button>
+      </div>`);
+      transcript.scrollTop = transcript.scrollHeight;
+    });
+
+    document.querySelector("#simulate-conflict").addEventListener("click", () => {
+      setSurface("chats");
+      messages.insertAdjacentHTML("beforeend", `<div class="state-event">
+        <strong>memory conflict</strong><br>
+        Memory changed in another tab while this response was running. The response was saved; its proposed memory update was not applied.
+        <div class="inline-actions"><button class="text-action" data-open-memory>review memory</button></div>
+      </div>`);
+      transcript.scrollTop = transcript.scrollHeight;
+    });
+
+    renderChats();
+    openFile(currentFile);
+  </script>
+</body>
+</html>

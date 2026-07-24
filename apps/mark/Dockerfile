@@ -13,6 +13,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/mark/package.json apps/mark/package.json
 COPY packages/browser-db/package.json packages/browser-db/package.json
 COPY packages/config/package.json packages/config/package.json
+COPY packages/node-server/package.json packages/node-server/package.json
 COPY packages/sync-client/package.json packages/sync-client/package.json
 COPY packages/ui/package.json packages/ui/package.json
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter mark.tildom...
@@ -23,6 +24,7 @@ ENV VITE_SYNC_BASE_URL=$VITE_SYNC_BASE_URL
 COPY apps/mark apps/mark
 COPY packages/browser-db packages/browser-db
 COPY packages/config packages/config
+COPY packages/node-server packages/node-server
 COPY packages/sync-client packages/sync-client
 COPY packages/ui packages/ui
 RUN pnpm --filter mark.tildom build

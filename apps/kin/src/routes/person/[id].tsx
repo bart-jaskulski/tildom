@@ -1,5 +1,11 @@
 import { For, Show, createEffect, createSignal } from "solid-js";
 import { useNavigate, useParams } from "@solidjs/router";
+import {
+  findMarkdownTaskIndex,
+  handleMarkdownishEnter,
+  renderMarkdownishToHtml,
+  toggleMarkdownTask,
+} from "@tildom/markdownish";
 import { useVimKeymaps } from "@tildom/ui";
 import AppNav from "~/components/AppNav";
 import { dbVersion } from "~/lib/db";
@@ -16,6 +22,7 @@ import {
   fetchRelationships,
   togglePinNote,
   updateContact,
+  updateNote,
   type Contact,
   type ContactNote,
   type SymmetricalRelationship,
@@ -24,8 +31,14 @@ import styles from "./person.module.css";
 
 const formatDate = (timestamp: number) => new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
-  timeStyle: "short",
 }).format(timestamp);
+
+const dateInputValue = (timestamp = Date.now()) => {
+  const date = new Date(timestamp);
+  return new Date(timestamp - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+};
+
+const dateInputTimestamp = (value: string) => new Date(`${value}T12:00:00`).getTime();
 
 export default function PersonDetail() {
   const params = useParams();
@@ -49,6 +62,11 @@ export default function PersonDetail() {
   const [relationshipRole, setRelationshipRole] = createSignal("");
   const [relationshipTarget, setRelationshipTarget] = createSignal("");
   const [noteBody, setNoteBody] = createSignal("");
+  const [noteDate, setNoteDate] = createSignal(dateInputValue());
+  const [editingNoteId, setEditingNoteId] = createSignal<string | null>(null);
+  const [editingNoteBody, setEditingNoteBody] = createSignal("");
+  const [editingDateNoteId, setEditingDateNoteId] = createSignal<string | null>(null);
+  const [editingNoteDate, setEditingNoteDate] = createSignal("");
   let noteInput: HTMLTextAreaElement | undefined;
 
   const openPerson = async (id: string, replace = false) => navigate(await fetchContactPath(id), { replace });
@@ -109,9 +127,38 @@ export default function PersonDetail() {
     const body = noteBody().trim();
     if (!body) return;
     try {
-      await createNote(contactId(), body, false);
+      await createNote(contactId(), body, false, dateInputTimestamp(noteDate()));
       setNoteBody("");
+      setNoteDate(dateInputValue());
     } catch { window.alert("Failed to save note."); }
+  };
+
+  const beginNoteEdit = (note: ContactNote) => {
+    setEditingNoteId(note.id);
+    setEditingNoteBody(note.body);
+  };
+
+  const saveNote = async (event: SubmitEvent, note: ContactNote) => {
+    event.preventDefault();
+    const body = editingNoteBody().trim();
+    if (!body) return;
+    try {
+      await updateNote(note.id, body, note.is_pinned === 1);
+      setEditingNoteId(null);
+    } catch {
+      window.alert("Failed to update timeline entry.");
+    }
+  };
+
+  const saveNoteDate = async (note: ContactNote, value: string) => {
+    const createdAt = dateInputTimestamp(value);
+    try {
+      await updateNote(note.id, note.body, note.is_pinned === 1, createdAt);
+      setNotes(current => current.map(item => item.id === note.id ? { ...item, created_at: createdAt } : item));
+      setEditingDateNoteId(null);
+    } catch {
+      window.alert("Failed to update timeline date.");
+    }
   };
 
   const addRelationship = async (event: SubmitEvent) => {
@@ -127,11 +174,27 @@ export default function PersonDetail() {
     }
   };
 
-  const renderNote = (body: string) => body.split(/(#[a-zA-Z0-9_-]+)/g).map((part) => {
-    if (!part.startsWith("#")) return part;
-    const tag = part.slice(1).toLowerCase();
-    return <button type="button" class={styles.inlineTag} onClick={() => setSelectedTag(selectedTag() === tag ? null : tag)}>{part}</button>;
-  });
+  const handleNoteClick = async (event: MouseEvent, note: ContactNote) => {
+    const taskIndex = findMarkdownTaskIndex(event.target);
+    if (taskIndex !== null) {
+      const body = toggleMarkdownTask(note.body, taskIndex);
+      try {
+        await updateNote(note.id, body, note.is_pinned === 1);
+        setNotes(current => current.map(item => item.id === note.id ? { ...item, body } : item));
+      } catch {
+        window.alert("Failed to update task.");
+      }
+      return;
+    }
+
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const button = target.closest<HTMLElement>("[data-markdownish-tag]");
+    const container = event.currentTarget;
+    if (!(container instanceof HTMLElement) || !button || !container.contains(button)) return;
+    const tag = button.dataset.markdownishTag?.toLowerCase();
+    if (tag) setSelectedTag(selectedTag() === tag ? null : tag);
+  };
 
   return (
     <main class="kin-page">
@@ -254,9 +317,16 @@ export default function PersonDetail() {
                 value={noteBody()}
                 placeholder="Enter interaction notes, observations, or updates here (use #tags to index)…"
                 onInput={(event) => setNoteBody(event.currentTarget.value)}
+                onKeyDown={handleMarkdownishEnter}
                 required
               />
-              <button type="submit" class="kin-primary-button">add</button>
+              <div class={styles.composerActions}>
+                <label class={styles.dateField}>
+                  <span>on</span>
+                  <input type="date" value={noteDate()} onInput={(event) => setNoteDate(event.currentTarget.value)} required />
+                </label>
+                <button type="submit" class="kin-primary-button">add entry</button>
+              </div>
             </form>
 
             <Show when={visibleNotes().length === 0}><p class={styles.logEmpty}>{selectedTag() ? `No entries tagged #${selectedTag()}.` : "The timeline is empty."}</p></Show>
@@ -267,14 +337,65 @@ export default function PersonDetail() {
                     <span class={styles.marker} aria-hidden="true" />
                     <div class={styles.timelineMeta}>
                       <div>
-                        <time>{formatDate(note.created_at)}</time>
+                        <Show when={editingDateNoteId() === note.id} fallback={(
+                          <button
+                            type="button"
+                            class={styles.timelineDate}
+                            title="Edit date"
+                            aria-label={`Edit date: ${formatDate(note.created_at)}`}
+                            onClick={() => {
+                              setEditingDateNoteId(note.id);
+                              setEditingNoteDate(dateInputValue(note.created_at));
+                            }}
+                          >{formatDate(note.created_at)}</button>
+                        )}>
+                          <input
+                            class={styles.timelineDateInput}
+                            type="date"
+                            value={editingNoteDate()}
+                            aria-label="Timeline entry date"
+                            autofocus
+                            onInput={(event) => {
+                              setEditingNoteDate(event.currentTarget.value);
+                              if (event.currentTarget.value) void saveNoteDate(note, event.currentTarget.value);
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === "Escape") setEditingDateNoteId(null);
+                            }}
+                          />
+                        </Show>
                         <button type="button" class="kin-link-button" onClick={() => void togglePinNote(note.id, note.is_pinned)}>
                           {note.is_pinned === 1 ? "[ unpin ]" : "[ pin ]"}
                         </button>
                       </div>
-                      <button type="button" class="kin-link-button kin-danger-link" onClick={async () => { if (window.confirm("Delete this timeline entry?")) await deleteNote(note.id); }}>[ delete ]</button>
+                      <div>
+                        <button type="button" class="kin-link-button" onClick={() => beginNoteEdit(note)}>[ edit ]</button>
+                        <button type="button" class="kin-link-button kin-danger-link" onClick={async () => { if (window.confirm("Delete this timeline entry?")) await deleteNote(note.id); }}>[ delete ]</button>
+                      </div>
                     </div>
-                    <p>{renderNote(note.body)}</p>
+                    <Show when={editingNoteId() === note.id} fallback={(
+                      <div
+                        class={`${styles.noteBody} markdownish`}
+                        innerHTML={renderMarkdownishToHtml(note.body, { hashtags: true, tasks: true })}
+                        onClick={(event) => void handleNoteClick(event, note)}
+                      />
+                    )}>
+                      <form class={styles.noteEditForm} onSubmit={(event) => void saveNote(event, note)}>
+                        <textarea
+                          class="kin-textarea"
+                          aria-label="Timeline entry"
+                          value={editingNoteBody()}
+                          autofocus
+                          onInput={(event) => setEditingNoteBody(event.currentTarget.value)}
+                          onKeyDown={handleMarkdownishEnter}
+                          required
+                        />
+                        <div class={styles.noteEditActions}>
+                          <button type="submit" class="kin-primary-button">save</button>
+                          <button type="button" class="kin-link-button" onClick={() => setEditingNoteId(null)}>[ cancel ]</button>
+                        </div>
+                      </form>
+                    </Show>
                   </article>
                 )}</For>
                 <span class={styles.eof}>~ EOF</span>

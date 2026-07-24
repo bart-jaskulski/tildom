@@ -2,11 +2,16 @@ import { Title } from "@solidjs/meta";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { For, Show, createEffect, createResource, createSignal, onCleanup } from "solid-js";
 import { isServer } from "solid-js/web";
+import {
+  findMarkdownTaskIndex,
+  handleMarkdownishEnter,
+  renderMarkdownishToHtml,
+  toggleMarkdownTask,
+} from "@tildom/markdownish";
 import { useVimKeymaps } from "@tildom/ui";
 import AppNav from "~/components/AppNav";
 import { dbVersion } from "~/lib/db";
 import { formatRelativeTimestamp } from "~/lib/entries";
-import { renderMarkdownToHtml } from "~/lib/markdown";
 import { handleTextareaKeyboardSubmit, resizeTextareaToFitContent } from "~/lib/textarea";
 import { addCommentToEntry, deleteComment, deleteEntry, fetchEntryDetail, isEntryStoreReady, updateComment, updateEntry } from "~/stores/entryStore";
 import styles from "./[id].module.css";
@@ -37,6 +42,9 @@ export default function ItemPage() {
     ([entryId]) => fetchEntryDetail(entryId),
   );
   const entry = () => detail()?.entry ?? null;
+  const handleMarkdownishKeyboardSubmit = (event: KeyboardEvent) => {
+    if (!handleMarkdownishEnter(event)) handleTextareaKeyboardSubmit(event);
+  };
 
   useVimKeymaps([
     { lhs: "i", callback: () => startEditing(), help: "edit entry" },
@@ -75,7 +83,7 @@ export default function ItemPage() {
     }
 
     setEditTitle(currentEntry.title);
-    setEditContent(currentEntry.sourceUrl ?? currentEntry.canonicalUrl ?? currentEntry.body);
+    setEditContent((currentEntry.sourceUrl ?? currentEntry.canonicalUrl ?? currentEntry.body).replace(/^\n/, ""));
     setEditTags(currentEntry.tags.join(" "));
     setActionError(null);
     setIsEditing(true);
@@ -200,6 +208,35 @@ export default function ItemPage() {
     }
   };
 
+  const handleEntryTaskClick = async (event: MouseEvent) => {
+    const taskIndex = findMarkdownTaskIndex(event.target);
+    const currentEntry = entry();
+    if (taskIndex === null || !currentEntry) return;
+
+    try {
+      await updateEntry(currentEntry.id, {
+        title: currentEntry.title,
+        content: toggleMarkdownTask(currentEntry.body, taskIndex),
+        tags: currentEntry.tags.join(" "),
+      });
+      await refetch();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Failed to update task");
+    }
+  };
+
+  const handleCommentTaskClick = async (event: MouseEvent, commentId: string, body: string) => {
+    const taskIndex = findMarkdownTaskIndex(event.target);
+    if (taskIndex === null) return;
+
+    try {
+      await updateComment(commentId, toggleMarkdownTask(body, taskIndex));
+      await refetch();
+    } catch (error) {
+      setCommentActionError(error instanceof Error ? error.message : "Failed to update task");
+    }
+  };
+
   return (
     <main class="hn-page">
       <Title>{entry()?.title ? `${entry()!.title} | mark.tildom` : "Item | mark.tildom"}</Title>
@@ -256,7 +293,7 @@ export default function ItemPage() {
                         setEditContent(event.currentTarget.value);
                         resizeTextareaToFitContent(event.currentTarget);
                       }}
-                      onKeyDown={handleTextareaKeyboardSubmit}
+                      onKeyDown={handleMarkdownishKeyboardSubmit}
                       rows={5}
                       class="hn-textarea"
                     />
@@ -308,7 +345,11 @@ export default function ItemPage() {
                   </Show>
 
                   <Show when={currentEntry().body}>
-                    <div class={`${styles.body} ${styles.markdown} ${styles.prose}`} innerHTML={renderMarkdownToHtml(currentEntry().body)} />
+                    <div
+                      class={`${styles.body} ${styles.markdown} ${styles.prose} markdownish`}
+                      innerHTML={renderMarkdownishToHtml(currentEntry().body, { tasks: true })}
+                      onClick={(event) => void handleEntryTaskClick(event)}
+                    />
                   </Show>
 
                   <Show when={actionError()}>
@@ -329,7 +370,11 @@ export default function ItemPage() {
                         when={editingCommentId() === comment.id}
                         fallback={
                           <>
-                            <div class={`${styles.commentBody} ${styles.markdown}`} innerHTML={renderMarkdownToHtml(comment.body)} />
+                            <div
+                              class={`${styles.commentBody} ${styles.markdown} markdownish`}
+                              innerHTML={renderMarkdownishToHtml(comment.body, { tasks: true })}
+                              onClick={(event) => void handleCommentTaskClick(event, comment.id, comment.body)}
+                            />
                             <p class="entry-subtext">
                               {formatRelativeTimestamp(comment.createdAt)}
                               <span> | </span>
@@ -367,7 +412,7 @@ export default function ItemPage() {
                               setEditingCommentBody(event.currentTarget.value);
                               resizeTextareaToFitContent(event.currentTarget);
                             }}
-                            onKeyDown={handleTextareaKeyboardSubmit}
+                            onKeyDown={handleMarkdownishKeyboardSubmit}
                             rows={4}
                             class="hn-textarea"
                           />
@@ -402,7 +447,7 @@ export default function ItemPage() {
                       setCommentBody(event.currentTarget.value);
                       resizeTextareaToFitContent(event.currentTarget);
                     }}
-                    onKeyDown={handleTextareaKeyboardSubmit}
+                    onKeyDown={handleMarkdownishKeyboardSubmit}
                     rows={4}
                     placeholder="private note, quote, or follow-up"
                     class="hn-textarea"
