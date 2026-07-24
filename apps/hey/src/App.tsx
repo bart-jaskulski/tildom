@@ -278,8 +278,8 @@ export default function App() {
   const joinPair = () => runSync(async () => {
     const secret = joinSecret();
     if (!secret) throw new Error("Missing pairing secret");
-    await joinSyncVault(secret);
     clearPairingHash();
+    await joinSyncVault(secret);
     setJoinSecret(null);
     pairDialog?.close();
     showToast("Device paired");

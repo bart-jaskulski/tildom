@@ -11,7 +11,7 @@ const client = createSyncClient({
   state: syncState,
   exportDatabase,
   importDatabase,
-  afterImport: async () => window.location.reload(),
+  afterImport: async () => window.setTimeout(() => window.location.reload()),
 });
 
 export const syncSignals = client.signals;
