@@ -5,6 +5,16 @@ type ChatEvent =
   | { type: "done"; memories: Array<{ path: string; content: string }> }
   | { type: "error"; error: string };
 
+export const generateChatTitle = async (message: string) => {
+  const response = await fetch("/api/title", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message }),
+  });
+  if (!response.ok) throw new Error("Failed to generate chat title.");
+  return ((await response.json()) as { title: string }).title;
+};
+
 export const streamChat = async (
   messages: Message[],
   memories: MemoryFile[],

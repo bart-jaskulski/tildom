@@ -1,5 +1,5 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { isStepCount, streamText, tool } from "ai";
+import { generateText, isStepCount, streamText, tool } from "ai";
 import { Hono } from "hono";
 import { z } from "zod";
 import { safePath } from "./memory.ts";
@@ -39,12 +39,34 @@ Never mention memory tools or internal files unless the user asks about memory.`
 
 export const app = new Hono();
 
+const googleModel = (model: string) =>
+  createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_API_KEY! })(model);
+
 app.get("/api/health", (context) =>
   context.json({
     ready: Boolean(process.env.GOOGLE_API_KEY),
     model: process.env.HEY_MODEL ?? "gemini-3-flash-preview",
+    titleModel: process.env.HEY_TITLE_MODEL ?? "gemini-2.5-flash-lite",
   }),
 );
+
+app.post("/api/title", async (context) => {
+  if (!process.env.GOOGLE_API_KEY) {
+    return context.json({ error: "GOOGLE_API_KEY is not configured." }, 503);
+  }
+  const parsed = z.object({ message: z.string().trim().min(1).max(100_000) })
+    .safeParse(await context.req.json().catch(() => null));
+  if (!parsed.success) return context.json({ error: "Invalid title request." }, 400);
+
+  const { text } = await generateText({
+    model: googleModel(process.env.HEY_TITLE_MODEL ?? "gemini-2.5-flash-lite"),
+    system: "Write a concise title for this chat. Return only the title, with no quotes or punctuation at the end.",
+    prompt: parsed.data.message,
+    maxOutputTokens: 30,
+  });
+  const title = text.trim().replace(/^["']|["']$/g, "").slice(0, 80);
+  return context.json({ title: title || "New conversation" });
+});
 
 app.post("/api/chat", async (context) => {
   const apiKey = process.env.GOOGLE_API_KEY;
@@ -99,7 +121,7 @@ app.post("/api/chat", async (context) => {
     : undefined;
 
   const result = streamText({
-    model: createGoogleGenerativeAI({ apiKey })(process.env.HEY_MODEL ?? "gemini-3-flash-preview"),
+    model: googleModel(process.env.HEY_MODEL ?? "gemini-3-flash-preview"),
     system: systemPrompt(settings),
     messages: messages.map((message) => ({ role: message.role, content: message.body })),
     tools: memoryTools,

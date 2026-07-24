@@ -16,6 +16,7 @@ import {
   selectWorkspace,
   workspaces,
 } from "~/stores/taskStore";
+import { pwaInstall } from "~/lib/pwaInstall";
 
 type StorageStatus = "checking" | "persisted" | "not-persisted" | "unavailable";
 
@@ -164,6 +165,19 @@ export default function SettingsPage() {
 
       {/* Settings Grid Panel */}
       <div class="tui-container max-w-xl mx-auto flex-1 gap-8 pb-20">
+        <Show when={pwaInstall.available() || pwaInstall.needsSafariInstructions()}>
+          <section class="border-b border-[var(--border-color)] pb-6">
+            <h2 class="tui-heading">■ Install</h2>
+            <Show when={pwaInstall.available()}>
+              <button type="button" class="tui-button min-h-[44px] px-3 font-mono" onClick={() => void pwaInstall.prompt()}>
+                [ INSTALL DO ]
+              </button>
+            </Show>
+            <Show when={!pwaInstall.available() && pwaInstall.needsSafariInstructions()}>
+              <p class="text-[var(--fg-muted)] text-sm">In Safari, use Share → Add to Home Screen.</p>
+            </Show>
+          </section>
+        </Show>
         
         {/* Workspace Preferences Section */}
         <section class="border-b border-[var(--border-color)] pb-6">

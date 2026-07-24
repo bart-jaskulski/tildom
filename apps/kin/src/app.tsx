@@ -8,6 +8,7 @@ import Settings from "./routes/settings";
 import Pair from "./routes/pair";
 import { initializeSync } from "./lib/syncClient";
 import { initializeContactStore } from "./stores/contactStore";
+import { pwaInstall } from "./lib/pwaInstall";
 import "./app.css";
 
 function KinVimNavigation(props: ParentProps) {
@@ -34,6 +35,7 @@ function KinVimNavigation(props: ParentProps) {
 
 export default function App() {
   onMount(async () => {
+    pwaInstall.initialize();
     await initializeContactStore();
     window.setTimeout(() => void initializeSync(), 1_000);
   });

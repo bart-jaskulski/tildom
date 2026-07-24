@@ -33,8 +33,9 @@ available offline; model responses require connectivity.
 ## Model Runtime
 
 - Gemini runs only through Hey's backend using AI SDK v7.
-- `GOOGLE_API_KEY` is server-only; `HEY_MODEL` optionally overrides
-  `gemini-3-flash-preview`.
+- `GOOGLE_API_KEY` is server-only. `HEY_MODEL` optionally overrides
+  `gemini-3-flash-preview`; `HEY_TITLE_MODEL` optionally overrides the lightweight
+  `gemini-2.5-flash-lite` used for chat titles.
 - The browser sends a turn-scoped chat and memory snapshot. The backend keeps neither after the
   streamed turn completes.
 - Memory tool writes return to the browser and are committed to the canonical local SQLite vault.

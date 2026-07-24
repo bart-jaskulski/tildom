@@ -1,10 +1,10 @@
 {
-  "name": "kin.tildom",
-  "short_name": "kin",
+  "name": "hey.tildom",
+  "short_name": "hey",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fafafa",
-  "theme_color": "#005cc5",
+  "theme_color": "#d73a49",
   "icons": [
     {
       "src": "/icon.svg",

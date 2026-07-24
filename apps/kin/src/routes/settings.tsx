@@ -5,6 +5,7 @@ import SyncSettings from "~/components/SyncSettings";
 import { exportDatabase, importDatabase } from "~/lib/db";
 import styles from "./settings.module.css";
 import { markSyncDirty } from "~/lib/syncState";
+import { pwaInstall } from "~/lib/pwaInstall";
 
 export default function Settings() {
   const [status, setStatus] = createSignal<string | null>(null);
@@ -53,6 +54,17 @@ export default function Settings() {
     <main class="kin-page">
       <AppNav active="settings" />
       <section class={`kin-content ${styles.panel}`}>
+        <Show when={pwaInstall.available() || pwaInstall.needsSafariInstructions()}>
+          <section class={styles.section}>
+            <h1>Install</h1>
+            <Show when={pwaInstall.available()}>
+              <button type="button" class="kin-button" onClick={() => void pwaInstall.prompt()}>install kin</button>
+            </Show>
+            <Show when={!pwaInstall.available() && pwaInstall.needsSafariInstructions()}>
+              <p>In Safari, use Share → Add to Home Screen.</p>
+            </Show>
+          </section>
+        </Show>
         <section class={styles.section}>
           <h1>Keyboard</h1>
           <label class={styles.checkbox}>

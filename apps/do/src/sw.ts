@@ -8,10 +8,11 @@ import {
 } from "~/lib/serviceWorkerRouting";
 
 declare const self: ServiceWorkerGlobalScope;
+declare const __PWA_ASSETS__: readonly string[];
 
 const NAVIGATION_CACHE_NAME = "do-tildom-navigation-v1";
 const ROOT_DOCUMENT_PATH = "/";
-const STATIC_PWA_ASSETS = ["/favicon.ico", "/icon-192.png", "/icon-512.png", "/manifest.json"].map((url) => ({
+const PRECACHE_ASSETS = __PWA_ASSETS__.map((url) => ({
   url,
   revision: null,
 }));
@@ -42,26 +43,15 @@ const handleNavigation = async (request: Request) => {
   const cache = await caches.open(NAVIGATION_CACHE_NAME);
   const cacheKey = toScopedDocumentUrl(toNavigationCacheKey(url));
   const rootFallbackKey = toScopedDocumentUrl(ROOT_DOCUMENT_PATH);
+  const cachedResponse = await cache.match(cacheKey) ?? await cache.match(rootFallbackKey);
+
+  if (cachedResponse) {
+    return cachedResponse;
+  }
 
   try {
-    const response = await fetch(request);
-
-    if (response.ok && response.headers.get("content-type")?.includes("text/html")) {
-      await cache.put(cacheKey, response.clone());
-    }
-
-    return response;
+    return await fetch(request);
   } catch {
-    const cachedResponse = await cache.match(cacheKey);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-
-    const rootFallback = await cache.match(rootFallbackKey);
-    if (rootFallback) {
-      return rootFallback;
-    }
-
     return errorResponse();
   }
 };
@@ -75,7 +65,7 @@ const errorResponse = () =>
     },
   });
 
-precacheAndRoute([...self.__WB_MANIFEST, ...STATIC_PWA_ASSETS]);
+precacheAndRoute(PRECACHE_ASSETS);
 cleanupOutdatedCaches();
 
 self.addEventListener("install", (event) => {

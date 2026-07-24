@@ -7,7 +7,7 @@ import {
   onMount,
 } from "solid-js";
 import { initDb } from "./lib/db";
-import { streamChat } from "./lib/chat";
+import { generateChatTitle, streamChat } from "./lib/chat";
 import { buildPairingUrl, clearPairingHash, parsePairingSecret } from "@tildom/sync-client";
 import {
   createSyncVault,
@@ -29,11 +29,13 @@ import {
   readChatDraft,
   readSettings,
   renameChat,
+  titleChat,
   writeMemoryFile,
   writeChatDraft,
   writeSettings,
 } from "./lib/store";
 import type { Chat, MemoryFile, Message, SearchResult, Settings, Surface } from "./lib/types";
+import { pwaInstall } from "./lib/pwaInstall";
 
 const compactDate = (timestamp: number) => {
   const date = new Date(timestamp);
@@ -158,6 +160,7 @@ export default function App() {
   };
 
   onMount(async () => {
+    pwaInstall.initialize();
     try {
       await initDb();
       const [files, preferences] = await Promise.all([listMemoryFiles(), readSettings()]);
@@ -207,7 +210,16 @@ export default function App() {
     let userMessage: Message | undefined;
     const pendingId = crypto.randomUUID();
     try {
+      const isFirstUserMessage = !messages().some((message) => message.role === "user");
       userMessage = await addMessage(chatId, "user", body);
+      if (isFirstUserMessage) {
+        void generateChatTitle(body)
+          .then(async (title) => {
+            await titleChat(chatId, title);
+            setChats(await listChats());
+          })
+          .catch(() => {});
+      }
       const requestMessages = [...messages(), userMessage];
       setMessages([...requestMessages, {
         id: pendingId,
@@ -593,6 +605,18 @@ export default function App() {
                     <span>[{preferences().vimEnabled ? "x" : " "}] enable Vim keys</span>
                   </label>
                 </section>
+
+                <Show when={pwaInstall.available() || pwaInstall.needsSafariInstructions()}>
+                  <section class="settings-section">
+                    <h2>Install</h2>
+                    <Show when={pwaInstall.available()}>
+                      <button class="button" type="button" onClick={() => void pwaInstall.prompt()}>install hey</button>
+                    </Show>
+                    <Show when={!pwaInstall.available() && pwaInstall.needsSafariInstructions()}>
+                      <p>In Safari, use Share → Add to Home Screen.</p>
+                    </Show>
+                  </section>
+                </Show>
 
                 <section class="settings-section">
                   <h2>Sync</h2>

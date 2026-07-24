@@ -10,11 +10,12 @@ import {
 import { createSyncWorker } from "@tildom/sync-client/service-worker";
 
 declare const self: ServiceWorkerGlobalScope;
+declare const __PWA_ASSETS__: readonly string[];
 
 const NAVIGATION_CACHE_NAME = "hn-links-navigation-v1";
 const STATIC_CACHE_NAME = "hn-links-static-v1";
 const ROOT_DOCUMENT_PATH = "/";
-const STATIC_PWA_ASSET_PATHS = ["/favicon.ico", "/icon-192.png", "/icon-512.png", "/manifest.json"];
+const STATIC_PWA_ASSET_PATHS = __PWA_ASSETS__;
 
 const toScopedDocumentUrl = (path: string) => new URL(path, self.registration.scope).toString();
 
@@ -85,7 +86,10 @@ const { prefetchLatestSnapshot, runBackgroundSync } = createSyncWorker(syncState
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
-  event.waitUntil(cacheAppShell().catch(() => undefined));
+  event.waitUntil(Promise.all([
+    cacheAppShell(),
+    caches.open(STATIC_CACHE_NAME).then((cache) => cache.addAll(STATIC_PWA_ASSET_PATHS)),
+  ]));
 });
 
 self.addEventListener("activate", (event) => {

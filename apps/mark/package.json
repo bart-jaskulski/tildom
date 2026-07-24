@@ -3,7 +3,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build:client": "node scripts/build-service-worker.mjs && vite build",
+    "build:client": "vite build && node ../../scripts/build-pwa.mjs",
     "build:server": "tsc -p tsconfig.server.json",
     "build": "pnpm build:client && pnpm build:server",
     "preview": "NODE_ENV=production node server-dist/index.js",

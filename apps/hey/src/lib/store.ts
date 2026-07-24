@@ -38,6 +38,9 @@ export const createChat = async () => {
 export const renameChat = (id: string, title: string) =>
   exec("UPDATE chats SET title = ?, updated_at = ? WHERE id = ?", [title, Date.now(), id]);
 
+export const titleChat = (id: string, title: string) =>
+  exec("UPDATE chats SET title = ? WHERE id = ? AND title = 'New conversation'", [title, id]);
+
 export const deleteChat = (id: string) => exec("DELETE FROM chats WHERE id = ?", [id]);
 
 export const addMessage = async (chatId: string, role: Message["role"], body: string) => {

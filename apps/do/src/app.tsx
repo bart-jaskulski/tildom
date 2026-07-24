@@ -9,9 +9,12 @@ import Home from "~/routes/index";
 import SettingsPage from "~/routes/settings";
 import PairPage from "~/routes/pair";
 import NotFound from "~/routes/[...404]";
+import { pwaInstall } from "~/lib/pwaInstall";
 import "./app.css";
 
 export default function App() {
+  pwaInstall.initialize();
+
   onMount(async () => {
     await initializeVaultStore();
     await initializeTaskStore();

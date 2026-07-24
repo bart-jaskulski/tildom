@@ -4,12 +4,12 @@
   "scripts": {
     "dev": "vite",
     "build": "pnpm build:client && pnpm build:server",
-    "build:client": "vite build",
+    "build:client": "vite build && node ../../scripts/build-pwa.mjs",
     "build:server": "tsc -p tsconfig.server.json",
     "preview": "NODE_ENV=production node server-dist/server/index.js",
     "start": "NODE_ENV=production node server-dist/server/index.js",
     "typecheck": "tsc --noEmit",
-    "test": "node --test server/*.test.ts"
+    "test": "node --test server/*.test.ts src/lib/*.test.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.23",
