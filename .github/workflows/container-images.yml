@@ -27,6 +27,8 @@ jobs:
             dockerfile: apps/mark/Dockerfile
           - image: kin
             dockerfile: apps/kin/Dockerfile
+          - image: hey
+            dockerfile: apps/hey/Dockerfile
           - image: sync
             dockerfile: services/sync/Dockerfile
 

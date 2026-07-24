@@ -1,4 +1,4 @@
-import { google } from "@ai-sdk/google";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { isStepCount, streamText, tool } from "ai";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -41,14 +41,15 @@ export const app = new Hono();
 
 app.get("/api/health", (context) =>
   context.json({
-    ready: Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY),
+    ready: Boolean(process.env.GOOGLE_API_KEY),
     model: process.env.HEY_MODEL ?? "gemini-3-flash-preview",
   }),
 );
 
 app.post("/api/chat", async (context) => {
-  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-    return context.json({ error: "GOOGLE_GENERATIVE_AI_API_KEY is not configured." }, 503);
+  const apiKey = process.env.GOOGLE_API_KEY;
+  if (!apiKey) {
+    return context.json({ error: "GOOGLE_API_KEY is not configured." }, 503);
   }
 
   const parsed = requestSchema.safeParse(await context.req.json().catch(() => null));
@@ -98,7 +99,7 @@ app.post("/api/chat", async (context) => {
     : undefined;
 
   const result = streamText({
-    model: google(process.env.HEY_MODEL ?? "gemini-3-flash-preview"),
+    model: createGoogleGenerativeAI({ apiKey })(process.env.HEY_MODEL ?? "gemini-3-flash-preview"),
     system: systemPrompt(settings),
     messages: messages.map((message) => ({ role: message.role, content: message.body })),
     tools: memoryTools,
