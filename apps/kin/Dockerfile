@@ -1,5 +1,12 @@
 # syntax=docker/dockerfile:1.7
 
+FROM node:22-bookworm-slim AS package-manifests
+
+WORKDIR /repo
+
+COPY packages packages
+RUN find packages -type f ! -name package.json -delete
+
 FROM node:22-bookworm-slim AS build
 
 WORKDIR /repo
@@ -11,20 +18,14 @@ RUN corepack enable && corepack prepare pnpm@11.10.0 --activate && pnpm config s
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/kin/package.json apps/kin/package.json
-COPY packages/config/package.json packages/config/package.json
-COPY packages/node-server/package.json packages/node-server/package.json
-COPY packages/sync-client/package.json packages/sync-client/package.json
-COPY packages/ui/package.json packages/ui/package.json
+COPY --from=package-manifests /repo/packages packages
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter kin.tildom...
 
 ARG VITE_SYNC_BASE_URL=https://sync.tildom.app
 ENV VITE_SYNC_BASE_URL=$VITE_SYNC_BASE_URL
 
 COPY apps/kin apps/kin
-COPY packages/config packages/config
-COPY packages/node-server packages/node-server
-COPY packages/sync-client packages/sync-client
-COPY packages/ui packages/ui
+COPY packages packages
 RUN pnpm --filter kin.tildom build
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter kin.tildom deploy --prod --legacy /app
 

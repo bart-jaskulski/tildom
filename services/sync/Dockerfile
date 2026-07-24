@@ -1,5 +1,12 @@
 # syntax=docker/dockerfile:1.7
 
+FROM node:22-bookworm-slim AS package-manifests
+
+WORKDIR /repo
+
+COPY packages packages
+RUN find packages -type f ! -name package.json -delete
+
 FROM node:22-bookworm-slim AS build
 
 WORKDIR /repo
@@ -10,11 +17,11 @@ ENV PATH=$PNPM_HOME:$PATH
 RUN corepack enable && corepack prepare pnpm@11.10.0 --activate && pnpm config set store-dir /pnpm/store
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY packages/config/package.json packages/config/package.json
 COPY services/sync/package.json services/sync/package.json
+COPY --from=package-manifests /repo/packages packages
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter @tildom/sync
 
-COPY packages/config packages/config
+COPY packages packages
 COPY services/sync services/sync
 RUN pnpm --filter @tildom/sync build
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter @tildom/sync deploy --prod --legacy /app

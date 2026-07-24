@@ -30,6 +30,16 @@ available offline; model responses require connectivity.
 6. **Warmth without manipulation:** Hey can feel familiar without claiming personhood, exclusive
    attachment, or replacement of human support.
 
+## Model Runtime
+
+- Gemini runs only through Hey's backend using AI SDK v7.
+- `GOOGLE_GENERATIVE_AI_API_KEY` is server-only; `HEY_MODEL` optionally overrides
+  `gemini-3-flash-preview`.
+- The browser sends a turn-scoped chat and memory snapshot. The backend keeps neither after the
+  streamed turn completes.
+- Memory tool writes return to the browser and are committed to the canonical local SQLite vault.
+- Existing conversations and memory remain available offline; sending a message does not.
+
 ## Primary Surfaces
 
 - `chats.db`: global chat search, conversation list, transcript, composer, and chat management.

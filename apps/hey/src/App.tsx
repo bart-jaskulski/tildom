@@ -7,6 +7,7 @@ import {
   onMount,
 } from "solid-js";
 import { initDb } from "./lib/db";
+import { streamChat } from "./lib/chat";
 import {
   addMessage,
   createChat,
@@ -50,17 +51,6 @@ const Highlight = (props: { text: string; query: string }) => {
   return <For each={props.text.split(new RegExp(`(${pattern})`, "gi"))}>{(part) =>
     terms.includes(part.toLowerCase()) ? <mark>{part}</mark> : part
   }</For>;
-};
-
-const mockReply = (body: string) => {
-  const lower = body.toLowerCase();
-  if (lower.includes("overwhelm") || lower.includes("stuck")) {
-    return "Let’s reduce the size of the moment. What is one thing that would make the next ten minutes slightly easier?";
-  }
-  if (lower.includes("call")) {
-    return "We can write the first sentence together, then decide the one fact you need from the call. Nothing beyond that has to be solved yet.";
-  }
-  return "I’m here. We can stay with this for a moment without forcing it into a solution. What part feels most important to say out loud?";
 };
 
 export default function App() {
@@ -184,22 +174,45 @@ export default function App() {
 
   const send = async () => {
     const body = draft().trim();
-    if (!body || !activeChatId() || sending()) return;
+    const preferences = settings();
+    if (!body || !activeChatId() || !preferences || sending()) return;
     setSending(true);
     setDraft("");
     queueMicrotask(() => resizeComposer());
     await writeChatDraft(activeChatId(), "");
+    const chatId = activeChatId();
+    let userMessage: Message | undefined;
+    const pendingId = crypto.randomUUID();
     try {
-      const userMessage = await addMessage(activeChatId(), "user", body);
-      setMessages((current) => [...current, userMessage]);
-      await new Promise((resolve) => window.setTimeout(resolve, 550));
-      const reply = await addMessage(activeChatId(), "assistant", mockReply(body));
-      setMessages((current) => [...current, reply]);
-      await refreshChats(activeChatId());
+      userMessage = await addMessage(chatId, "user", body);
+      const requestMessages = [...messages(), userMessage];
+      setMessages([...requestMessages, {
+        id: pendingId,
+        chatId,
+        role: "assistant",
+        body: "",
+        createdAt: Date.now(),
+      }]);
+      let replyBody = "";
+      const memoryWrites = await streamChat(requestMessages, memoryFiles(), preferences, (text) => {
+        replyBody += text;
+        setMessages((current) => current.map((message) =>
+          message.id === pendingId ? { ...message, body: replyBody } : message
+        ));
+      });
+      if (!replyBody.trim()) throw new Error("Hey returned an empty response.");
+      const reply = await addMessage(chatId, "assistant", replyBody);
+      setMessages((current) => current.map((message) => message.id === pendingId ? reply : message));
+      await Promise.all(memoryWrites.map((write) => writeMemoryFile({ path: write.path }, write.content)));
+      if (memoryWrites.length) setMemoryFiles(await listMemoryFiles());
+      await refreshChats(chatId);
     } catch (cause) {
-      setDraft(body);
-      await writeChatDraft(activeChatId(), body);
-      setError(cause instanceof Error ? cause.message : String(cause));
+      setMessages((current) => current.filter((message) => message.id !== pendingId));
+      if (!userMessage) {
+        setDraft(body);
+        await writeChatDraft(chatId, body);
+      }
+      showToast(cause instanceof Error ? cause.message : String(cause));
     } finally {
       setSending(false);
     }
@@ -389,15 +402,14 @@ export default function App() {
                       <For each={messages()}>{(message) =>
                         <article class={`message ${message.role}`}>
                           <header><span>{message.role === "user" ? "you" : "hey"}</span><time>{time(message.createdAt)}</time></header>
-                          <For each={message.body.split("\n\n")}>{(paragraph) => <p>{paragraph}</p>}</For>
+                          <Show
+                            when={message.body}
+                            fallback={<p>thinking<span aria-hidden="true">…</span></p>}
+                          >
+                            <For each={message.body.split("\n\n")}>{(paragraph) => <p>{paragraph}</p>}</For>
+                          </Show>
                         </article>
                       }</For>
-                    </Show>
-                    <Show when={sending()}>
-                      <article class="message assistant pending">
-                        <header><span>hey</span><time>now</time></header>
-                        <p>thinking<span aria-hidden="true">…</span></p>
-                      </article>
                     </Show>
                   </div>
 

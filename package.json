@@ -15,6 +15,7 @@
     "build:mark": "pnpm --filter mark.tildom build",
     "build:sync": "pnpm --filter @tildom/sync build",
     "start:do": "pnpm --filter do.tildom start",
+    "start:hey": "pnpm --filter hey.tildom start",
     "start:mark": "pnpm --filter mark.tildom start",
     "test": "pnpm --filter './apps/*' --filter './packages/*' --filter './services/*' test",
     "test:do": "pnpm --filter do.tildom test",

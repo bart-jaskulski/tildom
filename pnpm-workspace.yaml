@@ -7,3 +7,8 @@ allowBuilds:
   "@parcel/watcher": true
   better-sqlite3: true
   esbuild: true
+
+minimumReleaseAgeExclude:
+  - '@ai-sdk/gateway@4.0.28'
+  - '@ai-sdk/google@4.0.23'
+  - ai@7.0.37

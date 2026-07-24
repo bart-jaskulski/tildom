@@ -75,10 +75,11 @@ export const listMemoryFiles = async (): Promise<MemoryFile[]> =>
     updatedAt: row.updated_at,
   }));
 
-export const writeMemoryFile = async (file: MemoryFile, content: string) => {
+export const writeMemoryFile = async (file: Pick<MemoryFile, "path">, content: string) => {
   await exec(
-    "UPDATE memory_files SET content = ?, updated_at = ? WHERE path = ?",
-    [content, Date.now(), file.path],
+    `INSERT INTO memory_files (path, content, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(path) DO UPDATE SET content = excluded.content, updated_at = excluded.updated_at`,
+    [file.path, content, Date.now()],
   );
 };
 
