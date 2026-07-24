@@ -2,7 +2,8 @@ import { BrowserDbClient } from "@tildom/browser-db";
 import { MARK_DB_SCHEMA } from "./schema";
 
 const client = new BrowserDbClient("entries.sqlite3", {
-  schema: MARK_DB_SCHEMA
+  schema: MARK_DB_SCHEMA,
+  requiredTables: ["entries", "comments", "tags", "entry_tags"],
 });
 
 export const initDb = client.init;

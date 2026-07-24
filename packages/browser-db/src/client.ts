@@ -1,9 +1,11 @@
-import { createSignal, createEffect, createComputed, Signal } from "solid-js";
-import type { DbRequest, DbRequestBody, DbResponse } from "./types";
+import { createSignal, createComputed, Signal } from "solid-js";
+import type { DbMigration, DbRequest, DbRequestBody, DbResponse } from "./types";
 import DbWorker from "./db.worker?worker";
 
 export interface BrowserDbClientOptions {
   schema?: string;
+  migrations?: DbMigration[];
+  requiredTables?: string[];
   workerConstructor?: new () => Worker;
 }
 
@@ -47,14 +49,24 @@ export class BrowserDbClient {
     const WorkerCtor = this.options?.workerConstructor || DbWorker;
     this.worker = new WorkerCtor();
 
-    this.worker.onmessage = this.handleMessage;
+    this.worker!.onmessage = this.handleMessage;
 
-    await this.postAndWait({ 
-      type: "init",
-      dbName: this.dbName,
-      schema: this.options?.schema
-    } as any);
-    this.flushQueue();
+    try {
+      await this.postAndWait({
+        type: "init",
+        dbName: this.dbName,
+        schema: this.options?.schema,
+        migrations: this.options?.migrations,
+        requiredTables: this.options?.requiredTables,
+      });
+      this.flushQueue();
+    } catch (error) {
+      this.terminateWorker();
+      for (const queued of this.queue.splice(0)) {
+        queued.reject(error instanceof Error ? error : new Error(String(error)));
+      }
+      throw error;
+    }
   };
 
   private handleMessage = (event: MessageEvent<DbResponse>) => {
@@ -158,35 +170,9 @@ export class BrowserDbClient {
   };
 
   deleteDatabaseFile = async (): Promise<void> => {
-    if (this.worker) {
-      this.worker.terminate();
-      this.worker = null;
-      this.isReady = false;
-    }
-    
-    // Perform unlinking via a temp worker or local script
-    const WorkerCtor = this.options?.workerConstructor || DbWorker;
-    const tempWorker = new WorkerCtor();
-    
-    await new Promise<void>((resolve, reject) => {
-      tempWorker.onmessage = (event) => {
-        const msg = event.data;
-        if (msg.type === "success") {
-          tempWorker.terminate();
-          resolve();
-        } else if (msg.type === "error") {
-          tempWorker.terminate();
-          reject(new Error(msg.message));
-        }
-      };
-      
-      tempWorker.postMessage({
-        id: 1,
-        type: "import",
-        bytes: new Uint8Array(0),
-        dbName: this.dbName
-      });
-    });
+    await this.init();
+    await this.postAndWait({ type: "delete", dbName: this.dbName });
+    this.terminateWorker();
   };
 
   // Backwards compatibility aliases
@@ -203,7 +189,15 @@ export class BrowserDbClient {
   };
 
   close = (): Promise<void> => {
-    return this.deleteDatabaseFile();
+    if (!this.worker) return Promise.resolve();
+
+    return this.postAndWait({ type: "close" }).finally(this.terminateWorker);
+  };
+
+  private terminateWorker = () => {
+    this.worker?.terminate();
+    this.worker = null;
+    this.isReady = false;
   };
 }
 

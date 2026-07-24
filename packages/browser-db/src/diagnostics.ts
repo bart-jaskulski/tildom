@@ -1,7 +1,5 @@
 export const hasStorageDirectory = (): boolean => {
-  const storage = (globalThis.navigator as WorkerNavigator & {
-    storage?: { getDirectory?: unknown };
-  }).storage;
+  const storage = (globalThis.navigator as any).storage;
 
   return typeof storage?.getDirectory === "function";
 };
@@ -11,7 +9,9 @@ export const getOpfsDiagnostics = () => ({
   crossOriginIsolated: globalThis.crossOriginIsolated,
   sharedArrayBuffer: typeof globalThis.SharedArrayBuffer === "function",
   storageGetDirectory: hasStorageDirectory(),
-  workerContext: typeof WorkerGlobalScope !== "undefined" && globalThis instanceof WorkerGlobalScope,
+  workerContext:
+    typeof (globalThis as any).WorkerGlobalScope !== "undefined"
+    && globalThis instanceof (globalThis as any).WorkerGlobalScope,
 });
 
 export const assertOpfsAvailable = (sqlite3: any): void => {

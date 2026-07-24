@@ -192,9 +192,9 @@ importers:
       '@solidjs/router':
         specifier: ^0.15.4
         version: 0.15.4(solid-js@1.9.13)
-      '@sqlite.org/sqlite-wasm':
-        specifier: 3.53.0-build1
-        version: 3.53.0-build1
+      '@tildom/browser-db':
+        specifier: workspace:*
+        version: link:../../packages/browser-db
       '@tildom/markdownish':
         specifier: workspace:*
         version: link:../../packages/markdownish

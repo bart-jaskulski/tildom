@@ -66,6 +66,10 @@ class MockWorker implements Worker {
           this.onmessage({
             data: { id: msg.id, type: "success" }
           } as MessageEvent<DbResponse>);
+        } else if (msg.type === "import" || msg.type === "close" || msg.type === "delete") {
+          this.onmessage({
+            data: { id: msg.id, type: "success" }
+          } as MessageEvent<DbResponse>);
         }
       }, 10);
     });
@@ -140,5 +144,46 @@ describe("BrowserDbClient Encapsulated Transaction Suite", () => {
 
     // Observable should automatically update!
     expect(groceries()).toEqual([{ id: 42, name: "rice" }]);
+  });
+
+  it("closes without deleting the database", async () => {
+    await client.init();
+    const worker = mockWorkerConstructor.mock.results[0].value as MockWorker;
+
+    await client.close();
+
+    expect(worker.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: "close" }));
+    expect(worker.postMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "delete" }));
+    expect(worker.terminate).toHaveBeenCalledOnce();
+  });
+
+  it("deletes only through the explicit destroy operation", async () => {
+    await client.init();
+    const worker = mockWorkerConstructor.mock.results[0].value as MockWorker;
+
+    await client.deleteDatabaseFile();
+
+    expect(worker.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+      type: "delete",
+      dbName: "groceries.sqlite3",
+    }));
+    expect(worker.terminate).toHaveBeenCalledOnce();
+  });
+
+  it("passes migrations and import requirements to the worker", async () => {
+    client = new BrowserDbClient("groceries.sqlite3", {
+      workerConstructor: mockWorkerConstructor,
+      migrations: [{ version: 1, sql: "CREATE TABLE groceries (id INTEGER PRIMARY KEY);" }],
+      requiredTables: ["groceries"],
+    });
+
+    await client.init();
+    const worker = mockWorkerConstructor.mock.results[0].value as MockWorker;
+
+    expect(worker.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+      type: "init",
+      migrations: [{ version: 1, sql: "CREATE TABLE groceries (id INTEGER PRIMARY KEY);" }],
+      requiredTables: ["groceries"],
+    }));
   });
 });
