@@ -11,49 +11,82 @@
 }
 
 .startup {
-  min-height: 8.5rem;
-  padding: 0.75rem 0 0 2ch;
+  min-height: 17rem;
 }
 
-.startupStatus {
-  display: flex;
-  align-items: center;
-  gap: 1ch;
+.startupList {
   margin: 0;
-  color: var(--fg-default);
-  font-size: 13px;
+  padding: 0;
+  counter-reset: startup-counter;
+  list-style: none;
 }
 
-.startupPath {
-  color: var(--syntax-string);
-}
-
-.startupCursor {
-  color: var(--syntax-keyword);
-  animation: cursorBlink 1s steps(2, jump-none) infinite;
-}
-
-.startupRails {
+.startupItem {
+  position: relative;
   display: grid;
-  gap: 0.7rem;
-  margin: 1rem 0 0 1ch;
-  padding: 0.25rem 0 0.25rem 2ch;
+  gap: 0.6rem;
+  margin: 0 0 1.35rem 2ch;
+  padding: 0.75rem 1.5ch 0.75rem 2.5ch;
   border-left: 2px solid var(--border-color);
+  counter-increment: startup-counter;
+  animation: startupPulse 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
 
-  & span {
-    display: block;
-    width: min(56ch, 74%);
-    height: 0.75rem;
-    background: var(--syntax-bg-active);
-
-    &:nth-child(2) {
-      width: min(42ch, 58%);
-    }
-
-    &:nth-child(3) {
-      width: min(48ch, 66%);
-    }
+  &::before {
+    position: absolute;
+    top: 0.85rem;
+    right: calc(100% + 1.5ch);
+    width: 3ch;
+    color: var(--fg-muted);
+    content: counter(startup-counter);
+    font-size: 13px;
+    text-align: right;
   }
+
+  &:nth-child(2) {
+    animation-delay: 120ms;
+  }
+
+  &:nth-child(3) {
+    animation-delay: 240ms;
+  }
+}
+
+.startupTitle,
+.startupMeta,
+.startupPreview {
+  display: block;
+  background: var(--syntax-bg-active);
+}
+
+.startupTitle {
+  width: min(46ch, 68%);
+  height: 1rem;
+}
+
+.startupMeta {
+  width: min(31ch, 48%);
+  height: 0.65rem;
+}
+
+.startupPreview {
+  width: min(64ch, 88%);
+  height: 0.75rem;
+}
+
+.startupItem:nth-child(2) .startupTitle {
+  width: min(35ch, 56%);
+}
+
+.startupItem:nth-child(2) .startupPreview {
+  width: min(52ch, 76%);
+}
+
+.startupItem:nth-child(3) .startupTitle {
+  width: min(41ch, 62%);
+}
+
+.startupItem:nth-child(3) .startupPreview {
+  width: min(58ch, 82%);
 }
 
 .entryList {
@@ -73,8 +106,24 @@
   margin: 2rem 0 0;
 }
 
-@keyframes cursorBlink {
-  50% {
-    opacity: 0;
+@keyframes startupPulse {
+  from {
+    opacity: 0.48;
+  }
+
+  to {
+    opacity: 0.9;
+  }
+}
+
+@media (max-width: 768px) {
+  .startupItem {
+    margin-left: 1.25ch;
+    padding-left: 1.5ch;
+
+    &::before {
+      right: calc(100% + 0.75ch);
+      width: 2ch;
+    }
   }
 }

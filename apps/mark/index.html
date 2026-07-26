@@ -4,25 +4,113 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>mark.tildom</title>
+    <script>performance.mark?.("mark:boot:start")</script>
     <style>
-      html { background: #fafafa; }
-      body { margin: 0; color: #24292e; font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-      .boot-shell { max-width: 120ch; margin: 0 auto; }
-      .boot-tabline { min-height: 48px; display: flex; align-items: center; gap: 3ch; padding: 0 3ch; border-bottom: 1px solid #e1e4e8; font-size: 12px; }
-      .boot-brand { color: #d73a49; font-size: 16px; font-weight: 900; }
-      .boot-buffer { color: #24292e; }
-      .boot-status { display: flex; gap: 1ch; align-items: center; margin: 0; padding: 1.5rem 3ch; font-size: 13px; }
-      .boot-path { color: #032f62; }
-      .boot-cursor { color: #d73a49; animation: boot-blink 1s steps(2, jump-none) infinite; }
-      @keyframes boot-blink { 50% { opacity: 0; } }
-      @media (prefers-reduced-motion: reduce) { .boot-cursor { animation: none; } }
+      * { box-sizing: border-box; border-radius: 0; }
+      html { min-height: 100%; background: #fafafa; }
+      body { min-height: 100%; margin: 0; color: #24292e; background: #fafafa; font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 14px; line-height: 1.45; }
+      .boot-page { min-height: 100vh; background: #fafafa; }
+      .boot-topbar { display: flex; align-items: stretch; justify-content: space-between; width: 100%; max-width: 120ch; height: 48px; margin: 0 auto; padding-left: 1.5rem; border-bottom: 1px solid #e1e4e8; }
+      .boot-brand { display: flex; align-items: center; gap: 0.75rem; color: #d73a49; font-size: 16px; font-weight: 900; letter-spacing: -0.02em; text-decoration: none; white-space: nowrap; }
+      .boot-logo { width: 24px; height: 24px; flex: none; }
+      .boot-nav { display: flex; flex: 1 1 auto; align-items: stretch; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+      .boot-nav a { display: flex; align-items: center; min-height: 48px; padding: 0 2.2ch; color: #6a737d; font-size: 12px; text-decoration: none; white-space: nowrap; }
+      .boot-nav a:first-child { border-bottom: 2px solid #d73a49; background: #fff; color: #24292e; font-weight: bold; }
+      .boot-search { position: relative; display: flex; align-items: center; width: 24ch; min-width: 24ch; margin-left: auto; border-left: 1px solid #e1e4e8; background: #fff; }
+      .boot-search::before { position: absolute; top: 50%; left: 1.25ch; color: #d73a49; content: ">"; font-weight: bold; transform: translateY(-50%); }
+      .boot-search input { width: 100%; min-height: 48px; padding: 0 1.5ch 0 3.5ch; border: 0; outline: 0; background: transparent; color: #24292e; font: inherit; font-size: 13px; opacity: 1; }
+      .boot-search input::placeholder { color: #6a737d; opacity: 0.8; }
+      .boot-search-toggle { display: none; }
+      .boot-content { display: grid; gap: 1.5rem; width: 100%; max-width: 120ch; margin: 0 auto; padding: 1.5rem 3ch 2.5rem; }
+      .boot-form { width: 100%; max-width: 80ch; }
+      .boot-textarea { width: 100%; min-height: 122px; padding: 0.75rem 1.5ch; border: 1px solid #e1e4e8; background: #fff; color: #6a737d; font-size: 13px; line-height: 1.5; }
+      .boot-actions { margin: 2rem 0 1.25rem; }
+      .boot-save { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 3ch; border: 2px solid #24292e; background: #fff; color: #24292e; font: inherit; font-size: 12px; font-weight: bold; letter-spacing: 0.04em; text-transform: uppercase; }
+      .boot-list { min-height: 17rem; margin: 0; padding: 0; counter-reset: boot-counter; list-style: none; }
+      .boot-item { position: relative; display: grid; gap: 0.6rem; margin: 0 0 1.35rem 2ch; padding: 0.75rem 1.5ch 0.75rem 2.5ch; border-left: 2px solid #e1e4e8; counter-increment: boot-counter; animation: boot-pulse 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate; }
+      .boot-item::before { position: absolute; top: 0.85rem; right: calc(100% + 1.5ch); width: 3ch; color: #6a737d; content: counter(boot-counter); font-size: 13px; text-align: right; }
+      .boot-item:nth-child(2) { animation-delay: 120ms; }
+      .boot-item:nth-child(3) { animation-delay: 240ms; }
+      .boot-line { display: block; background: #dbedff; }
+      .boot-title { width: min(46ch, 68%); height: 1rem; }
+      .boot-meta { width: min(31ch, 48%); height: 0.65rem; }
+      .boot-preview { width: min(64ch, 88%); height: 0.75rem; }
+      .boot-item:nth-child(2) .boot-title { width: min(35ch, 56%); }
+      .boot-item:nth-child(2) .boot-preview { width: min(52ch, 76%); }
+      .boot-item:nth-child(3) .boot-title { width: min(41ch, 62%); }
+      .boot-item:nth-child(3) .boot-preview { width: min(58ch, 82%); }
+      .boot-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+      @keyframes boot-pulse { from { opacity: 0.48; } to { opacity: 0.9; } }
+      @media (max-width: 768px) {
+        .boot-topbar { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 48px; grid-template-rows: 48px 48px; max-width: none; height: 96px; padding: 0; }
+        .boot-brand { grid-column: 1; grid-row: 1; padding-left: 1.5ch; }
+        .boot-nav { grid-column: 1 / -1; grid-row: 2; }
+        .boot-nav a { flex: 1 0 auto; justify-content: center; padding: 0 1.5ch; }
+        .boot-search { position: absolute; top: 0; right: 0; width: 48px; min-width: 48px; height: 48px; margin: 0; border-left: 0; overflow: hidden; }
+        .boot-search::before, .boot-search input { display: none; }
+        .boot-search-toggle { display: grid; width: 48px; height: 48px; margin-left: auto; padding: 0; border: 0; background: transparent; color: #24292e; place-items: center; }
+        .boot-search-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: square; stroke-width: 2; }
+        .boot-content { padding: 1.25rem 1.5ch 2rem; }
+        .boot-save { width: 100%; }
+        .boot-item { margin-left: 1.25ch; padding-left: 1.5ch; }
+        .boot-item::before { right: calc(100% + 0.75ch); width: 2ch; }
+      }
+      @media (prefers-reduced-motion: reduce) { .boot-item { animation: none; opacity: 0.72; } }
     </style>
   </head>
   <body>
     <div id="app">
-      <main class="boot-shell" role="status" aria-live="polite">
-        <div class="boot-tabline"><span class="boot-brand">tildom</span><span class="boot-buffer">[ bookmarks.db ]</span></div>
-        <p class="boot-status"><span class="boot-path">~/mark.db</span><span>opening local library</span><span class="boot-cursor" aria-hidden="true">█</span></p>
+      <main class="boot-page">
+        <header class="boot-topbar">
+          <a href="/" class="boot-brand">
+            <svg class="boot-logo" viewBox="0 0 64 64" aria-hidden="true">
+              <rect width="64" height="64" fill="#24292e" />
+              <rect x="8" y="8" width="48" height="48" fill="#d73a49" />
+              <path fill="#fff" d="M21 16h22v34L32 43l-11 7z" />
+            </svg>
+            <span>tildom</span>
+          </a>
+          <nav class="boot-nav" aria-label="Primary">
+            <a href="/" aria-current="page">[ bookmarks.db ]</a>
+            <a href="/settings">[ settings.json ]</a>
+          </nav>
+          <div class="boot-search" role="search">
+            <input type="search" placeholder="search" aria-label="Search saved links" disabled />
+            <button class="boot-search-toggle" type="button" aria-label="Search saved links" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m21 21-4.35-4.35m2.35-5.15a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" />
+              </svg>
+            </button>
+          </div>
+        </header>
+        <section class="boot-content">
+          <div class="boot-form" aria-hidden="true">
+            <div class="boot-textarea">Paste a link or write a note</div>
+            <div class="boot-actions">
+              <button class="boot-save" type="button" disabled>save</button>
+            </div>
+          </div>
+          <section role="status" aria-live="polite">
+            <span class="boot-sr">Opening local library</span>
+            <ol class="boot-list" aria-hidden="true">
+              <li class="boot-item">
+                <span class="boot-line boot-title"></span>
+                <span class="boot-line boot-meta"></span>
+                <span class="boot-line boot-preview"></span>
+              </li>
+              <li class="boot-item">
+                <span class="boot-line boot-title"></span>
+                <span class="boot-line boot-meta"></span>
+                <span class="boot-line boot-preview"></span>
+              </li>
+              <li class="boot-item">
+                <span class="boot-line boot-title"></span>
+                <span class="boot-line boot-meta"></span>
+                <span class="boot-line boot-preview"></span>
+              </li>
+            </ol>
+          </section>
+        </section>
       </main>
     </div>
     <script type="module" src="/src/main.tsx"></script>

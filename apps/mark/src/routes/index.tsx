@@ -2,7 +2,7 @@ import { Title } from "@solidjs/meta";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { For, Show, createEffect, createMemo, createResource, createSignal } from "solid-js";
 import { isServer } from "solid-js/web";
-import { handleMarkdownishEnter } from "@tildom/markdownish";
+import { handleMarkdownishEnter } from "@tildom/markdownish/keyboard";
 import { useVimKeymaps } from "@tildom/ui";
 import styles from "./index.module.css";
 import AppNav from "~/components/AppNav";
@@ -14,6 +14,7 @@ import { handleTextareaKeyboardSubmit, resizeTextareaToFitContent } from "~/lib/
 import { createEntry, deleteEntry, entries, isEntryStoreReady } from "~/stores/entryStore";
 
 const PAGE_SIZE = 20;
+const STARTUP_ROWS = [0, 1, 2];
 
 const isSearchResult = (entry: Entry | SearchResult): entry is SearchResult => "matchText" in entry;
 
@@ -21,6 +22,25 @@ const parsePage = (value: unknown) => {
   const page = Number(value);
   return Number.isInteger(page) && page > 0 ? page : 1;
 };
+
+function StartupEntries() {
+  return (
+    <section class={styles.startup} role="status" aria-live="polite">
+      <span class="visually-hidden">Opening local library</span>
+      <ol class={styles.startupList} aria-hidden="true">
+        <For each={STARTUP_ROWS}>
+          {() => (
+            <li class={styles.startupItem}>
+              <span class={styles.startupTitle} />
+              <span class={styles.startupMeta} />
+              <span class={styles.startupPreview} />
+            </li>
+          )}
+        </For>
+      </ol>
+    </section>
+  );
+}
 
 export default function Home() {
   const [params, setParams] = useSearchParams();
@@ -200,20 +220,7 @@ export default function Home() {
 
         <Show
           when={isEntryStoreReady()}
-          fallback={
-            <section class={styles.startup} role="status" aria-live="polite">
-              <p class={styles.startupStatus}>
-                <span class={styles.startupPath}>~/mark.db</span>
-                <span>opening local library</span>
-                <span class={styles.startupCursor} aria-hidden="true">█</span>
-              </p>
-              <div class={styles.startupRails} aria-hidden="true">
-                <span />
-                <span />
-                <span />
-              </div>
-            </section>
-          }
+          fallback={<StartupEntries />}
         >
           <div>
             <Show when={searchQuery()}>

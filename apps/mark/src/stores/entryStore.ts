@@ -13,6 +13,7 @@ import {
   type EntryDetail,
 } from "~/lib/entries";
 import { fetchLinkMetadata } from "~/lib/linkMetadata";
+import { markStartup, measureStartup } from "~/lib/startupPerformance";
 import { markSyncDirty } from "~/lib/syncState";
 import { fetchSuggestedTags } from "~/lib/tagSuggestions";
 import { MAX_TAGS_PER_ENTRY, MAX_USED_TAGS, normalizeTagList, parseTagInput } from "~/lib/tags";
@@ -336,11 +337,27 @@ const tagEntryInBackground = (
 
 export const initializeEntryStore = async () => {
   console.debug("Initializing entry store...");
+  markStartup("db:init:start");
+
   try {
     await initDb();
+    markStartup("db:init:ready");
+    measureStartup("db:init", "db:init:start", "db:init:ready");
+
     await entryStore.refreshEntries();
+    markStartup("entries:query:ready");
+    measureStartup("entries:initial-query", "db:init:ready", "entries:query:ready");
+
     entryStore.setReady(true);
+    markStartup("entries:ready");
+    measureStartup("boot-to-entries-ready", "boot:start", "entries:ready");
+
+    requestAnimationFrame(() => {
+      markStartup("entries:painted");
+      measureStartup("boot-to-entries-painted", "boot:start", "entries:painted");
+    });
   } catch (error) {
+    markStartup("db:init:error");
     console.error("Failed to initialize entry store:", error);
   }
 };

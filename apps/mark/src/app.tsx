@@ -1,19 +1,33 @@
 import { Meta, MetaProvider, Title } from "@solidjs/meta";
 import { Route, Router, useLocation, useNavigate } from "@solidjs/router";
-import { Suspense, onMount, type ParentProps } from "solid-js";
+import { Suspense, lazy, onMount, type ParentProps } from "solid-js";
 import { VimNavigationProvider, type VimKeymap } from "@tildom/ui";
-import NotFound from "~/routes/[...404]";
 import Home from "~/routes/index";
-import ItemPage from "~/routes/item/[id]";
-import Pair from "~/routes/pair";
-import Settings from "~/routes/settings";
-import ShareTarget from "~/routes/share-target";
 import { requestPersistentStorage } from "~/lib/persistentStorage";
-import { initializeSync } from "~/lib/syncClient";
 import { initializeEntryStore } from "~/stores/entryStore";
+import AppNav from "~/components/AppNav";
 import KeybindHelp from "~/components/KeybindHelp";
 import { pwaInstall } from "~/lib/pwaInstall";
 import "./app.css";
+
+const NotFound = lazy(() => import("~/routes/[...404]"));
+const ItemPage = lazy(() => import("~/routes/item/[id]"));
+const Pair = lazy(() => import("~/routes/pair"));
+const Settings = lazy(() => import("~/routes/settings"));
+const ShareTarget = lazy(() => import("~/routes/share-target"));
+
+function RouteLoading() {
+  const location = useLocation();
+
+  return (
+    <main class="hn-page">
+      <AppNav active={location.pathname === "/settings" ? "settings" : undefined} />
+      <section class="hn-content">
+        <p class="hn-status" role="status">Opening local view...</p>
+      </section>
+    </main>
+  );
+}
 
 function MarkVimNavigation(props: ParentProps) {
   const location = useLocation();
@@ -53,7 +67,11 @@ export default function App() {
     void requestPersistentStorage();
     await initializeEntryStore();
 
-    window.setTimeout(() => void initializeSync(), 1_000);
+    window.setTimeout(() => {
+      void import("~/lib/syncClient")
+        .then(({ initializeSync }) => initializeSync())
+        .catch(console.error);
+    }, 1_000);
   });
 
   return (
@@ -63,7 +81,7 @@ export default function App() {
           <Title>mark.tildom</Title>
           <Meta name="theme-color" content="#d73a49" />
           <MarkVimNavigation>
-            <Suspense>{props.children}</Suspense>
+            <Suspense fallback={<RouteLoading />}>{props.children}</Suspense>
             <KeybindHelp />
           </MarkVimNavigation>
         </MetaProvider>
