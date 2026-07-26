@@ -63,6 +63,9 @@ export default defineConfig(({ mode }) => {
         "Cross-Origin-Embedder-Policy": "require-corp",
       },
     },
+    build: {
+      sourcemap: true,
+    },
     optimizeDeps: {
       exclude: ["@sqlite.org/sqlite-wasm"],
     },
