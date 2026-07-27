@@ -19,6 +19,8 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      has_changes: ${{ steps.matrix.outputs.has_changes }}
       home: ${{ steps.filter.outputs.home }}
       mark: ${{ steps.filter.outputs.mark }}
       kin: ${{ steps.filter.outputs.kin }}
@@ -116,33 +118,53 @@ jobs:
               - 'pnpm-workspace.yaml'
               - '.github/workflows/container-images.yml'
 
+      - name: Build matrix
+        id: matrix
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          IMAGE_HOME: ${{ steps.filter.outputs.home }}
+          IMAGE_MARK: ${{ steps.filter.outputs.mark }}
+          IMAGE_KIN: ${{ steps.filter.outputs.kin }}
+          IMAGE_HEY: ${{ steps.filter.outputs.hey }}
+          IMAGE_DO: ${{ steps.filter.outputs.do }}
+          IMAGE_API: ${{ steps.filter.outputs.api }}
+          IMAGE_SYNC: ${{ steps.filter.outputs.sync }}
+        run: |
+          if [ "$EVENT_NAME" = workflow_dispatch ] || [ "$REF_TYPE" = tag ]; then
+            images='["home", "mark", "kin", "hey", "do", "api", "sync"]'
+          else
+            images="$(jq -cn \
+              --arg home "$IMAGE_HOME" \
+              --arg mark "$IMAGE_MARK" \
+              --arg kin "$IMAGE_KIN" \
+              --arg hey "$IMAGE_HEY" \
+              --arg do "$IMAGE_DO" \
+              --arg api "$IMAGE_API" \
+              --arg sync "$IMAGE_SYNC" \
+              '$ARGS.named | to_entries | map(select(.value == "true") | .key)')"
+          fi
+
+          matrix="$(jq -cn --argjson images "$images" '{include: [$images[] | {image: ., dockerfile: (if . == "api" or . == "sync" then "services/" + . + "/Dockerfile" else "apps/" + . + "/Dockerfile" end)}]}')"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          if [ "$images" = '[]' ]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
     name: Build ${{ matrix.image }}
     needs: changes
-    if: >-
-      ${{ github.event_name == 'workflow_dispatch' || github.ref_type == 'tag' || needs.changes.outputs[matrix.image] == 'true' }}
+    if: needs.changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - image: home
-            dockerfile: apps/home/Dockerfile
-          - image: mark
-            dockerfile: apps/mark/Dockerfile
-          - image: kin
-            dockerfile: apps/kin/Dockerfile
-          - image: hey
-            dockerfile: apps/hey/Dockerfile
-          - image: do
-            dockerfile: apps/do/Dockerfile
-          - image: api
-            dockerfile: services/api/Dockerfile
-          - image: sync
-            dockerfile: services/sync/Dockerfile
+      matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
 
     steps:
       - name: Check out repository
