@@ -2,20 +2,36 @@ import { Title } from "@solidjs/meta";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { For, Show, createEffect, createMemo, createResource, createSignal } from "solid-js";
 import { isServer } from "solid-js/web";
-import { handleMarkdownishEnter } from "@tildom/markdownish/keyboard";
 import { useVimKeymaps } from "@tildom/ui";
+import ClipboardPaste from "lucide-solid/icons/clipboard-paste";
 import Button from "~/components/Button";
+import EntryComposer from "~/components/EntryComposer";
+import MobileEntryDialog from "~/components/MobileEntryDialog";
 import styles from "./index.module.css";
 import EntryListItemPreview from "~/components/EntryListItemPreview";
 import { client } from "~/lib/db";
-import type { Entry, SearchResult } from "~/lib/entries";
+import { isUrlOnlyInput, type Entry, type SearchResult } from "~/lib/entries";
 import { searchLocalEntries } from "~/lib/searchIndex";
-import { handleTextareaKeyboardSubmit, resizeTextareaToFitContent } from "~/lib/textarea";
 import { createEntry, deleteEntry, entries, isEntryStoreReady } from "~/stores/entryStore";
 
 const PAGE_SIZE = 20;
 const STARTUP_ROWS = [0, 1, 2];
-const STARTUP_ENTRY = { id: "", body: "", title: "", domain: "", tags: [], commentCount: 0, createdAt: "", sourceUrl: "" };
+const STARTUP_ENTRY: Entry = {
+  id: "",
+  sourceUrl: null,
+  canonicalUrl: null,
+  domain: null,
+  title: "",
+  body: "",
+  excerpt: null,
+  excerptStatus: "idle",
+  excerptError: null,
+  createdAt: 0,
+  updatedAt: 0,
+  lastCommentedAt: null,
+  commentCount: 0,
+  tags: [],
+};
 
 const isSearchResult = (entry: Entry | SearchResult): entry is SearchResult => "matchText" in entry;
 
@@ -44,7 +60,9 @@ function StartupEntries() {
 export default function Home() {
   const [params, setParams] = useSearchParams();
   const [entryBody, setEntryBody] = createSignal("");
-  let entryBodyTextarea: HTMLTextAreaElement | undefined;
+  let desktopEntryTextarea: HTMLTextAreaElement | undefined;
+  let mobileEntryTextarea: HTMLTextAreaElement | undefined;
+  let mobileComposer: HTMLDialogElement | undefined;
   const [error, setError] = createSignal<string | null>(null);
   const [isSaving, setIsSaving] = createSignal(false);
   const searchQuery = createMemo(() => String(params.q ?? "").trim());
@@ -65,6 +83,16 @@ export default function Home() {
   const selectedEntry = () => {
     const index = activeIndex();
     return index === null ? undefined : paginatedEntries()[index];
+  };
+
+  const focusEntryComposer = () => {
+    if (window.matchMedia("(max-width: 640px)").matches) {
+      if (!mobileComposer?.open) mobileComposer?.showModal();
+      requestAnimationFrame(() => mobileEntryTextarea?.focus());
+      return;
+    }
+
+    desktopEntryTextarea?.focus();
   };
 
   createEffect(() => {
@@ -102,7 +130,7 @@ export default function Home() {
       },
       help: "previous item",
     },
-    { lhs: "i", callback: () => entryBodyTextarea?.focus(), help: "focus new bookmark" },
+    { lhs: "i", callback: focusEntryComposer, help: "focus new bookmark" },
     { lhs: ":w", callback: () => {
       if (entryBody()) void handleSubmit(new Event("submit") as SubmitEvent);
     }, help: "save" },
@@ -121,7 +149,7 @@ export default function Home() {
           if (selected) void handleDelete(selected.id);
         }, help: "delete selected item" },
         { lhs: "p", callback: () => {
-          entryBodyTextarea?.focus();
+          focusEntryComposer();
           navigator.clipboard.readText().then((text) => {
             if (text) setEntryBody(prev => prev + text);
           }).catch(() => {});
@@ -139,13 +167,6 @@ export default function Home() {
     },
   ]);
 
-  createEffect(() => {
-    entryBody();
-    if (entryBodyTextarea) {
-      resizeTextareaToFitContent(entryBodyTextarea);
-    }
-  });
-
   const setPage = (page: number) => {
     const nextPage = Math.min(Math.max(page, 1), totalPages());
     setParams({ page: nextPage > 1 ? String(nextPage) : undefined });
@@ -154,21 +175,43 @@ export default function Home() {
 
   const hasMore = createMemo(() => currentPage() < totalPages());
 
-  const handleSubmit = async (event: SubmitEvent) => {
-    event.preventDefault();
+  const saveEntry = async (body: string) => {
     if (!isEntryStoreReady()) return;
 
     setError(null);
     setIsSaving(true);
 
     try {
-      await createEntry(entryBody());
+      await createEntry(body);
       setEntryBody("");
+      mobileComposer?.close();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save entry");
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleSubmit = (event: SubmitEvent) => {
+    event.preventDefault();
+    void saveEntry(entryBody());
+  };
+
+  const handleClipboardSave = async () => {
+    try {
+      const clipboardText = (await navigator.clipboard.readText()).trim();
+      if (isUrlOnlyInput(clipboardText)) {
+        await saveEntry(clipboardText);
+        return;
+      }
+
+      setEntryBody(clipboardText);
+      setError(clipboardText ? "Clipboard has text, but no link. Edit it below." : "Clipboard is empty. Paste or write below.");
+    } catch {
+      setError("Clipboard access was blocked. Paste or write below.");
+    }
+
+    focusEntryComposer();
   };
 
   const handleDelete = async (entryId: string) => {
@@ -190,40 +233,53 @@ export default function Home() {
       <Title>{searchQuery() ? `${searchQuery()} | mark.tildom` : "mark.tildom"}</Title>
 
         <Show when={!searchQuery()}>
-          <form id="submit" class="hn-form hn-panel" onSubmit={handleSubmit}>
-            <div class="hn-form-row">
-              <label class="hn-label visually-hidden" for="entry-body">save</label>
-              <textarea
+          <>
+            <div class={`${styles.desktopComposer} hn-panel`}>
+              <EntryComposer
                 id="entry-body"
-                ref={(element) => {
-                  entryBodyTextarea = element;
-                  resizeTextareaToFitContent(element);
-                }}
                 value={entryBody()}
-                onInput={(event) => {
-                  setEntryBody(event.currentTarget.value);
-                  resizeTextareaToFitContent(event.currentTarget);
+                error={error()}
+                isSaving={isSaving()}
+                onInput={setEntryBody}
+                onSubmit={handleSubmit}
+                onPasteLink={() => void handleClipboardSave()}
+                textareaRef={(element) => {
+                  desktopEntryTextarea = element;
                 }}
-                onKeyDown={(event) => {
-                  if (!handleMarkdownishEnter(event)) handleTextareaKeyboardSubmit(event);
-                }}
-                rows={5}
-                placeholder="Paste a link or write a note"
-                class="hn-textarea"
               />
             </div>
 
-            <Show when={error()}>
-              <p class="hn-error">{error()}</p>
-            </Show>
-
-            <div class="hn-form-row">
-              <span />
-              <Button type="submit" disabled={!isEntryStoreReady() || isSaving()}>
-                {isSaving() ? "saving..." : "save"}
+            <div class={styles.mobileBar}>
+              <Button type="button" onClick={focusEntryComposer}>
+                add link
+              </Button>
+              <Button
+                type="button"
+                class={styles.mobilePaste}
+                disabled={!isEntryStoreReady() || isSaving()}
+                onClick={() => void handleClipboardSave()}
+                aria-label="Save copied link"
+                title="Save copied link"
+              >
+                <ClipboardPaste aria-hidden="true" />
               </Button>
             </div>
-          </form>
+
+            <MobileEntryDialog
+              value={entryBody()}
+              error={error()}
+              isSaving={isSaving()}
+              onInput={setEntryBody}
+              onSubmit={handleSubmit}
+              onPasteLink={() => void handleClipboardSave()}
+              dialogRef={(element) => {
+                mobileComposer = element;
+              }}
+              textareaRef={(element) => {
+                mobileEntryTextarea = element;
+              }}
+            />
+          </>
         </Show>
 
         <Show

@@ -33,7 +33,7 @@
 }
 .entryList {
   margin: 0;
-  padding: 0;
+  padding: 0 0 calc(5.5rem + env(safe-area-inset-bottom));
   list-style: none;
 }
 
@@ -45,6 +45,51 @@
 
 .pagination {
   margin: 2rem 0 0;
+}
+
+.desktopComposer {
+  display: none;
+}
+
+.mobileBar {
+  position: fixed;
+  z-index: 20;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 0.75rem 1.5ch max(0.75rem, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-canvas);
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(44px, 1fr);
+  gap: 1ch;
+}
+
+.mobileBar button {
+  width: 100%;
+}
+
+.mobilePaste {
+  padding: 0;
+}
+
+.mobilePaste svg {
+  width: 17px;
+  height: 17px;
+}
+
+@media (min-width: 641px) {
+  .desktopComposer {
+    display: block;
+  }
+
+  .mobileBar {
+    display: none;
+  }
+
+  .entryList {
+    padding-bottom: 0;
+  }
 }
 
 @keyframes startupPulse {

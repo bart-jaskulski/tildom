@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>mark.tildom</title>
     <script>performance.mark?.("mark:boot:start")</script>
     <script>
@@ -40,8 +40,11 @@
       [data-boot-route="settings"] .boot-other, [data-boot-route="other"] .boot-other { display: block; }
       .boot-form { width: 100%; max-width: 80ch; }
       .boot-textarea { width: 100%; min-height: 122px; padding: 0.75rem 1.5ch; border: 1px solid #e1e4e8; background: #fff; color: #6a737d; font-size: 13px; line-height: 1.5; }
-      .boot-actions { margin: 2rem 0 1.25rem; }
+      .boot-actions { display: grid; grid-template-columns: minmax(0, 5fr) minmax(44px, 1fr); gap: 1ch; margin: 2rem 0 1.25rem; }
       .boot-save { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 3ch; border: 2px solid #e1e4e8; background: #fff; color: #6a737d; cursor: not-allowed; font: inherit; font-size: 12px; font-weight: bold; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.6; }
+      .boot-paste { padding: 0; }
+      .boot-paste svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-linecap: square; stroke-linejoin: miter; stroke-width: 2; }
+      .boot-mobile-bar { display: none; }
       .boot-list { min-height: 17rem; margin: 0; padding: 0; list-style: none; }
       .boot-list-item { display: grid; gap: 0.6rem; margin: 0 0 1.35rem; padding: 0.75rem 1.5ch; border-left: 2px solid #e1e4e8; }
       .boot-line { display: block; background: #dbedff; animation: boot-pulse 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate; }
@@ -71,6 +74,11 @@
         .boot-search-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: square; stroke-width: 2; }
         .boot-content { padding: 1.25rem 1.5ch 2rem; }
         .boot-save { width: 100%; }
+      }
+      @media (max-width: 640px) {
+        [data-boot-route="home"] .boot-form { display: none; }
+        [data-boot-route="home"] .boot-list { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
+        [data-boot-route="home"] .boot-mobile-bar { position: fixed; z-index: 20; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: minmax(0, 5fr) minmax(44px, 1fr); gap: 1ch; padding: 0.75rem 1.5ch max(0.75rem, env(safe-area-inset-bottom)); border-top: 1px solid #e1e4e8; background: #fafafa; }
       }
       @media (prefers-reduced-motion: reduce) { .boot-line { animation: none; opacity: 0.72; } }
     </style>
@@ -104,6 +112,11 @@
               <div class="boot-textarea">Paste a link or write a note</div>
               <div class="boot-actions">
                 <button class="boot-save" type="button" disabled>save</button>
+                <button class="boot-save boot-paste" type="button" aria-label="Save copied link" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M9 5h6m-7 3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h7m3-16a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2h8V5Zm1 9v6m-3-3h6" />
+                  </svg>
+                </button>
               </div>
             </div>
             <section role="status" aria-live="polite">
@@ -126,6 +139,14 @@
                 </li>
               </ol>
             </section>
+            <div class="boot-mobile-bar" aria-hidden="true">
+              <button class="boot-save" type="button" disabled>add link</button>
+              <button class="boot-save boot-paste" type="button" disabled>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M9 5h6m-7 3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h7m3-16a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2h8V5Zm1 9v6m-3-3h6" />
+                </svg>
+              </button>
+            </div>
           </div>
           <article class="boot-item-view" role="status" aria-live="polite">
             <span class="boot-sr">Loading item</span>

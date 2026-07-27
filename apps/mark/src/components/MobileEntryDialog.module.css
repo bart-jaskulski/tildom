@@ -1,0 +1,48 @@
+.dialog {
+  width: 100%;
+  max-width: none;
+  max-height: min(78dvh, 42rem);
+  margin: auto 0 0;
+  padding: 1rem 1.5ch max(1.5rem, env(safe-area-inset-bottom));
+  border: 0;
+  border-top: 2px solid var(--fg-default);
+  background: var(--bg-surface);
+  color: var(--fg-default);
+}
+
+.dialog::backdrop {
+  background: rgb(36 41 46 / 35%);
+}
+
+.actions {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: flex-end;
+  margin: 0 0 1.25rem;
+}
+
+.close {
+  min-height: 44px;
+  padding: 0 0.5ch;
+  border: 0;
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.close:hover,
+.close:focus-visible {
+  background: var(--syntax-bg-active);
+  color: var(--fg-default);
+}
+
+@media (min-width: 641px) {
+  .dialog {
+    display: none;
+  }
+}
