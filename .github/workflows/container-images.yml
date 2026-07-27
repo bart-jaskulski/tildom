@@ -13,8 +13,114 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      home: ${{ steps.filter.outputs.home }}
+      mark: ${{ steps.filter.outputs.mark }}
+      kin: ${{ steps.filter.outputs.kin }}
+      hey: ${{ steps.filter.outputs.hey }}
+      do: ${{ steps.filter.outputs.do }}
+      api: ${{ steps.filter.outputs.api }}
+      sync: ${{ steps.filter.outputs.sync }}
+    steps:
+      - name: Check out repository
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect image inputs
+        id: filter
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            home:
+              - 'apps/home/**'
+              - 'packages/config/**'
+              - 'packages/ui/**'
+              - 'apps/home/Dockerfile'
+              - 'docker/static-spa.conf'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.github/workflows/container-images.yml'
+            mark:
+              - 'apps/mark/**'
+              - 'packages/browser-db/**'
+              - 'packages/config/**'
+              - 'packages/markdownish/**'
+              - 'packages/sync-client/**'
+              - 'packages/ui/**'
+              - 'apps/mark/Dockerfile'
+              - 'docker/static-spa.conf'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.github/workflows/container-images.yml'
+            kin:
+              - 'apps/kin/**'
+              - 'packages/browser-db/**'
+              - 'packages/config/**'
+              - 'packages/markdownish/**'
+              - 'packages/sync-client/**'
+              - 'packages/ui/**'
+              - 'apps/kin/Dockerfile'
+              - 'docker/static-spa.conf'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.github/workflows/container-images.yml'
+            hey:
+              - 'apps/hey/**'
+              - 'packages/browser-db/**'
+              - 'packages/config/**'
+              - 'packages/markdownish/**'
+              - 'packages/sync-client/**'
+              - 'packages/ui/**'
+              - 'apps/hey/Dockerfile'
+              - 'docker/static-spa.conf'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.github/workflows/container-images.yml'
+            do:
+              - 'apps/do/**'
+              - 'packages/browser-db/**'
+              - 'packages/config/**'
+              - 'packages/ui/**'
+              - 'apps/do/Dockerfile'
+              - 'docker/static-spa.conf'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.github/workflows/container-images.yml'
+            api:
+              - 'services/api/**'
+              - 'packages/config/**'
+              - 'services/api/Dockerfile'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.github/workflows/container-images.yml'
+            sync:
+              - 'services/sync/**'
+              - 'packages/config/**'
+              - 'services/sync/Dockerfile'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.github/workflows/container-images.yml'
+
   build:
     name: Build ${{ matrix.image }}
+    needs: changes
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' || github.ref_type == 'tag' || needs.changes.outputs[matrix.image] == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
