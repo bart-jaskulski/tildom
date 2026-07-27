@@ -1,4 +1,3 @@
-import tailwindcss from "@tailwindcss/vite";
 import solid from "vite-plugin-solid";
 import { defineConfig } from "vite";
 import { fileURLToPath, URL } from "node:url";
@@ -25,7 +24,6 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       solid(),
-      tailwindcss(),
       tildomPwa({
         name: "mark.tildom",
         short_name: "mark",
@@ -64,7 +62,9 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
-      sourcemap: true,
+      modulePreload: {
+        polyfill: false,
+      },
     },
     optimizeDeps: {
       exclude: ["@sqlite.org/sqlite-wasm"],

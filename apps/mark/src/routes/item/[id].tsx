@@ -9,11 +9,13 @@ import {
   toggleMarkdownTask,
 } from "@tildom/markdownish";
 import { useVimKeymaps } from "@tildom/ui";
-import AppNav from "~/components/AppNav";
-import { dbVersion } from "~/lib/db";
+import Button from "~/components/Button";
+import ItemLoading from "~/components/ItemLoading";
+import { client } from "~/lib/db";
 import { formatRelativeTimestamp } from "~/lib/entries";
 import { handleTextareaKeyboardSubmit, resizeTextareaToFitContent } from "~/lib/textarea";
 import { addCommentToEntry, deleteComment, deleteEntry, fetchEntryDetail, isEntryStoreReady, updateComment, updateEntry } from "~/stores/entryStore";
+import TextButton from "~/components/TextButton";
 import styles from "./[id].module.css";
 
 export default function ItemPage() {
@@ -38,7 +40,7 @@ export default function ItemPage() {
   let commentBodyTextarea: HTMLTextAreaElement | undefined;
   let editingCommentTextarea: HTMLTextAreaElement | undefined;
   const [detail, { refetch }] = createResource(
-    () => (!isServer && isEntryStoreReady() ? [params.id ?? "", dbVersion()] as const : null),
+    () => (!isServer && isEntryStoreReady() ? [params.id ?? "", client.dbVersion] as const : null),
     ([entryId]) => fetchEntryDetail(entryId),
   );
   const entry = () => detail()?.entry ?? null;
@@ -238,41 +240,40 @@ export default function ItemPage() {
   };
 
   return (
-    <main class="hn-page">
+    <>
       <Title>{entry()?.title ? `${entry()!.title} | mark.tildom` : "Item | mark.tildom"}</Title>
-      <AppNav />
-
-      <section class="hn-content hn-stack">
         <Show when={entry()} fallback={
-          <p class="hn-status">{detail.loading ? "Loading item..." : "Item not found"}</p>
+          !isEntryStoreReady() || detail.loading
+            ? <ItemLoading />
+            : <p class="hn-status">Item not found</p>
         }>
           {(currentEntry) => (
             <>
               <article>
-                <div class="entry-subtext">
+                <div class={styles.subtext}>
                   <Show when={currentEntry().domain}>
                     <span>{currentEntry().domain}</span>
                   </Show>
                   <span>{currentEntry().domain ? " | " : ""}{formatRelativeTimestamp(currentEntry().createdAt)}</span>
                   <Show when={!isEditing()}>
                     <span> | </span>
-                    <button type="button" class="hn-link-button" onClick={startEditing}>
+                    <TextButton type="button" inline onClick={startEditing}>
                       edit
-                    </button>
+                    </TextButton>
                     <span> | </span>
-                    <button
+                    <TextButton
                       type="button"
-                      class="hn-link-button"
+                      inline
                       onClick={handleDelete}
                       disabled={isDeleting()}
                     >
                       {isDeleting() ? "deleting..." : "delete"}
-                    </button>
+                    </TextButton>
                   </Show>
                 </div>
 
                 <Show when={!isEditing()} fallback={
-                  <form class="hn-form hn-stack item-edit-form" onSubmit={submitEdit}>
+                  <form class="hn-form item-edit-form" onSubmit={submitEdit}>
                     <label class="hn-label" for="edit-title">title</label>
                     <input
                       id="edit-title"
@@ -311,32 +312,32 @@ export default function ItemPage() {
                     </Show>
 
                     <div class={styles.actions}>
-                      <button type="submit" disabled={isEditSaving()} class="hn-button">
+                      <Button type="submit" disabled={isEditSaving()}>
                         {isEditSaving() ? "saving..." : "save changes"}
-                      </button>
-                      <button type="button" class="hn-button" onClick={cancelEditing}>
+                      </Button>
+                      <Button type="button" onClick={cancelEditing}>
                         cancel
-                      </button>
+                      </Button>
                     </div>
                   </form>
                 }>
                   <h1 class={styles.title}>{currentEntry().title}</h1>
 
                   <Show when={currentEntry().canonicalUrl}>
-                    <a href={currentEntry().canonicalUrl!} target="_blank" rel="noreferrer" class={`${styles.url} entry-subtext`}>
+                    <a href={currentEntry().canonicalUrl!} target="_blank" rel="noreferrer" class={`${styles.url} ${styles.subtext}`}>
                       {currentEntry().canonicalUrl}
                     </a>
                   </Show>
 
                   <Show when={currentEntry().excerpt}>
-                    <p class={`entry-preview ${styles.preview}`}>{currentEntry().excerpt}</p>
+                    <p class={styles.preview}>{currentEntry().excerpt}</p>
                   </Show>
 
                   <Show when={currentEntry().tags.length > 0}>
-                    <p class={`entry-tags ${styles.tags}`}>
+                    <p class={styles.tags}>
                       <For each={currentEntry().tags}>
                         {(tag) => (
-                          <A href={`/?q=${encodeURIComponent(`#${tag}`)}`} class="entry-tag">
+                          <A href={`/?q=${encodeURIComponent(`#${tag}`)}`} class={styles.tag}>
                             #{tag}
                           </A>
                         )}
@@ -375,26 +376,26 @@ export default function ItemPage() {
                               innerHTML={renderMarkdownishToHtml(comment.body, { tasks: true })}
                               onClick={(event) => void handleCommentTaskClick(event, comment.id, comment.body)}
                             />
-                            <p class="entry-subtext">
+                            <p class={styles.subtext}>
                               {formatRelativeTimestamp(comment.createdAt)}
                               <span> | </span>
-                              <button
+                              <TextButton
                                 type="button"
-                                class="hn-link-button"
+                                inline
                                 onClick={() => startCommentEditing(comment.id, comment.body)}
                                 disabled={commentDeletingId() === comment.id}
                               >
                                 edit
-                              </button>
+                              </TextButton>
                               <span> | </span>
-                              <button
+                              <TextButton
                                 type="button"
-                                class="hn-link-button"
+                                inline
                                 onClick={() => handleCommentDelete(comment.id)}
                                 disabled={commentDeletingId() === comment.id}
                               >
                                 {commentDeletingId() === comment.id ? "deleting..." : "delete"}
-                              </button>
+                              </TextButton>
                             </p>
                           </>
                         }
@@ -417,12 +418,12 @@ export default function ItemPage() {
                             class="hn-textarea"
                           />
                           <div class={styles.actions}>
-                            <button type="submit" class="hn-button" disabled={commentSavingId() === comment.id}>
+                            <Button type="submit" disabled={commentSavingId() === comment.id}>
                               {commentSavingId() === comment.id ? "saving..." : "save"}
-                            </button>
-                            <button type="button" class="hn-button" onClick={cancelCommentEditing}>
+                            </Button>
+                            <Button type="button" onClick={cancelCommentEditing}>
                               cancel
-                            </button>
+                            </Button>
                           </div>
                         </form>
                       </Show>
@@ -455,19 +456,17 @@ export default function ItemPage() {
                   <Show when={commentError()}>
                     <p class="hn-error">{commentError()}</p>
                   </Show>
-                  <button
+                  <Button
                     type="submit"
                     disabled={isCommentSaving()}
-                    class="hn-button"
                   >
                     {isCommentSaving() ? "adding..." : "add comment"}
-                  </button>
+                  </Button>
                 </form>
               </section>
             </>
           )}
         </Show>
-      </section>
-    </main>
+    </>
   );
 }

@@ -13,7 +13,7 @@
     border-top: 0;
   }
 
-  & > :global(.hn-button) {
+  & > button {
     justify-self: start;
   }
 }
@@ -91,9 +91,7 @@
 }
 
 .optionDescription {
-  & :global(.hn-link-button) {
-    min-height: auto;
-    padding: 0;
+  &Button {
     color: var(--syntax-string);
     font: inherit;
   }

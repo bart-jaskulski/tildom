@@ -1,22 +1,44 @@
 .topbar {
-  display: flex;
-  align-items: stretch;
-  justify-content: space-between;
-  width: 100%;
-  max-width: 120ch;
-  height: 48px;
-  min-height: 48px;
-  margin: 0 auto;
-  padding-left: 1.5rem;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 48px;
+  grid-template-rows: 48px 48px;
+  max-width: none;
+  height: 96px;
+  min-height: 96px;
+  margin: 0;
+  padding: 0;
   border-bottom: 1px solid var(--border-color);
-  background: var(--bg-canvas);
+
+  @media (min-width: 769px) {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 120ch;
+    height: 48px;
+    min-height: 48px;
+    margin-inline: auto;
+    padding-left: 1.5rem;
+    background: var(--bg-canvas);
+    gap: 8px;
+  }
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
   min-width: 0;
+  grid-column: 1;
+  grid-row: 1;
+  height: auto;
+  gap: 0.75rem;
+  padding-left: 1.5ch;
+
+  @media (min-width: 769px) {
+    gap: 1.5rem;
+    padding-left: 0;
+  }
 
   & a {
     color: inherit;
@@ -51,6 +73,14 @@
   min-width: 0;
   overflow-x: auto;
   scrollbar-width: none;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+
+  @media (min-width: 769px) {
+    white-space: normal;
+  }
 
   &::-webkit-scrollbar {
     display: none;
@@ -60,12 +90,20 @@
     display: flex;
     align-items: center;
     min-height: 48px;
-    padding: 0 2.2ch;
     border-right: 0;
     color: var(--fg-muted);
     font-size: 12px;
     transition: background-color 0.15s ease-out, color 0.15s ease-out;
     white-space: nowrap;
+    flex: 1 0 auto;
+    justify-content: center;
+    padding: 0 1.5ch;
+
+    @media (min-width: 769px) {
+      flex: 0 1 auto;
+      justify-content: flex-start;
+      padding: 0 2.2ch;
+    }
 
     &:hover {
       background: var(--bg-surface);
@@ -83,42 +121,71 @@
 }
 
 .search {
-  position: relative;
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
   display: flex;
   align-items: center;
-  width: 24ch;
-  min-width: 24ch;
-  margin-left: auto;
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  margin: 0;
   padding: 0;
-  border-left: 1px solid var(--border-color);
+  border-left: 0;
+  border-bottom: 0;
   background: var(--bg-surface);
+  overflow: hidden;
   transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 
-  &:focus-within {
-    width: min(44ch, 42vw);
+  @media (min-width: 769px) {
+    position: relative;
+    top: auto;
+    right: auto;
+    z-index: auto;
+    width: 24ch;
+    min-width: 24ch;
+    height: auto;
+    margin-left: auto;
+    border-left: 1px solid var(--border-color);
+    overflow: visible;
+
+    &:focus-within {
+      width: min(44ch, 42vw);
+    }
   }
 
   &::before {
     position: absolute;
     top: 50%;
     left: 1.25ch;
-    color: var(--syntax-keyword);
-    content: ">";
-    font-weight: bold;
-    pointer-events: none;
-    transform: translateY(-50%);
+    display: none;
+
+    @media (min-width: 769px) {
+      display: block;
+      color: var(--syntax-keyword);
+      content: ">";
+      font-weight: bold;
+      pointer-events: none;
+      transform: translateY(-50%);
+    }
   }
 
   & input {
-    width: 100%;
-    min-height: 48px;
-    padding: 0 1.5ch 0 3.5ch;
+    display: none;
     border: none;
     outline: none;
     background: transparent;
     color: var(--fg-default);
     font-size: 13px;
     transition: box-shadow 0.15s ease-out;
+
+    @media (min-width: 769px) {
+      display: block;
+      width: 100%;
+      min-height: 48px;
+      padding: 0 1.5ch 0 3.5ch;
+    }
 
     &:focus {
       box-shadow: inset 2px 0 0 var(--syntax-keyword);
@@ -129,111 +196,52 @@
       opacity: 0.8;
     }
   }
+
+  &[data-open] {
+    width: 100%;
+    min-width: 0;
+
+    & input {
+      display: block;
+      min-height: 48px;
+      padding: 0 48px 0 1.5ch;
+    }
+
+    & .toggle {
+      position: absolute;
+      top: 0;
+      right: 0;
+    }
+  }
 }
 
 .toggle {
-  display: none;
-}
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--fg-default);
+  cursor: pointer;
+  place-items: center;
 
-@media (max-width: 768px) {
-  .topbar {
-    position: relative;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 48px;
-    grid-template-rows: 48px 48px;
-    max-width: none;
-    height: 96px;
-    min-height: 96px;
-    margin: 0;
-    padding: 0;
+  @media (min-width: 769px) {
+    display: none;
   }
 
-  .brand {
-    grid-column: 1;
-    grid-row: 1;
-    height: auto;
-    gap: 0.75rem;
-    padding-left: 1.5ch;
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    background: var(--syntax-bg-active);
   }
 
-  .nav {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    overflow-x: auto;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
-
-    & a {
-      flex: 1 0 auto;
-      justify-content: center;
-      padding: 0 1.5ch;
-    }
-  }
-
-  .search {
-    position: absolute;
-    top: 0;
-    right: 0;
-    z-index: 1;
-    width: 48px;
-    min-width: 48px;
-    height: 48px;
-    margin: 0;
-    border-bottom: 0;
-    border-left: 0;
-    overflow: hidden;
-    transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-
-    &::before {
-      display: none;
-    }
-
-    & input {
-      display: none;
-    }
-
-    &[data-open] {
-      width: 100%;
-      min-width: 0;
-
-      & input {
-        display: block;
-        min-height: 48px;
-        padding: 0 48px 0 1.5ch;
-      }
-
-      & .toggle {
-        position: absolute;
-        top: 0;
-        right: 0;
-      }
-    }
-  }
-
-  .toggle {
-    display: grid;
-    width: 48px;
-    height: 48px;
-    margin-left: auto;
-    border: 0;
-    background: transparent;
-    color: var(--fg-default);
-    cursor: pointer;
-    place-items: center;
-
-    &:hover,
-    &:focus-visible {
-      outline: none;
-      background: var(--syntax-bg-active);
-    }
-
-    & svg {
-      width: 18px;
-      height: 18px;
-      fill: none;
-      stroke: currentColor;
-      stroke-linecap: square;
-      stroke-width: 2;
-    }
+  & svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: square;
+    stroke-width: 2;
   }
 }

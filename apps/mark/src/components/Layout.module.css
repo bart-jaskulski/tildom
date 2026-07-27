@@ -1,0 +1,36 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100vh;
+  background: var(--bg-canvas);
+}
+
+.content {
+  width: 100%;
+  max-width: 120ch;
+  margin: 0 auto;
+  padding: 1.5rem 3ch 2.5rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.loading {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1.5ch;
+  border-left: 2px solid var(--fg-muted);
+  background: var(--bg-canvas);
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .page {
+    min-height: 100vh;
+    margin: 0;
+    border: none;
+  }
+
+  .content {
+    padding: 1.25rem 1.5ch 2rem;
+  }
+}

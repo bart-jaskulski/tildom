@@ -1,5 +1,5 @@
 import { createSyncClient } from "@tildom/sync-client";
-import { exportDatabase, importDatabase } from "./db";
+import { client as databaseClient } from "./db";
 import { syncState, SYNC_BACKGROUND_TAG } from "./syncState";
 import { refreshEntries } from "~/stores/entryStore";
 
@@ -14,8 +14,8 @@ const client = createSyncClient({
   appId: "mark",
   baseUrl,
   state: syncState,
-  exportDatabase,
-  importDatabase,
+  exportDatabase: databaseClient.exportDatabase,
+  importDatabase: databaseClient.importDatabase,
   afterImport: refreshEntries,
   queueBackgroundSync: async () => {
     const registration = await navigator.serviceWorker?.ready;

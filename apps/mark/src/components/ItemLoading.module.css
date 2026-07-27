@@ -1,0 +1,44 @@
+.loading {
+  display: grid;
+  gap: 0.85rem;
+  max-width: 75ch;
+  padding-top: 0.35rem;
+}
+
+.line {
+  display: block;
+  background: var(--syntax-bg-active);
+  animation: pulse 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
+}
+
+.meta {
+  width: min(28ch, 44%);
+  height: 0.7rem;
+}
+
+.title {
+  width: min(52ch, 78%);
+  height: 1.65rem;
+}
+
+.url {
+  width: min(42ch, 64%);
+  height: 0.75rem;
+}
+
+.body {
+  width: min(68ch, 96%);
+  height: 6rem;
+  margin-top: 0.35rem;
+  border-left: 2px solid var(--border-color);
+}
+
+@keyframes pulse {
+  from {
+    opacity: 0.48;
+  }
+
+  to {
+    opacity: 0.9;
+  }
+}

@@ -1,0 +1,132 @@
+.row {
+  position: relative;
+  border-left: 2px solid var(--border-color);
+  transition: background-color 0.15s ease-out, border-color 0.15s ease-out;
+  padding-inline: 1.5ch;
+  padding-block: 0.25rem;
+
+  @media (min-width: 769px) {
+    padding-block: 0.75rem;
+  }
+
+  &:hover,
+  &.activeRow {
+    border-left-color: var(--syntax-keyword);
+    background: var(--syntax-bg-active);
+  }
+
+}
+
+.titleline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+
+  @media (min-width: 769px) {
+    gap: 1ch;
+  }
+}
+
+.title {
+  max-width: 75ch;
+  color: var(--fg-default);
+  font-size: 16px;
+  font-weight: bold;
+  overflow-wrap: anywhere;
+
+  &:hover {
+    color: var(--highlight-blue);
+  }
+}
+
+.domain {
+  color: var(--highlight-blue);
+  font-size: 12px;
+}
+
+.preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  max-width: 75ch;
+  margin: 0.55rem 0 0;
+  color: var(--fg-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.subtext {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1ch;
+  margin-top: 0.35rem;
+  color: var(--fg-muted);
+  font-size: 12px;
+
+  & a {
+    color: var(--fg-default);
+    font-weight: bold;
+
+    &:hover {
+      color: var(--syntax-keyword);
+    }
+  }
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1ch;
+  max-width: 75ch;
+  margin: 0.45rem 0 0;
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+
+.tag {
+  color: var(--fg-muted) !important;
+  font-weight: 500;
+
+  &:hover {
+    color: var(--syntax-keyword) !important;
+  }
+}
+
+.searchHighlight {
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--syntax-keyword);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.loadingTitle,
+.loadingMeta,
+.loadingPreview {
+  display: block;
+  background: var(--syntax-bg-active);
+}
+
+.loadingTitle {
+  width: min(46ch, 68%);
+  height: 1rem;
+}
+
+.loadingMeta {
+  width: min(31ch, 48%);
+  height: 0.65rem;
+  margin-top: 0.6rem;
+}
+
+.loadingPreview {
+  width: min(64ch, 88%);
+  height: 0.75rem;
+  margin-top: 0.6rem;
+}

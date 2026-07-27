@@ -1,14 +1,16 @@
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
 import { formatRelativeTimestamp, hasEntryLink, type Entry, type SearchResult } from "~/lib/entries";
-import styles from "./EntryCard.module.css";
+import styles from "./EntryListItemPreview.module.css";
+import TextButton from "./TextButton";
 
-type EntryCardProps = {
+type EntryListItemPreviewProps = {
   entry: Entry | SearchResult;
   matchText?: string;
   searchQuery?: string;
   onDelete?: (entryId: string) => void;
   isActive?: boolean;
+  loading?: boolean;
 };
 
 const searchTerms = (query: string): string[] => query.toLowerCase().match(/[\p{L}\p{N}_]+/gu) ?? [];
@@ -29,7 +31,7 @@ const previewText = (entry: Entry | SearchResult) => {
   return entry.excerpt || entry.body || entry.canonicalUrl || entry.sourceUrl || "";
 };
 
-export default function EntryCard(props: EntryCardProps) {
+export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
   const entry = () => props.entry;
   const title = () => entry().title || entry().domain || "Untitled";
   const timestamp = () => entry().lastCommentedAt ?? entry().createdAt;
@@ -48,6 +50,16 @@ export default function EntryCard(props: EntryCardProps) {
 
   return (
     <article class={styles.row} classList={{ [styles.activeRow]: props.isActive }} data-entry-row data-active={props.isActive ? "" : undefined}>
+      <Show
+        when={!props.loading}
+        fallback={(
+          <>
+            <span class={styles.loadingTitle} />
+            <span class={styles.loadingMeta} />
+            <span class={styles.loadingPreview} />
+          </>
+        )}
+      >
         <div class={styles.titleline}>
           <A href={`/item/${entry().id}`} class={styles.title}>{highlighted(title())}</A>
           <Show when={entry().domain}>
@@ -55,7 +67,7 @@ export default function EntryCard(props: EntryCardProps) {
           </Show>
         </div>
 
-        <div class="entry-subtext">
+        <div class={styles.subtext}>
           <span>{formatRelativeTimestamp(timestamp())}</span>
           <span> | {entry().commentCount} {entry().commentCount === 1 ? "comment" : "comments"}</span>
           <Show when={entry().canonicalUrl}>
@@ -71,25 +83,25 @@ export default function EntryCard(props: EntryCardProps) {
           </Show>
           <Show when={props.onDelete}>
             <span> | </span>
-            <button
+            <TextButton
               type="button"
-              class="hn-link-button"
+              inline
               onClick={() => props.onDelete?.(entry().id)}
             >
               delete
-            </button>
+            </TextButton>
           </Show>
         </div>
 
         <Show when={previewText(entry())}>
-          <p class="entry-preview">{highlighted(previewText(entry()))}</p>
+          <p class={styles.preview}>{highlighted(previewText(entry()))}</p>
         </Show>
 
         <Show when={entry().tags.length > 0}>
-          <p class="entry-tags">
+          <p class={styles.tags}>
             <For each={entry().tags}>
               {(tag) => (
-                <A href={`/?q=${encodeURIComponent(`#${tag}`)}`} class="entry-tag">
+                <A href={`/?q=${encodeURIComponent(`#${tag}`)}`} class={styles.tag}>
                   #{highlighted(tag)}
                 </A>
               )}
@@ -98,8 +110,9 @@ export default function EntryCard(props: EntryCardProps) {
         </Show>
 
         <Show when={props.matchText && !hasVisibleMatch()}>
-          <p class="entry-preview">{highlighted(props.matchText!)}</p>
+          <p class={styles.preview}>{highlighted(props.matchText!)}</p>
         </Show>
+      </Show>
     </article>
   );
 }

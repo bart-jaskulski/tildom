@@ -4,10 +4,10 @@ import { For, Show, createEffect, createMemo, createResource, createSignal } fro
 import { isServer } from "solid-js/web";
 import { handleMarkdownishEnter } from "@tildom/markdownish/keyboard";
 import { useVimKeymaps } from "@tildom/ui";
+import Button from "~/components/Button";
 import styles from "./index.module.css";
-import AppNav from "~/components/AppNav";
-import EntryCard from "~/components/EntryCard";
-import { dbVersion } from "~/lib/db";
+import EntryListItemPreview from "~/components/EntryListItemPreview";
+import { client } from "~/lib/db";
 import type { Entry, SearchResult } from "~/lib/entries";
 import { searchLocalEntries } from "~/lib/searchIndex";
 import { handleTextareaKeyboardSubmit, resizeTextareaToFitContent } from "~/lib/textarea";
@@ -15,6 +15,7 @@ import { createEntry, deleteEntry, entries, isEntryStoreReady } from "~/stores/e
 
 const PAGE_SIZE = 20;
 const STARTUP_ROWS = [0, 1, 2];
+const STARTUP_ENTRY = { id: "", body: "", title: "", domain: "", tags: [], commentCount: 0, createdAt: "", sourceUrl: "" };
 
 const isSearchResult = (entry: Entry | SearchResult): entry is SearchResult => "matchText" in entry;
 
@@ -30,10 +31,8 @@ function StartupEntries() {
       <ol class={styles.startupList} aria-hidden="true">
         <For each={STARTUP_ROWS}>
           {() => (
-            <li class={styles.startupItem}>
-              <span class={styles.startupTitle} />
-              <span class={styles.startupMeta} />
-              <span class={styles.startupPreview} />
+            <li class={styles.entryItem}>
+              <EntryListItemPreview entry={STARTUP_ENTRY} loading />
             </li>
           )}
         </For>
@@ -50,7 +49,7 @@ export default function Home() {
   const [isSaving, setIsSaving] = createSignal(false);
   const searchQuery = createMemo(() => String(params.q ?? "").trim());
   const [results] = createResource(
-    () => (!isServer && isEntryStoreReady() && searchQuery() ? [searchQuery(), dbVersion()] as const : null),
+    () => (!isServer && isEntryStoreReady() && searchQuery() ? [searchQuery(), client.dbVersion] as const : null),
     ([query]) => searchLocalEntries(query),
   );
   const visibleEntries = createMemo(() => searchQuery() ? results() ?? [] : entries());
@@ -61,13 +60,18 @@ export default function Home() {
   const pageStart = createMemo(() => (currentPage() - 1) * PAGE_SIZE);
   const paginatedEntries = createMemo(() => visibleEntries().slice(pageStart(), pageStart() + PAGE_SIZE));
   const navigate = useNavigate();
-  const [activeIndex, setActiveIndex] = createSignal(0);
-  const hasPagination = createMemo(() => visibleEntries().length > PAGE_SIZE);
+  let entryList: HTMLOListElement | undefined;
+  const [activeIndex, setActiveIndex] = createSignal<number | null>(null);
+  const selectedEntry = () => {
+    const index = activeIndex();
+    return index === null ? undefined : paginatedEntries()[index];
+  };
 
   createEffect(() => {
     const max = paginatedEntries().length - 1;
-    if (activeIndex() > max) {
-      setActiveIndex(Math.max(0, max));
+    const index = activeIndex();
+    if (index !== null && index > max) {
+      setActiveIndex(max < 0 ? null : max);
     }
   });
 
@@ -82,7 +86,10 @@ export default function Home() {
     {
       lhs: "j",
       callback: () => {
-        setActiveIndex(prev => Math.min(prev + 1, paginatedEntries().length - 1));
+        setActiveIndex(prev => {
+          const max = paginatedEntries().length - 1;
+          return max < 0 ? null : Math.min((prev ?? -1) + 1, max);
+        });
         scrollActiveIntoView();
       },
       help: "next item",
@@ -90,7 +97,7 @@ export default function Home() {
     {
       lhs: "k",
       callback: () => {
-        setActiveIndex(prev => Math.max(prev - 1, 0));
+        setActiveIndex(prev => prev === null ? 0 : Math.max(prev - 1, 0));
         scrollActiveIntoView();
       },
       help: "previous item",
@@ -100,17 +107,17 @@ export default function Home() {
       if (entryBody()) void handleSubmit(new Event("submit") as SubmitEvent);
     }, help: "save" },
     { lhs: ["gx", "o"], callback: () => {
-      const selected = paginatedEntries()[activeIndex()];
+      const selected = selectedEntry();
       if (selected?.canonicalUrl) window.open(selected.canonicalUrl, "_blank", "noreferrer");
     }, help: "open original URL" },
-    { lhs: "gg", callback: () => { setActiveIndex(0); scrollActiveIntoView(); }, help: "first item" },
-    { lhs: "G", callback: () => { setActiveIndex(paginatedEntries().length - 1); scrollActiveIntoView(); }, help: "last item" },
+    { lhs: "gg", callback: () => { setActiveIndex(paginatedEntries().length ? 0 : null); scrollActiveIntoView(); }, help: "first item" },
+    { lhs: "G", callback: () => { const max = paginatedEntries().length - 1; setActiveIndex(max < 0 ? null : max); scrollActiveIntoView(); }, help: "last item" },
     { lhs: ["e", "Enter"], callback: () => {
-      const selected = paginatedEntries()[activeIndex()];
+      const selected = selectedEntry();
       if (selected) navigate(`/item/${selected.id}`);
     }, help: "open selected item" },
         { lhs: "d", callback: () => {
-          const selected = paginatedEntries()[activeIndex()];
+          const selected = selectedEntry();
           if (selected) void handleDelete(selected.id);
         }, help: "delete selected item" },
         { lhs: "p", callback: () => {
@@ -142,12 +149,15 @@ export default function Home() {
   const setPage = (page: number) => {
     const nextPage = Math.min(Math.max(page, 1), totalPages());
     setParams({ page: nextPage > 1 ? String(nextPage) : undefined });
+    requestAnimationFrame(() => entryList?.scrollIntoView());
   };
 
   const hasMore = createMemo(() => currentPage() < totalPages());
 
   const handleSubmit = async (event: SubmitEvent) => {
     event.preventDefault();
+    if (!isEntryStoreReady()) return;
+
     setError(null);
     setIsSaving(true);
 
@@ -176,11 +186,9 @@ export default function Home() {
   };
 
   return (
-    <main class="hn-page">
+    <>
       <Title>{searchQuery() ? `${searchQuery()} | mark.tildom` : "mark.tildom"}</Title>
-      <AppNav />
 
-      <section class="hn-content hn-stack">
         <Show when={!searchQuery()}>
           <form id="submit" class="hn-form hn-panel" onSubmit={handleSubmit}>
             <div class="hn-form-row">
@@ -211,9 +219,9 @@ export default function Home() {
 
             <div class="hn-form-row">
               <span />
-              <button type="submit" disabled={isSaving()} class="hn-button">
+              <Button type="submit" disabled={!isEntryStoreReady() || isSaving()}>
                 {isSaving() ? "saving..." : "save"}
-              </button>
+              </Button>
             </div>
           </form>
         </Show>
@@ -234,11 +242,11 @@ export default function Home() {
             </Show>
 
             <Show when={!isEmpty()}>
-              <ol class={styles.entryList} start={pageStart() + 1}>
+              <ol ref={entryList} class={styles.entryList} start={pageStart() + 1} style={{ "--entry-count": pageStart() }}>
                 <For each={paginatedEntries()}>
                   {(entry, index) => (
                     <li class={styles.entryItem}>
-                      <EntryCard
+                      <EntryListItemPreview
                         entry={entry}
                         matchText={isSearchResult(entry) ? entry.matchText : undefined}
                         searchQuery={searchQuery()}
@@ -259,18 +267,16 @@ export default function Home() {
 
             <Show when={hasMore()}>
               <nav class={styles.pagination} aria-label="Pagination">
-                <button
+                <Button
                   type="button"
-                  class="hn-button"
                   onClick={() => setPage(currentPage() + 1)}
                 >
                   More
-                </button>
+                </Button>
               </nav>
             </Show>
           </div>
         </Show>
-      </section>
-    </main>
+      </>
   );
 }

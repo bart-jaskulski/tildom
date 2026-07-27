@@ -1,14 +1,17 @@
 import { Title } from "@solidjs/meta";
 import { Show, createMemo, createSignal, onMount } from "solid-js";
 import { createPreferences, showVimHelp } from "@tildom/ui";
-import AppNav from "~/components/AppNav";
+import { buildPairingUrl, clearPairingHash, parsePairingSecret } from "@tildom/sync-client";
+import Button from "~/components/Button";
+import buttonStyles from "~/components/Button.module.css";
 import QRDisplay from "~/components/DevicePairing/QRDisplay";
-import { destroyDatabase, exportDatabase, importDatabase } from "~/lib/db";
+import TextButton from "~/components/TextButton";
+import { client } from "~/lib/db";
 import { pwaInstall } from "~/lib/pwaInstall";
-import { buildPairingUrl, clearPairingHash, parsePairingSecret } from "~/lib/syncCrypto";
 import { createSyncVault, disconnectSync, joinSyncVault, refreshSyncState, syncNow, syncSignals } from "~/lib/syncClient";
 import { markSyncDirty } from "~/lib/syncState";
 import { getSyncConfig } from "~/lib/syncState";
+import { isEntryStoreReady } from "~/stores/entryStore";
 import styles from "./settings.module.css";
 
 const createBackupFilename = () => `mark-tildom-${new Date().toISOString().slice(0, 10)}.sqlite3`;
@@ -55,7 +58,7 @@ export default function Settings() {
   const handleExport = async () => {
     setStatus(null); setError(null); setIsExporting(true);
     try {
-      const bytes = await exportDatabase();
+      const bytes = await client.exportDatabase();
       const url = URL.createObjectURL(new Blob([new Uint8Array(bytes).buffer], { type: "application/vnd.sqlite3" }));
       Object.assign(document.createElement("a"), { href: url, download: createBackupFilename() }).click();
       URL.revokeObjectURL(url);
@@ -76,7 +79,7 @@ export default function Settings() {
     }
     setStatus(null); setError(null); setIsImporting(true);
     try {
-      await importDatabase(new Uint8Array(await file.arrayBuffer()));
+      await client.importDatabase(new Uint8Array(await file.arrayBuffer()));
       await markSyncDirty();
       setStatus("Database imported.");
     } catch (err) {
@@ -92,7 +95,7 @@ export default function Settings() {
     setIsDestroying(true);
     try {
       await disconnectSync();
-      await destroyDatabase();
+      await client.deleteDatabaseFile();
       window.location.assign("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to destroy database");
@@ -109,18 +112,17 @@ export default function Settings() {
   });
 
   return (
-    <main class="hn-page">
+    <>
       <Title>Settings | mark.tildom</Title>
-      <AppNav active="settings" />
-      <section class={`hn-content hn-stack ${styles.panel}`}>
+      <section class={styles.panel}>
         <Show when={pwaInstall.available() || pwaInstall.needsSafariInstructions()}>
           <section class={styles.section}>
             <h1 class={styles.sectionTitle}>App</h1>
             <Show when={pwaInstall.available()}>
-              <button type="button" class="hn-button" onClick={() => void pwaInstall.prompt()}>install mark</button>
+              <Button type="button" onClick={() => void pwaInstall.prompt()}>install mark</Button>
             </Show>
             <Show when={!pwaInstall.available() && pwaInstall.needsSafariInstructions()}>
-              <button type="button" class="hn-button" aria-expanded={showInstallHelp()} onClick={() => setShowInstallHelp(!showInstallHelp)}>add to home screen</button>
+              <Button type="button" aria-expanded={showInstallHelp()} onClick={() => setShowInstallHelp(!showInstallHelp)}>add to home screen</Button>
               <Show when={showInstallHelp()}><p class={`hn-muted ${styles.note}`}>In Safari, use Share, then choose <strong>Add to Home Screen</strong>.</p></Show>
             </Show>
           </section>
@@ -132,7 +134,7 @@ export default function Settings() {
             <input type="checkbox" checked={prefs().vimKeys} onChange={() => setPrefs(prev => ({ ...prev, vimKeys: !prev.vimKeys }))} />
             <span class={styles.optionLabel}>{prefs().vimKeys ? "[x]" : "[ ]"} enable Vim keys</span>
           </label>
-          <p class={styles.optionDescription}>Wide screens with a hardware keyboard. <button type="button" class="hn-link-button" onClick={() => showVimHelp()}>view keybinds <kbd>?</kbd></button></p>
+          <p class={styles.optionDescription}>Wide screens with a hardware keyboard. <TextButton type="button" inline class={styles.optionDescriptionButton} onClick={() => showVimHelp()}>view keybinds <kbd>?</kbd></TextButton></p>
         </section>
 
         <section class={styles.section}>
@@ -140,7 +142,7 @@ export default function Settings() {
           <Show when={joinSecret()}>
             <div class={styles.syncBlock}>
               <p class="hn-muted">Pairing will replace this device with the latest remote snapshot.</p>
-              <button type="button" class="hn-button" disabled={syncBusy()} onClick={joinVault}>{syncBusy() ? "joining..." : "join vault"}</button>
+              <Button type="button" disabled={!isEntryStoreReady() || syncBusy()} onClick={joinVault}>{syncBusy() ? "joining..." : "join vault"}</Button>
             </div>
           </Show>
           <Show when={!syncSignals.isReady()}>
@@ -151,7 +153,7 @@ export default function Settings() {
             </dl>
           </Show>
           <Show when={syncSignals.isReady() && !syncSignals.isPaired() && !joinSecret()}>
-            <button type="button" class="hn-button" disabled={syncBusy()} onClick={() => void runSync(createSyncVault)}>{syncBusy() ? "creating..." : "create sync vault"}</button>
+            <Button type="button" disabled={!isEntryStoreReady() || syncBusy()} onClick={() => void runSync(createSyncVault)}>{syncBusy() ? "creating..." : "create sync vault"}</Button>
           </Show>
           <Show when={syncSignals.isReady() && syncSignals.isPaired()}>
             <dl class={styles.syncStatus}>
@@ -160,11 +162,11 @@ export default function Settings() {
               <div><dt>local</dt><dd>{syncSignals.hasLocalChanges() ? "pending changes" : "clean"}</dd></div>
             </dl>
             <div class={styles.actions}>
-              <button type="button" class="hn-button" disabled={syncBusy()} onClick={() => void runSync(syncNow)}>{syncBusy() ? "syncing..." : "sync now"}</button>
-              <button type="button" class="hn-button" disabled={syncBusy() || !pairUrl()} onClick={() => void runSync(() => navigator.clipboard.writeText(pairUrl()))}>copy pair link</button>
-              <button type="button" class="hn-button hn-danger-button" disabled={syncBusy()} onClick={() => void runSync(disconnectSync)}>disconnect</button>
+              <Button type="button" disabled={!isEntryStoreReady() || syncBusy()} onClick={() => void runSync(syncNow)}>{syncBusy() ? "syncing..." : "sync now"}</Button>
+              <Button type="button" disabled={syncBusy() || !pairUrl()} onClick={() => void runSync(() => navigator.clipboard.writeText(pairUrl()))}>copy pair link</Button>
+              <Button type="button" danger disabled={syncBusy()} onClick={() => void runSync(disconnectSync)}>disconnect</Button>
             </div>
-            <button type="button" class="hn-link-button" aria-expanded={showQr()} onClick={() => setShowQr(!showQr())}>{showQr() ? "hide pairing QR" : "show pairing QR"}</button>
+            <TextButton type="button" aria-expanded={showQr()} onClick={() => setShowQr(!showQr())}>{showQr() ? "hide pairing QR" : "show pairing QR"}</TextButton>
             <Show when={showQr() && pairUrl()}><div class={styles.syncQr}><QRDisplay value={pairUrl()} /></div></Show>
           </Show>
         </section>
@@ -172,15 +174,15 @@ export default function Settings() {
         <section class={styles.section}>
           <h2 class={styles.sectionTitle}>Database</h2>
           <div class={styles.actions}>
-            <button type="button" class="hn-button" onClick={handleExport} disabled={isExporting() || isImporting() || isDestroying()}>{isExporting() ? "exporting..." : "export"}</button>
-            <label class={`hn-button ${styles.fileButton}`}><input ref={fileInput} type="file" accept=".sqlite,.sqlite3,.db,application/vnd.sqlite3,application/x-sqlite3" disabled={isExporting() || isImporting() || isDestroying()} onChange={handleImport} />{isImporting() ? "importing..." : "import"}</label>
+            <Button type="button" onClick={handleExport} disabled={!isEntryStoreReady() || isExporting() || isImporting() || isDestroying()}>{isExporting() ? "exporting..." : "export"}</Button>
+            <label class={`${buttonStyles.button} ${styles.fileButton}`}><input ref={fileInput} type="file" accept=".sqlite,.sqlite3,.db,application/vnd.sqlite3,application/x-sqlite3" disabled={!isEntryStoreReady() || isExporting() || isImporting() || isDestroying()} onChange={handleImport} />{isImporting() ? "importing..." : "import"}</label>
           </div>
-          <button type="button" class="hn-button hn-danger-button" disabled={isDestroying()} onClick={() => void destroyLocalDatabase()}>{isDestroying() ? "destroying..." : "destroy local database"}</button>
+          <Button type="button" danger disabled={!isEntryStoreReady() || isDestroying()} onClick={() => void destroyLocalDatabase()}>{isDestroying() ? "destroying..." : "destroy local database"}</Button>
         </section>
 
         <Show when={status()}><p class="hn-status" role="status">{status()}</p></Show>
         <Show when={error()}><p class="hn-error" role="alert">{error()}</p></Show>
       </section>
-    </main>
+    </>
   );
 }

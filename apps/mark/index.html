@@ -5,44 +5,63 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>mark.tildom</title>
     <script>performance.mark?.("mark:boot:start")</script>
+    <script>
+      document.documentElement.dataset.bootRoute =
+        location.pathname === "/" && !location.search
+          ? "home"
+          : (location.pathname.startsWith("/item/") || location.pathname.startsWith("/share-target/"))
+            ? "item"
+            : location.pathname === "/settings"
+              ? "settings"
+              : "other";
+    </script>
     <style>
       * { box-sizing: border-box; border-radius: 0; }
       html { min-height: 100%; background: #fafafa; }
       body { min-height: 100%; margin: 0; color: #24292e; background: #fafafa; font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 14px; line-height: 1.45; }
       .boot-page { min-height: 100vh; background: #fafafa; }
-      .boot-topbar { display: flex; align-items: stretch; justify-content: space-between; width: 100%; max-width: 120ch; height: 48px; margin: 0 auto; padding-left: 1.5rem; border-bottom: 1px solid #e1e4e8; }
-      .boot-brand { display: flex; align-items: center; gap: 0.75rem; color: #d73a49; font-size: 16px; font-weight: 900; letter-spacing: -0.02em; text-decoration: none; white-space: nowrap; }
+      .boot-topbar { display: flex; align-items: stretch; justify-content: space-between; gap: 8px; width: 100%; max-width: 120ch; height: 48px; margin: 0 auto; padding-left: 1.5rem; border-bottom: 1px solid #e1e4e8; }
+      .boot-brand { display: flex; align-items: center; min-width: 0; }
+      .boot-title { display: flex; align-items: center; gap: 0.75rem; color: #d73a49; font-size: 16px; font-weight: 900; letter-spacing: -0.02em; text-decoration: none; white-space: nowrap; }
       .boot-logo { width: 24px; height: 24px; flex: none; }
       .boot-nav { display: flex; flex: 1 1 auto; align-items: stretch; min-width: 0; overflow-x: auto; scrollbar-width: none; }
       .boot-nav a { display: flex; align-items: center; min-height: 48px; padding: 0 2.2ch; color: #6a737d; font-size: 12px; text-decoration: none; white-space: nowrap; }
-      .boot-nav a:first-child { border-bottom: 2px solid #d73a49; background: #fff; color: #24292e; font-weight: bold; }
+      [data-boot-route="home"] .boot-nav a:first-child, [data-boot-route="item"] .boot-nav a:first-child { border-bottom: 2px solid #d73a49; background: #fff; color: #24292e; font-weight: bold; }
+      [data-boot-route="settings"] .boot-nav a:last-child { border-bottom: 2px solid #d73a49; background: #fff; color: #24292e; font-weight: bold; }
       .boot-search { position: relative; display: flex; align-items: center; width: 24ch; min-width: 24ch; margin-left: auto; border-left: 1px solid #e1e4e8; background: #fff; }
       .boot-search::before { position: absolute; top: 50%; left: 1.25ch; color: #d73a49; content: ">"; font-weight: bold; transform: translateY(-50%); }
       .boot-search input { width: 100%; min-height: 48px; padding: 0 1.5ch 0 3.5ch; border: 0; outline: 0; background: transparent; color: #24292e; font: inherit; font-size: 13px; opacity: 1; }
       .boot-search input::placeholder { color: #6a737d; opacity: 0.8; }
       .boot-search-toggle { display: none; }
       .boot-content { display: grid; gap: 1.5rem; width: 100%; max-width: 120ch; margin: 0 auto; padding: 1.5rem 3ch 2.5rem; }
+      .boot-home, .boot-item-view, .boot-other { display: none; }
+      [data-boot-route="home"] .boot-home { display: grid; gap: 1.5rem; }
+      [data-boot-route="item"] .boot-item-view { display: grid; }
+      [data-boot-route="settings"] .boot-other, [data-boot-route="other"] .boot-other { display: block; }
       .boot-form { width: 100%; max-width: 80ch; }
       .boot-textarea { width: 100%; min-height: 122px; padding: 0.75rem 1.5ch; border: 1px solid #e1e4e8; background: #fff; color: #6a737d; font-size: 13px; line-height: 1.5; }
       .boot-actions { margin: 2rem 0 1.25rem; }
-      .boot-save { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 3ch; border: 2px solid #24292e; background: #fff; color: #24292e; font: inherit; font-size: 12px; font-weight: bold; letter-spacing: 0.04em; text-transform: uppercase; }
-      .boot-list { min-height: 17rem; margin: 0; padding: 0; counter-reset: boot-counter; list-style: none; }
-      .boot-item { position: relative; display: grid; gap: 0.6rem; margin: 0 0 1.35rem 2ch; padding: 0.75rem 1.5ch 0.75rem 2.5ch; border-left: 2px solid #e1e4e8; counter-increment: boot-counter; animation: boot-pulse 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate; }
-      .boot-item::before { position: absolute; top: 0.85rem; right: calc(100% + 1.5ch); width: 3ch; color: #6a737d; content: counter(boot-counter); font-size: 13px; text-align: right; }
-      .boot-item:nth-child(2) { animation-delay: 120ms; }
-      .boot-item:nth-child(3) { animation-delay: 240ms; }
-      .boot-line { display: block; background: #dbedff; }
-      .boot-title { width: min(46ch, 68%); height: 1rem; }
-      .boot-meta { width: min(31ch, 48%); height: 0.65rem; }
-      .boot-preview { width: min(64ch, 88%); height: 0.75rem; }
-      .boot-item:nth-child(2) .boot-title { width: min(35ch, 56%); }
-      .boot-item:nth-child(2) .boot-preview { width: min(52ch, 76%); }
-      .boot-item:nth-child(3) .boot-title { width: min(41ch, 62%); }
-      .boot-item:nth-child(3) .boot-preview { width: min(58ch, 82%); }
+      .boot-save { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 3ch; border: 2px solid #e1e4e8; background: #fff; color: #6a737d; cursor: not-allowed; font: inherit; font-size: 12px; font-weight: bold; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.6; }
+      .boot-list { min-height: 17rem; margin: 0; padding: 0; list-style: none; }
+      .boot-list-item { display: grid; gap: 0.6rem; margin: 0 0 1.35rem; padding: 0.75rem 1.5ch; border-left: 2px solid #e1e4e8; }
+      .boot-line { display: block; background: #dbedff; animation: boot-pulse 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate; }
+      .boot-list-title { width: min(46ch, 68%); height: 1rem; }
+      .boot-list-meta { width: min(31ch, 48%); height: 0.65rem; }
+      .boot-list-preview { width: min(64ch, 88%); height: 0.75rem; }
+      .boot-list-item:nth-child(2) .boot-list-title { width: min(35ch, 56%); }
+      .boot-list-item:nth-child(2) .boot-list-preview { width: min(52ch, 76%); }
+      .boot-list-item:nth-child(3) .boot-list-title { width: min(41ch, 62%); }
+      .boot-list-item:nth-child(3) .boot-list-preview { width: min(58ch, 82%); }
+      .boot-item-view { gap: 0.85rem; max-width: 75ch; padding-top: 0.35rem; }
+      .boot-item-meta { width: min(28ch, 44%); height: 0.7rem; }
+      .boot-item-title { width: min(52ch, 78%); height: 1.65rem; }
+      .boot-item-url { width: min(42ch, 64%); height: 0.75rem; }
+      .boot-item-body { width: min(68ch, 96%); height: 6rem; margin-top: 0.35rem; border-left: 2px solid #e1e4e8; }
+      .boot-loading { margin: 0.75rem 0; padding: 0.75rem 1.5ch; border-left: 2px solid #6a737d; font-size: 13px; }
       .boot-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
       @keyframes boot-pulse { from { opacity: 0.48; } to { opacity: 0.9; } }
       @media (max-width: 768px) {
-        .boot-topbar { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 48px; grid-template-rows: 48px 48px; max-width: none; height: 96px; padding: 0; }
+        .boot-topbar { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 48px; grid-template-rows: 48px 48px; max-width: none; height: 96px; padding: 0; gap: 0; }
         .boot-brand { grid-column: 1; grid-row: 1; padding-left: 1.5ch; }
         .boot-nav { grid-column: 1 / -1; grid-row: 2; }
         .boot-nav a { flex: 1 0 auto; justify-content: center; padding: 0 1.5ch; }
@@ -52,26 +71,22 @@
         .boot-search-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: square; stroke-width: 2; }
         .boot-content { padding: 1.25rem 1.5ch 2rem; }
         .boot-save { width: 100%; }
-        .boot-item { margin-left: 1.25ch; padding-left: 1.5ch; }
-        .boot-item::before { right: calc(100% + 0.75ch); width: 2ch; }
       }
-      @media (prefers-reduced-motion: reduce) { .boot-item { animation: none; opacity: 0.72; } }
+      @media (prefers-reduced-motion: reduce) { .boot-line { animation: none; opacity: 0.72; } }
     </style>
   </head>
   <body>
     <div id="app">
-      <main class="boot-page">
+      <div class="boot-page">
         <header class="boot-topbar">
-          <a href="/" class="boot-brand">
-            <svg class="boot-logo" viewBox="0 0 64 64" aria-hidden="true">
-              <rect width="64" height="64" fill="#24292e" />
-              <rect x="8" y="8" width="48" height="48" fill="#d73a49" />
-              <path fill="#fff" d="M21 16h22v34L32 43l-11 7z" />
-            </svg>
-            <span>tildom</span>
-          </a>
+          <div class="boot-brand">
+            <a href="/" class="boot-title">
+              <img class="boot-logo" src="/icon.svg" alt="" aria-hidden="true" />
+              <span>tildom</span>
+            </a>
+          </div>
           <nav class="boot-nav" aria-label="Primary">
-            <a href="/" aria-current="page">[ bookmarks.db ]</a>
+            <a href="/">[ bookmarks.db ]</a>
             <a href="/settings">[ settings.json ]</a>
           </nav>
           <div class="boot-search" role="search">
@@ -83,35 +98,45 @@
             </button>
           </div>
         </header>
-        <section class="boot-content">
-          <div class="boot-form" aria-hidden="true">
-            <div class="boot-textarea">Paste a link or write a note</div>
-            <div class="boot-actions">
-              <button class="boot-save" type="button" disabled>save</button>
+        <main class="boot-content">
+          <div class="boot-home">
+            <div class="boot-form" aria-hidden="true">
+              <div class="boot-textarea">Paste a link or write a note</div>
+              <div class="boot-actions">
+                <button class="boot-save" type="button" disabled>save</button>
+              </div>
             </div>
+            <section role="status" aria-live="polite">
+              <span class="boot-sr">Opening local library</span>
+              <ol class="boot-list" aria-hidden="true">
+                <li class="boot-list-item">
+                  <span class="boot-line boot-list-title"></span>
+                  <span class="boot-line boot-list-meta"></span>
+                  <span class="boot-line boot-list-preview"></span>
+                </li>
+                <li class="boot-list-item">
+                  <span class="boot-line boot-list-title"></span>
+                  <span class="boot-line boot-list-meta"></span>
+                  <span class="boot-line boot-list-preview"></span>
+                </li>
+                <li class="boot-list-item">
+                  <span class="boot-line boot-list-title"></span>
+                  <span class="boot-line boot-list-meta"></span>
+                  <span class="boot-line boot-list-preview"></span>
+                </li>
+              </ol>
+            </section>
           </div>
-          <section role="status" aria-live="polite">
-            <span class="boot-sr">Opening local library</span>
-            <ol class="boot-list" aria-hidden="true">
-              <li class="boot-item">
-                <span class="boot-line boot-title"></span>
-                <span class="boot-line boot-meta"></span>
-                <span class="boot-line boot-preview"></span>
-              </li>
-              <li class="boot-item">
-                <span class="boot-line boot-title"></span>
-                <span class="boot-line boot-meta"></span>
-                <span class="boot-line boot-preview"></span>
-              </li>
-              <li class="boot-item">
-                <span class="boot-line boot-title"></span>
-                <span class="boot-line boot-meta"></span>
-                <span class="boot-line boot-preview"></span>
-              </li>
-            </ol>
-          </section>
-        </section>
-      </main>
+          <article class="boot-item-view" role="status" aria-live="polite">
+            <span class="boot-sr">Loading item</span>
+            <span class="boot-line boot-item-meta" aria-hidden="true"></span>
+            <span class="boot-line boot-item-title" aria-hidden="true"></span>
+            <span class="boot-line boot-item-url" aria-hidden="true"></span>
+            <span class="boot-line boot-item-body" aria-hidden="true"></span>
+          </article>
+          <p class="boot-loading boot-other" role="status">Opening local view...</p>
+        </main>
+      </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

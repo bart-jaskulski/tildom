@@ -1,4 +1,4 @@
-import { query } from "~/lib/db";
+import { client } from "~/lib/db";
 import type { SearchResult } from "~/lib/entries";
 import { normalizeTagName } from "~/lib/tags";
 
@@ -174,7 +174,7 @@ const searchStrictTag = async (rawQuery: string): Promise<SearchResult[]> => {
     return [];
   }
 
-  const rows = await query<SearchDocumentRow>(
+  const rows = await client.query<SearchDocumentRow>(
     `
       SELECT
         search_documents.entry_id,
@@ -221,7 +221,7 @@ export const searchLocalEntries = async (rawQuery: string): Promise<SearchResult
 
   const ftsQuery = buildFtsQuery(terms);
 
-  const ftsRows = await query<SearchDocumentRow>(
+  const ftsRows = await client.query<SearchDocumentRow>(
     `
       SELECT
         search_documents_fts.entry_id,
@@ -248,7 +248,7 @@ export const searchLocalEntries = async (rawQuery: string): Promise<SearchResult
     [ftsQuery],
   );
 
-  const containsRows = await query<SearchDocumentRow>(
+  const containsRows = await client.query<SearchDocumentRow>(
     `
       SELECT
         search_documents.entry_id,
@@ -273,7 +273,7 @@ export const searchLocalEntries = async (rawQuery: string): Promise<SearchResult
     buildContainsParams(terms),
   );
 
-  const tagRows = await query<SearchDocumentRow>(
+  const tagRows = await client.query<SearchDocumentRow>(
     `
       SELECT
         search_documents.entry_id,

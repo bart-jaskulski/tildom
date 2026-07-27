@@ -1,6 +1,6 @@
 import { createEffect, createRoot } from "solid-js";
 import { createStore } from "solid-js/store";
-import { dbVersion, exec, initDb, query } from "~/lib/db";
+import { client } from "~/lib/db";
 import {
   buildUrlFallbackTitle,
   createRecordId,
@@ -93,7 +93,7 @@ const entryStore = createRoot(() => {
   });
 
   const refreshEntries = async () => {
-    const rows = await query<EntryRow>(
+    const rows = await client.query<EntryRow>(
       `
         SELECT
           e.id,
@@ -125,7 +125,7 @@ const entryStore = createRoot(() => {
   };
 
   createEffect(() => {
-    const version = dbVersion();
+    const version = client.dbVersion;
     if (version > 0) {
       void refreshEntries();
     }
@@ -139,7 +139,7 @@ const entryStore = createRoot(() => {
 });
 
 const fetchEntryRow = async (entryId: string) => {
-  const rows = await query<EntryRow>(
+  const rows = await client.query<EntryRow>(
     `
       SELECT
         e.id,
@@ -173,7 +173,7 @@ const fetchEntryRow = async (entryId: string) => {
 };
 
 const findEntryIdByCanonicalUrl = async (canonicalUrl: string) => {
-  const rows = await query<EntryIdRow>(
+  const rows = await client.query<EntryIdRow>(
     "SELECT id FROM entries WHERE canonical_url = ? LIMIT 1",
     [canonicalUrl],
   );
@@ -187,7 +187,7 @@ const isDuplicateUrlError = (error: unknown) =>
 const placeholders = (values: unknown[]) => values.map(() => "?").join(", ");
 
 export const fetchTagVocabulary = async () => {
-  const rows = await query<{ name: string }>(
+  const rows = await client.query<{ name: string }>(
     `
       SELECT tags.name
       FROM tags
@@ -203,7 +203,7 @@ export const fetchTagVocabulary = async () => {
 };
 
 const fetchUsedTagsOutsideEntry = async (entryId: string) => {
-  const rows = await query<{ name: string }>(
+  const rows = await client.query<{ name: string }>(
     `
       SELECT DISTINCT tags.name
       FROM tags
@@ -221,7 +221,7 @@ const fetchExistingTags = async (tagNames: string[]) => {
     return new Map<string, string>();
   }
 
-  const rows = await query<TagRow>(
+  const rows = await client.query<TagRow>(
     `
       SELECT id, name
       FROM tags
@@ -234,7 +234,7 @@ const fetchExistingTags = async (tagNames: string[]) => {
 };
 
 const pruneOrphanTags = async () => {
-  await exec(`
+  await client.exec(`
     DELETE FROM tags
     WHERE NOT EXISTS (
       SELECT 1 FROM entry_tags
@@ -247,7 +247,7 @@ const setEntryTags = async (entryId: string, tagNames: string[]) => {
   const now = Date.now();
   const existingTags = await fetchExistingTags(tagNames);
 
-  await exec("DELETE FROM entry_tags WHERE entry_id = ?", [entryId]);
+  await client.exec("DELETE FROM entry_tags WHERE entry_id = ?", [entryId]);
 
   for (const tagName of tagNames) {
     let tagId = existingTags.get(tagName);
@@ -255,13 +255,13 @@ const setEntryTags = async (entryId: string, tagNames: string[]) => {
     if (!tagId) {
       tagId = createRecordId();
       existingTags.set(tagName, tagId);
-      await exec(
+      await client.exec(
         "INSERT INTO tags (id, name, created_at) VALUES (?, ?, ?)",
         [tagId, tagName, now],
       );
     }
 
-    await exec(
+    await client.exec(
       "INSERT INTO entry_tags (entry_id, tag_id, created_at) VALUES (?, ?, ?)",
       [entryId, tagId, now],
     );
@@ -340,7 +340,7 @@ export const initializeEntryStore = async () => {
   markStartup("db:init:start");
 
   try {
-    await initDb();
+    await client.init();
     markStartup("db:init:ready");
     measureStartup("db:init", "db:init:start", "db:init:ready");
 
@@ -368,7 +368,7 @@ export const refreshEntries = entryStore.refreshEntries;
 
 export const fetchEntryDetail = async (entryId: string): Promise<EntryDetail> => {
   const entryRow = await fetchEntryRow(entryId);
-  const comments = await query<CommentRow>(
+  const comments = await client.query<CommentRow>(
     `
       SELECT id, entry_id, body, created_at, updated_at
       FROM comments
@@ -398,7 +398,7 @@ const insertUrlEntry = async (urlInput: string) => {
   const excerptStatus = metadata.excerpt ? "ready" : "idle";
 
   try {
-    await exec(
+    await client.exec(
       `
         INSERT INTO entries (
           id,
@@ -456,7 +456,7 @@ const insertNoteEntry = async (bodyInput: string) => {
   const now = Date.now();
   const entryId = createRecordId();
 
-  await exec(
+  await client.exec(
     `
       INSERT INTO entries (
         id,
@@ -503,7 +503,7 @@ export const updateEntry = async (
   const body = normalizedUrl ? "" : content;
 
   try {
-    await exec(
+    await client.exec(
       `
         UPDATE entries
         SET
@@ -541,9 +541,9 @@ export const updateEntry = async (
 };
 
 export const deleteEntry = async (entryId: string) => {
-  await exec("DELETE FROM comments WHERE entry_id = ?", [entryId]);
-  await exec("DELETE FROM entry_tags WHERE entry_id = ?", [entryId]);
-  await exec("DELETE FROM entries WHERE id = ?", [entryId]);
+  await client.exec("DELETE FROM comments WHERE entry_id = ?", [entryId]);
+  await client.exec("DELETE FROM entry_tags WHERE entry_id = ?", [entryId]);
+  await client.exec("DELETE FROM entries WHERE id = ?", [entryId]);
   await pruneOrphanTags();
   await markSyncDirty();
 };
@@ -557,7 +557,7 @@ export const addCommentToEntry = async (entryId: string, bodyInput: string) => {
   const now = Date.now();
   const commentId = createRecordId();
 
-  await exec(
+  await client.exec(
     `
       INSERT INTO comments (id, entry_id, body, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?)
@@ -565,7 +565,7 @@ export const addCommentToEntry = async (entryId: string, bodyInput: string) => {
     [commentId, entryId, body, now, now],
   );
 
-  await exec(
+  await client.exec(
     `
       UPDATE entries
       SET updated_at = ?, last_commented_at = ?
@@ -584,7 +584,7 @@ export const updateComment = async (commentId: string, bodyInput: string) => {
     throw new Error("Comment is required");
   }
 
-  await exec(
+  await client.exec(
     `
       UPDATE comments
       SET body = ?, updated_at = ?
@@ -596,6 +596,6 @@ export const updateComment = async (commentId: string, bodyInput: string) => {
 };
 
 export const deleteComment = async (commentId: string) => {
-  await exec("DELETE FROM comments WHERE id = ?", [commentId]);
+  await client.exec("DELETE FROM comments WHERE id = ?", [commentId]);
   await markSyncDirty();
 };

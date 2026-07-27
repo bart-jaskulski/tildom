@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const queryMock = vi.hoisted(() => vi.fn());
 
 vi.mock("~/lib/db", () => ({
-  query: queryMock,
+  client: { query: queryMock },
 }));
 
 import { searchLocalEntries } from "./searchIndex";

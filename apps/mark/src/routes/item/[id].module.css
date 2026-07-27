@@ -14,12 +14,54 @@
   word-break: break-all;
 }
 
+.subtext {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1ch;
+  color: var(--fg-muted);
+  font-size: 12px;
+
+  & a {
+    color: var(--fg-default);
+    font-weight: bold;
+
+    &:hover {
+      color: var(--syntax-keyword);
+    }
+  }
+}
+
 .tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1ch;
+  max-width: 75ch;
+  margin-top: 0.45rem;
+  color: var(--fg-muted);
+  font-size: 12px;
   margin-bottom: 0.75rem;
+}
+
+.tag {
+  color: var(--fg-muted) !important;
+  font-weight: 500;
+
+  &:hover {
+    color: var(--syntax-keyword) !important;
+  }
 }
 
 .preview {
   max-width: 100%;
+  margin: 0.55rem 0 0;
+  padding: 0.5rem 1.5ch;
+  border-left: 1px dashed var(--border-color);
+  background: var(--bg-canvas);
+  color: var(--fg-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .body {

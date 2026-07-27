@@ -4,10 +4,12 @@ const execMock = vi.hoisted(() => vi.fn());
 const queryMock = vi.hoisted(() => vi.fn());
 
 vi.mock("~/lib/db", () => ({
-  dbVersion: () => 0,
-  exec: execMock,
-  initDb: vi.fn(),
-  query: queryMock,
+  client: {
+    dbVersion: 0,
+    exec: execMock,
+    init: vi.fn(),
+    query: queryMock,
+  },
 }));
 
 vi.mock("~/lib/syncState", () => ({

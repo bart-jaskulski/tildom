@@ -1,0 +1,27 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.5ch;
+  border: 0;
+  background: transparent;
+  color: var(--fg-default);
+  cursor: pointer;
+  font-weight: bold;
+
+  &:hover:not(:disabled) {
+    color: var(--syntax-keyword);
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    color: var(--fg-muted);
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+.inline {
+  min-height: auto;
+  padding: 0;
+}
