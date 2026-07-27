@@ -4,21 +4,6 @@
 @import "@tildom/markdownish/styles.css" layer(components);
 
 @layer app {
-  .hn-stack {
-    display: grid;
-    gap: 1.5rem;
-  }
-
-  .hn-panel {
-    padding-top: 1.25rem;
-    border-top: 1px solid var(--border-color);
-
-    &:first-child {
-      padding-top: 0;
-      border-top: 0;
-    }
-  }
-
   .hn-heading {
     display: flex;
     align-items: center;
@@ -69,8 +54,7 @@
     border: 0;
   }
 
-  .hn-input,
-  .hn-textarea {
+  .hn-input {
     width: 100%;
     padding: 0.75rem 1.5ch;
     border: 1px solid var(--border-color);
@@ -86,11 +70,6 @@
       padding: calc(0.75rem - 1px) calc(1.5ch - 1px);
       border: 2px solid var(--fg-default);
     }
-  }
-
-  .hn-textarea {
-    min-height: 100px;
-    resize: vertical;
   }
 
   /* Feedback and entry metadata */

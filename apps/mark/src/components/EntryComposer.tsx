@@ -1,9 +1,8 @@
-import { Show, createEffect } from "solid-js";
-import { handleMarkdownishEnter } from "@tildom/markdownish/keyboard";
+import { Show } from "solid-js";
 import ClipboardPaste from "lucide-solid/icons/clipboard-paste";
 import Button from "./Button";
+import Textarea from "./Textarea";
 import styles from "./EntryComposer.module.css";
-import { handleTextareaKeyboardSubmit, resizeTextareaToFitContent } from "~/lib/textarea";
 
 type EntryComposerProps = {
   id: string;
@@ -18,34 +17,16 @@ type EntryComposerProps = {
 };
 
 export default function EntryComposer(props: EntryComposerProps) {
-  let textarea: HTMLTextAreaElement | undefined;
-
-  createEffect(() => {
-    props.value;
-    if (textarea) resizeTextareaToFitContent(textarea);
-  });
-
   return (
     <form class={styles.form} classList={{ [styles.mobile]: props.mobile }} onSubmit={props.onSubmit}>
       <label class="visually-hidden" for={props.id}>save</label>
-      <textarea
+      <Textarea
         id={props.id}
-        ref={(element) => {
-          textarea = element;
-          props.textareaRef(element);
-          resizeTextareaToFitContent(element);
-        }}
+        ref={props.textareaRef}
         value={props.value}
-        onInput={(event) => {
-          props.onInput(event.currentTarget.value);
-          resizeTextareaToFitContent(event.currentTarget);
-        }}
-        onKeyDown={(event) => {
-          if (!handleMarkdownishEnter(event)) handleTextareaKeyboardSubmit(event);
-        }}
+        onInput={(event) => props.onInput(event.currentTarget.value)}
         rows={5}
         placeholder="Paste a link or write a note"
-        class={styles.textarea}
       />
 
       <Show when={props.error}>

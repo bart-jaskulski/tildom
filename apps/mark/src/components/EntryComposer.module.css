@@ -5,26 +5,6 @@
   gap: 1.25rem;
 }
 
-.textarea {
-  width: 100%;
-  min-height: 100px;
-  padding: 0.75rem 1.5ch;
-  resize: vertical;
-  border: 1px solid var(--border-color);
-  outline: none;
-  background: var(--bg-surface);
-  color: var(--fg-default);
-  font: inherit;
-  font-size: 13px;
-  line-height: 1.5;
-  transition: border-color 0.1s ease-out;
-}
-
-.textarea:focus {
-  padding: calc(0.75rem - 1px) calc(1.5ch - 1px);
-  border: 2px solid var(--fg-default);
-}
-
 .error {
   margin: 0;
   padding: 0.75rem 1.5ch;
@@ -59,7 +39,7 @@
   gap: 1.5rem;
 }
 
-.mobile .textarea {
+.mobile textarea {
   min-height: 10rem;
   font-size: 16px;
 }

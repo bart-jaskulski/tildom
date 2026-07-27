@@ -1,19 +1,18 @@
 import { Title } from "@solidjs/meta";
 import { A, useNavigate, useParams } from "@solidjs/router";
-import { For, Show, createEffect, createResource, createSignal, onCleanup } from "solid-js";
+import { For, Show, createResource, createSignal, onCleanup } from "solid-js";
 import { isServer } from "solid-js/web";
 import {
   findMarkdownTaskIndex,
-  handleMarkdownishEnter,
   renderMarkdownishToHtml,
   toggleMarkdownTask,
 } from "@tildom/markdownish";
 import { useVimKeymaps } from "@tildom/ui";
 import Button from "~/components/Button";
 import ItemLoading from "~/components/ItemLoading";
+import Textarea from "~/components/Textarea";
 import { client } from "~/lib/db";
 import { formatRelativeTimestamp } from "~/lib/entries";
-import { handleTextareaKeyboardSubmit, resizeTextareaToFitContent } from "~/lib/textarea";
 import { addCommentToEntry, deleteComment, deleteEntry, fetchEntryDetail, isEntryStoreReady, updateComment, updateEntry } from "~/stores/entryStore";
 import TextButton from "~/components/TextButton";
 import styles from "./[id].module.css";
@@ -36,18 +35,11 @@ export default function ItemPage() {
   const [commentDeletingId, setCommentDeletingId] = createSignal<string | null>(null);
   const [isEditing, setIsEditing] = createSignal(false);
   const [isDeleting, setIsDeleting] = createSignal(false);
-  let editContentTextarea: HTMLTextAreaElement | undefined;
-  let commentBodyTextarea: HTMLTextAreaElement | undefined;
-  let editingCommentTextarea: HTMLTextAreaElement | undefined;
   const [detail, { refetch }] = createResource(
     () => (!isServer && isEntryStoreReady() ? [params.id ?? "", client.dbVersion] as const : null),
     ([entryId]) => fetchEntryDetail(entryId),
   );
   const entry = () => detail()?.entry ?? null;
-  const handleMarkdownishKeyboardSubmit = (event: KeyboardEvent) => {
-    if (!handleMarkdownishEnter(event)) handleTextareaKeyboardSubmit(event);
-  };
-
   useVimKeymaps([
     { lhs: "i", callback: () => startEditing(), help: "edit entry" },
     { lhs: ["o", "gx"], callback: () => {
@@ -56,27 +48,6 @@ export default function ItemPage() {
     }, help: "open original URL" },
     { lhs: "d", callback: () => void handleDelete(), help: "delete entry" },
   ]);
-
-  createEffect(() => {
-    editContent();
-    if (isEditing() && editContentTextarea) {
-      resizeTextareaToFitContent(editContentTextarea);
-    }
-  });
-
-  createEffect(() => {
-    commentBody();
-    if (commentBodyTextarea) {
-      resizeTextareaToFitContent(commentBodyTextarea);
-    }
-  });
-
-  createEffect(() => {
-    editingCommentBody();
-    if (editingCommentTextarea) {
-      resizeTextareaToFitContent(editingCommentTextarea);
-    }
-  });
 
   const startEditing = () => {
     const currentEntry = entry();
@@ -283,20 +254,11 @@ export default function ItemPage() {
                     />
 
                     <label class="hn-label" for="edit-content">content</label>
-                    <textarea
+                    <Textarea
                       id="edit-content"
-                      ref={(element) => {
-                        editContentTextarea = element;
-                        resizeTextareaToFitContent(element);
-                      }}
                       value={editContent()}
-                      onInput={(event) => {
-                        setEditContent(event.currentTarget.value);
-                        resizeTextareaToFitContent(event.currentTarget);
-                      }}
-                      onKeyDown={handleMarkdownishKeyboardSubmit}
+                      onInput={(event) => setEditContent(event.currentTarget.value)}
                       rows={5}
-                      class="hn-textarea"
                     />
 
                     <label class="hn-label" for="edit-tags">tags</label>
@@ -402,20 +364,11 @@ export default function ItemPage() {
                       >
                         <form class="hn-form hn-stack item-edit-form" onSubmit={(event) => submitCommentEdit(event, comment.id)}>
                           <label class="hn-label visually-hidden" for={`comment-edit-${comment.id}`}>edit comment</label>
-                          <textarea
+                          <Textarea
                             id={`comment-edit-${comment.id}`}
-                            ref={(element) => {
-                              editingCommentTextarea = element;
-                              resizeTextareaToFitContent(element);
-                            }}
                             value={editingCommentBody()}
-                            onInput={(event) => {
-                              setEditingCommentBody(event.currentTarget.value);
-                              resizeTextareaToFitContent(event.currentTarget);
-                            }}
-                            onKeyDown={handleMarkdownishKeyboardSubmit}
+                            onInput={(event) => setEditingCommentBody(event.currentTarget.value)}
                             rows={4}
-                            class="hn-textarea"
                           />
                           <div class={styles.actions}>
                             <Button type="submit" disabled={commentSavingId() === comment.id}>
@@ -437,21 +390,12 @@ export default function ItemPage() {
 
                 <form class="hn-form" onSubmit={submitComment}>
                   <label class="hn-label" for="comment-body">add comment</label>
-                  <textarea
+                  <Textarea
                     id="comment-body"
-                    ref={(element) => {
-                      commentBodyTextarea = element;
-                      resizeTextareaToFitContent(element);
-                    }}
                     value={commentBody()}
-                    onInput={(event) => {
-                      setCommentBody(event.currentTarget.value);
-                      resizeTextareaToFitContent(event.currentTarget);
-                    }}
-                    onKeyDown={handleMarkdownishKeyboardSubmit}
+                    onInput={(event) => setCommentBody(event.currentTarget.value)}
                     rows={4}
                     placeholder="private note, quote, or follow-up"
-                    class="hn-textarea"
                   />
                   <Show when={commentError()}>
                     <p class="hn-error">{commentError()}</p>

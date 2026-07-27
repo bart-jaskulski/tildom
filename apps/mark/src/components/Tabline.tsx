@@ -1,14 +1,16 @@
 import { A, useLocation, useNavigate, useSearchParams } from "@solidjs/router";
+import Search from "lucide-solid/icons/search";
+import X from "lucide-solid/icons/x";
 import { createEffect, createSignal, onCleanup } from "solid-js";
-import styles from "./AppNav.module.css";
+import styles from "./Tabline.module.css";
 
-type AppNavProps = {
+type TablineProps = {
   active?: "settings";
 };
 
 const SEARCH_DEBOUNCE_MS = 350;
 
-export default function AppNav(props: AppNavProps) {
+export default function Tabline(props: TablineProps) {
   const [params, setParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -71,9 +73,7 @@ export default function AppNav(props: AppNavProps) {
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => mobileSearchOpen() ? setMobileSearchOpen(false) : openMobileSearch()}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d={mobileSearchOpen() ? "M6 6l12 12M18 6 6 18" : "m21 21-4.35-4.35m2.35-5.15a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z"} />
-          </svg>
+          {mobileSearchOpen() ? <X aria-hidden="true" /> : <Search aria-hidden="true" />}
         </button>
         <input
           data-mark-search
