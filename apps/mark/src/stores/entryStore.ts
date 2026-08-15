@@ -329,9 +329,47 @@ const tagEntryInBackground = (
     const existingTags = await fetchTagVocabulary();
     const tags = await fetchSuggestedTags({ ...input, existingTags });
     await applySuggestedTags(entryId, tags);
-    await entryStore.refreshEntries();
   })().catch(() => {
     // Tagging is intentionally best-effort.
+  });
+};
+
+const enrichUrlEntryInBackground = (
+  entryId: string,
+  input: { title: string; url: string },
+) => {
+  void (async () => {
+    const metadata = await fetchLinkMetadata(input.url);
+
+    if (metadata.title || metadata.excerpt) {
+      await client.exec(
+        `
+          UPDATE entries
+          SET
+            title = CASE WHEN title = ? THEN COALESCE(?, title) ELSE title END,
+            excerpt = ?,
+            excerpt_status = ?,
+            updated_at = ?
+          WHERE id = ?
+        `,
+        [
+          input.title,
+          metadata.title,
+          metadata.excerpt,
+          metadata.excerpt ? "ready" : "idle",
+          Date.now(),
+          entryId,
+        ],
+      );
+    }
+
+    tagEntryInBackground(entryId, {
+      title: metadata.title ?? input.title,
+      url: input.url,
+      excerpt: metadata.excerpt,
+    });
+  })().catch(() => {
+    // Enrichment is intentionally best-effort.
   });
 };
 
@@ -391,11 +429,9 @@ const insertUrlEntry = async (urlInput: string) => {
     return existingEntryId;
   }
 
-  const metadata = await fetchLinkMetadata(normalizedUrl.canonicalUrl);
   const now = Date.now();
   const entryId = createRecordId();
-  const title = metadata.title ?? buildUrlFallbackTitle(normalizedUrl);
-  const excerptStatus = metadata.excerpt ? "ready" : "idle";
+  const title = buildUrlFallbackTitle(normalizedUrl);
 
   try {
     await client.exec(
@@ -420,8 +456,8 @@ const insertUrlEntry = async (urlInput: string) => {
         normalizedUrl.canonicalUrl,
         normalizedUrl.domain,
         title,
-        metadata.excerpt,
-        excerptStatus,
+        null,
+        "idle",
         now,
         now,
         now,
@@ -438,10 +474,9 @@ const insertUrlEntry = async (urlInput: string) => {
     throw error;
   }
 
-  tagEntryInBackground(entryId, {
+  enrichUrlEntryInBackground(entryId, {
     title,
     url: normalizedUrl.canonicalUrl,
-    excerpt: metadata.excerpt,
   });
 
   return entryId;
@@ -501,6 +536,7 @@ export const updateEntry = async (
 
   const title = titleInput || (normalizedUrl ? buildUrlFallbackTitle(normalizedUrl) : deriveNoteTitle(content));
   const body = normalizedUrl ? "" : content;
+  const updatedAt = Date.now();
 
   try {
     await client.exec(
@@ -521,7 +557,7 @@ export const updateEntry = async (
         normalizedUrl?.domain ?? null,
         title,
         body,
-        Date.now(),
+        updatedAt,
         entryId,
       ],
     );
@@ -538,6 +574,15 @@ export const updateEntry = async (
   }
 
   await markSyncDirty();
+  return {
+    sourceUrl: normalizedUrl?.sourceUrl ?? null,
+    canonicalUrl: normalizedUrl?.canonicalUrl ?? null,
+    domain: normalizedUrl?.domain ?? null,
+    title,
+    body,
+    updatedAt,
+    tags: nextTags,
+  };
 };
 
 export const deleteEntry = async (entryId: string) => {
@@ -575,7 +620,13 @@ export const addCommentToEntry = async (entryId: string, bodyInput: string) => {
   );
 
   await markSyncDirty();
-  return commentId;
+  return {
+    id: commentId,
+    entryId,
+    body,
+    createdAt: now,
+    updatedAt: now,
+  };
 };
 
 export const updateComment = async (commentId: string, bodyInput: string) => {
@@ -584,15 +635,18 @@ export const updateComment = async (commentId: string, bodyInput: string) => {
     throw new Error("Comment is required");
   }
 
+  const updatedAt = Date.now();
+
   await client.exec(
     `
       UPDATE comments
       SET body = ?, updated_at = ?
       WHERE id = ?
     `,
-    [body, Date.now(), commentId],
+    [body, updatedAt, commentId],
   );
   await markSyncDirty();
+  return { body, updatedAt };
 };
 
 export const deleteComment = async (commentId: string) => {

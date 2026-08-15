@@ -59,11 +59,8 @@ describe("entryStore mutations", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("prefills URL entries with fetched metadata", async () => {
-    vi.mocked(fetch).mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ title: "Fetched title", excerpt: "Fetched excerpt" }),
-    } as Response);
+  it("saves URL entries before metadata enrichment completes", async () => {
+    vi.mocked(fetch).mockReturnValue(new Promise(() => {}));
 
     await createEntry("https://example.com/article");
 
@@ -77,7 +74,7 @@ describe("entryStore mutations", () => {
     );
     expect(execMock).toHaveBeenCalledWith(
       expect.stringContaining("INSERT INTO entries"),
-      expect.arrayContaining(["Fetched title", "Fetched excerpt", "ready"]),
+      expect.arrayContaining(["example.com", null, "idle"]),
     );
   });
 

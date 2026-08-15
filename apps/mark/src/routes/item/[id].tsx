@@ -11,7 +11,6 @@ import { useVimKeymaps } from "@tildom/ui";
 import Button from "~/components/Button";
 import ItemLoading from "~/components/ItemLoading";
 import Textarea from "~/components/Textarea";
-import { client } from "~/lib/db";
 import { formatRelativeTimestamp } from "~/lib/entries";
 import { addCommentToEntry, deleteComment, deleteEntry, fetchEntryDetail, isEntryStoreReady, updateComment, updateEntry } from "~/stores/entryStore";
 import TextButton from "~/components/TextButton";
@@ -35,9 +34,9 @@ export default function ItemPage() {
   const [commentDeletingId, setCommentDeletingId] = createSignal<string | null>(null);
   const [isEditing, setIsEditing] = createSignal(false);
   const [isDeleting, setIsDeleting] = createSignal(false);
-  const [detail, { refetch }] = createResource(
-    () => (!isServer && isEntryStoreReady() ? [params.id ?? "", client.dbVersion] as const : null),
-    ([entryId]) => fetchEntryDetail(entryId),
+  const [detail, { mutate }] = createResource(
+    () => (!isServer && isEntryStoreReady() ? params.id ?? null : null),
+    (entryId) => fetchEntryDetail(entryId),
   );
   const entry = () => detail()?.entry ?? null;
   useVimKeymaps([
@@ -78,13 +77,20 @@ export default function ItemPage() {
     setActionError(null);
 
     try {
-      await updateEntry(currentEntry.id, {
+      const updatedEntry = await updateEntry(currentEntry.id, {
         title: editTitle(),
         content: editContent(),
         tags: editTags(),
       });
       setIsEditing(false);
-      await refetch();
+      mutate((current) => current?.entry ? {
+        ...current,
+        entry: {
+          ...current.entry,
+          ...updatedEntry,
+          tags: updatedEntry.tags ?? current.entry.tags,
+        },
+      } : current);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Failed to update entry");
     } finally {
@@ -122,9 +128,17 @@ export default function ItemPage() {
     setCommentError(null);
 
     try {
-      await addCommentToEntry(currentEntry.id, commentBody());
+      const comment = await addCommentToEntry(currentEntry.id, commentBody());
       setCommentBody("");
-      await refetch();
+      mutate((current) => current?.entry ? {
+        entry: {
+          ...current.entry,
+          updatedAt: comment.updatedAt,
+          lastCommentedAt: comment.createdAt,
+          commentCount: current.entry.commentCount + 1,
+        },
+        comments: [...current.comments, comment],
+      } : current);
     } catch (err) {
       setCommentError(err instanceof Error ? err.message : "Failed to add comment");
     } finally {
@@ -150,9 +164,15 @@ export default function ItemPage() {
     setCommentActionError(null);
 
     try {
-      await updateComment(commentId, editingCommentBody());
+      const updatedComment = await updateComment(commentId, editingCommentBody());
       cancelCommentEditing();
-      await refetch();
+      mutate((current) => current ? {
+        ...current,
+        comments: current.comments.map((comment) => comment.id === commentId ? {
+          ...comment,
+          ...updatedComment,
+        } : comment),
+      } : current);
     } catch (err) {
       setCommentActionError(err instanceof Error ? err.message : "Failed to update comment");
     } finally {
@@ -173,7 +193,13 @@ export default function ItemPage() {
       if (editingCommentId() === commentId) {
         cancelCommentEditing();
       }
-      await refetch();
+      mutate((current) => current?.entry ? {
+        entry: {
+          ...current.entry,
+          commentCount: Math.max(0, current.entry.commentCount - 1),
+        },
+        comments: current.comments.filter((comment) => comment.id !== commentId),
+      } : current);
     } catch (err) {
       setCommentActionError(err instanceof Error ? err.message : "Failed to delete comment");
     } finally {
@@ -187,12 +213,19 @@ export default function ItemPage() {
     if (taskIndex === null || !currentEntry) return;
 
     try {
-      await updateEntry(currentEntry.id, {
+      const updatedEntry = await updateEntry(currentEntry.id, {
         title: currentEntry.title,
         content: toggleMarkdownTask(currentEntry.body, taskIndex),
         tags: currentEntry.tags.join(" "),
       });
-      await refetch();
+      mutate((current) => current?.entry ? {
+        ...current,
+        entry: {
+          ...current.entry,
+          ...updatedEntry,
+          tags: updatedEntry.tags ?? current.entry.tags,
+        },
+      } : current);
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Failed to update task");
     }
@@ -203,8 +236,14 @@ export default function ItemPage() {
     if (taskIndex === null) return;
 
     try {
-      await updateComment(commentId, toggleMarkdownTask(body, taskIndex));
-      await refetch();
+      const updatedComment = await updateComment(commentId, toggleMarkdownTask(body, taskIndex));
+      mutate((current) => current ? {
+        ...current,
+        comments: current.comments.map((comment) => comment.id === commentId ? {
+          ...comment,
+          ...updatedComment,
+        } : comment),
+      } : current);
     } catch (error) {
       setCommentActionError(error instanceof Error ? error.message : "Failed to update task");
     }
