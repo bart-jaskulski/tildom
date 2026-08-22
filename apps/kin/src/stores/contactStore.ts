@@ -127,11 +127,7 @@ const appStore = createRoot(() => {
   const refreshContacts = async () => setState("contacts", await query<Contact>("SELECT * FROM contacts ORDER BY name ASC"));
 
   createEffect(() => {
-    const version = dbVersion();
-    // Re-run contact loading whenever database revisions happen
-    if (version > 0 || state.isReady) {
-      void refreshContacts();
-    }
+    if (dbVersion() > 0) void refreshContacts();
   });
 
   return {

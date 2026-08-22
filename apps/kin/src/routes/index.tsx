@@ -1,11 +1,12 @@
 import { For, Show, createEffect, createMemo, createResource, createSignal } from "solid-js";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { useVimKeymaps } from "@tildom/ui";
+import AddPerson, { type AddPersonHandle } from "~/components/AddPerson";
 import AppNav from "~/components/AppNav";
+import PeopleLoading from "~/components/PeopleLoading";
 import { dbVersion } from "~/lib/db";
 import {
   contacts,
-  createContact,
   deleteContact,
   fetchContactPath,
   isContactStoreReady,
@@ -34,19 +35,13 @@ export default function Home() {
     () => isContactStoreReady() && query() ? [query(), dbVersion()] as const : null,
     ([value]) => searchContacts(value),
   );
-  const [sortAscending, setSortAscending] = createSignal(true);
   const [activeIndex, setActiveIndex] = createSignal(0);
-  const [name, setName] = createSignal("");
-  const [relationship, setRelationship] = createSignal("");
-  const [location, setLocation] = createSignal("");
-  let addDialog: HTMLDialogElement | undefined;
-  let nameInput: HTMLInputElement | undefined;
+  let addPerson: AddPersonHandle | undefined;
 
   const openPerson = async (id: string) => navigate(await fetchContactPath(id));
 
   const visiblePeople = createMemo<(Contact | ContactSearchResult)[]>(() => {
-    const rows = query() ? results() ?? [] : contacts();
-    return sortAscending() ? rows : [...rows].reverse();
+    return query() ? results() ?? [] : contacts();
   });
 
   createEffect(() => {
@@ -57,39 +52,23 @@ export default function Home() {
     document.querySelector("[data-person-row][data-active]")?.scrollIntoView({ block: "center", behavior: "smooth" });
   });
 
-  const openAdd = () => {
-    addDialog?.showModal();
-    queueMicrotask(() => nameInput?.focus());
-  };
-
   useVimKeymaps([
     { lhs: "j", callback: () => { setActiveIndex((index) => Math.min(index + 1, visiblePeople().length - 1)); scrollActiveIntoView(); }, help: "next person" },
     { lhs: "k", callback: () => { setActiveIndex((index) => Math.max(index - 1, 0)); scrollActiveIntoView(); }, help: "previous person" },
     { lhs: "gg", callback: () => { setActiveIndex(0); scrollActiveIntoView(); }, help: "first person" },
     { lhs: "G", callback: () => { setActiveIndex(Math.max(0, visiblePeople().length - 1)); scrollActiveIntoView(); }, help: "last person" },
     { lhs: ["e", "Enter"], callback: () => { const person = visiblePeople()[activeIndex()]; if (person) void openPerson(person.id); }, help: "open person" },
-    { lhs: "i", callback: openAdd, help: "add person" },
+    { lhs: "i", callback: () => addPerson?.open(), help: "add person" },
     { lhs: "d", callback: () => { const person = visiblePeople()[activeIndex()]; if (person && window.confirm(`Delete ${person.name}?`)) void deleteContact(person.id); }, help: "delete person" },
   ]);
-
-  const addPerson = async (event: SubmitEvent) => {
-    event.preventDefault();
-    const id = await createContact(name(), relationship(), location());
-    setName(""); setRelationship(""); setLocation("");
-    addDialog?.close();
-    await openPerson(id);
-  };
 
   return (
     <main class="kin-page">
       <AppNav active="people" />
       <section class="kin-content">
-        <Show when={isContactStoreReady()} fallback={<p class={styles.feedNote}>~/kin.db opening local directory █</p>}>
+        <Show when={isContactStoreReady()} fallback={<PeopleLoading />}>
           <Show when={!query()}>
-            <div class={styles.toolbar}>
-              <button type="button" class="kin-button" onClick={() => setSortAscending(!sortAscending())}>[ sort: name {sortAscending() ? "▲" : "▼"} ]</button>
-              <button type="button" class="kin-primary-button" onClick={openAdd}>add person</button>
-            </div>
+            <AddPerson ref={(handle) => { addPerson = handle; }} onCreated={(id) => void openPerson(id)} />
           </Show>
 
           <Show when={query()}>
@@ -139,18 +118,6 @@ export default function Home() {
         </Show>
       </section>
 
-      <dialog ref={addDialog} class={styles.addDialog} onClose={() => { setName(""); setRelationship(""); setLocation(""); }}>
-        <form method="dialog" class={styles.dialogForm} onSubmit={addPerson}>
-          <h2>Add record to people.db</h2>
-          <label>Full name<input ref={nameInput} class="kin-input" value={name()} placeholder="e.g. John Doe" onInput={(event) => setName(event.currentTarget.value)} required /></label>
-          <label>Relationship type<input class="kin-input" value={relationship()} placeholder="e.g. colleague / friend / family" onInput={(event) => setRelationship(event.currentTarget.value)} /></label>
-          <label>Location<input class="kin-input" value={location()} placeholder="e.g. Berlin, DE" onInput={(event) => setLocation(event.currentTarget.value)} /></label>
-          <div class={styles.dialogActions}>
-            <button type="button" class="kin-button" onClick={() => addDialog?.close()}>cancel</button>
-            <button type="submit" class="kin-primary-button">add record</button>
-          </div>
-        </form>
-      </dialog>
     </main>
   );
 }

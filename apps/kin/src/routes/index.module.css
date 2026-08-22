@@ -29,33 +29,20 @@
 .peopleList {
   margin: 0;
   padding: 0;
-  counter-reset: person-counter;
   list-style: none;
 }
 
 .peopleItem {
   position: relative;
   margin-bottom: 1.35rem;
-  counter-increment: person-counter;
 }
 
 .personRow {
   position: relative;
-  margin-left: 2ch;
-  padding: 0.75rem 1.5ch 0.75rem 2.5ch;
+  padding-inline: 0.75rem;
+  padding-block: 1.5ch;
   border-left: 2px solid var(--border-color);
   transition: background-color 0.15s ease-out, border-color 0.15s ease-out;
-
-  &::before {
-    position: absolute;
-    top: 0.85rem;
-    right: calc(100% + 1.5ch);
-    width: 3ch;
-    color: var(--fg-muted);
-    content: counter(person-counter);
-    font-size: 13px;
-    text-align: right;
-  }
 
   &:hover,
   &.activeRow {

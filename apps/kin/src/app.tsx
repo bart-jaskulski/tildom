@@ -1,15 +1,18 @@
 import { Router, Route, useLocation, useNavigate } from "@solidjs/router";
 import { MetaProvider, Meta, Title } from "@solidjs/meta";
-import { onMount, type ParentProps } from "solid-js";
+import { lazy, onMount, Show, Suspense, type ParentProps } from "solid-js";
 import { VimNavigationProvider, type VimKeymap } from "@tildom/ui";
+import AppNav from "./components/AppNav";
 import Home from "./routes/index";
-import PersonDetail from "./routes/person/[id]";
-import Settings from "./routes/settings";
-import Pair from "./routes/pair";
+import PersonLoading from "./routes/person/PersonLoading";
 import { initializeSync } from "./lib/syncClient";
 import { initializeContactStore } from "./stores/contactStore";
 import { pwaInstall } from "./lib/pwaInstall";
 import "./app.css";
+
+const PersonDetail = lazy(() => import("./routes/person/[id]"));
+const Settings = lazy(() => import("./routes/settings"));
+const Pair = lazy(() => import("./routes/pair"));
 
 function KinVimNavigation(props: ParentProps) {
   const location = useLocation();
@@ -33,6 +36,23 @@ function KinVimNavigation(props: ParentProps) {
   return <VimNavigationProvider keymaps={keymaps}>{props.children}</VimNavigationProvider>;
 }
 
+function RouteLoading() {
+  const location = useLocation();
+  const isPersonRoute = () => location.pathname.startsWith("/person/");
+
+  return (
+    <main class="kin-page" aria-busy="true">
+      <AppNav active={location.pathname === "/settings" ? "settings" : "people"} />
+      <Show
+        when={isPersonRoute()}
+        fallback={<section class="kin-content" />}
+      >
+        <section class="kin-content"><PersonLoading /></section>
+      </Show>
+    </main>
+  );
+}
+
 export default function App() {
   onMount(async () => {
     pwaInstall.initialize();
@@ -46,7 +66,11 @@ export default function App() {
         <MetaProvider>
           <Title>kin.tildom</Title>
           <Meta name="theme-color" content="#d73a49" />
-          <KinVimNavigation>{props.children}</KinVimNavigation>
+          <KinVimNavigation>
+            <Suspense fallback={<RouteLoading />}>
+              {props.children}
+            </Suspense>
+          </KinVimNavigation>
         </MetaProvider>
       )}
     >

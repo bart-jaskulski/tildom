@@ -8,9 +8,87 @@
 .loading {
   grid-column: 1 / -1;
   margin: 0;
-  padding: 0.75rem 1.5ch;
-  border-left: 2px solid var(--highlight-blue);
+  display: grid;
+  grid-template-columns: 35ch minmax(0, 1fr);
+  align-items: start;
+  gap: 4ch;
 }
+
+.loadingSidebar,
+.loadingLog {
+  animation: loadingPulse 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
+}
+
+.loadingProfile {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.loadingTitle,
+.loadingShortLine,
+.loadingAction,
+.loadingLabel,
+.loadingLine,
+.loadingHeading,
+.loadingTags span,
+.loadingComposer > span,
+.loadingComposer div span,
+.loadingNoteMeta span,
+.loadingNoteLine {
+  display: block;
+  height: 1em;
+  background: var(--syntax-bg-active);
+}
+
+.loadingTitle { width: 16ch; height: 1.3em; }
+.loadingShortLine { width: 9ch; }
+.loadingAction { width: 5ch; }
+.loadingLabel { width: 7ch; }
+.loadingLine { width: 100%; }
+.loadingHeading { width: 14ch; }
+
+.loadingTags {
+  display: flex;
+  gap: 1ch;
+  margin-top: 0.5rem;
+}
+
+.loadingTags span:nth-child(1) { width: 5ch; }
+.loadingTags span:nth-child(2) { width: 8ch; }
+.loadingTags span:nth-child(3) { width: 6ch; }
+
+.loadingComposer {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.loadingComposer > span {
+  height: 100px;
+}
+
+.loadingComposer div {
+  display: flex;
+  justify-content: space-between;
+}
+
+.loadingComposer div span:first-child { width: 13ch; }
+.loadingComposer div span:last-child { width: 12ch; }
+
+.loadingTimeline {
+  gap: 1.75rem;
+}
+
+.loadingNoteMeta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.loadingNoteMeta span:first-child { width: 12ch; }
+.loadingNoteMeta span:last-child { width: 9ch; }
+.loadingNoteLine { width: 88%; margin-top: 0.5rem; }
+.loadingNoteLineShort { width: 56%; }
 
 .mobileToggle {
   display: none;
@@ -445,6 +523,17 @@
     gap: 0;
   }
 
+  .loading {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .loadingSidebar {
+    display: grid;
+    margin-bottom: 0;
+  }
+
   .mobileToggle {
     display: flex;
     align-items: center;
@@ -493,4 +582,16 @@
     border-top: 1px solid var(--border-color);
     background: var(--bg-canvas);
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loadingSidebar,
+  .loadingLog {
+    animation: none;
+  }
+}
+
+@keyframes loadingPulse {
+  from { opacity: 0.48; }
+  to { opacity: 0.9; }
 }

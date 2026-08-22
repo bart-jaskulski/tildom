@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createSignal } from "solid-js";
+import { For, Show, createEffect, createResource, createSignal } from "solid-js";
 import { useNavigate, useParams } from "@solidjs/router";
 import {
   findMarkdownTaskIndex,
@@ -8,7 +8,7 @@ import {
 } from "@tildom/markdownish";
 import { useVimKeymaps } from "@tildom/ui";
 import AppNav from "~/components/AppNav";
-import { dbVersion } from "~/lib/db";
+import PersonLoading from "./PersonLoading";
 import {
   contacts,
   createNote,
@@ -20,6 +20,7 @@ import {
   fetchContactPath,
   fetchNotes,
   fetchRelationships,
+  isContactStoreReady,
   togglePinNote,
   updateContact,
   updateNote,
@@ -38,7 +39,12 @@ const dateInputValue = (timestamp = Date.now()) => {
   return new Date(timestamp - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
 };
 
-const dateInputTimestamp = (value: string) => new Date(`${value}T12:00:00`).getTime();
+const dateInputTimestamp = (value: string, time = Date.now()) => {
+  const date = new Date(`${value}T00:00:00`);
+  const clock = new Date(time);
+  date.setHours(clock.getHours(), clock.getMinutes(), clock.getSeconds(), clock.getMilliseconds());
+  return date.getTime();
+};
 
 export default function PersonDetail() {
   const params = useParams();
@@ -70,30 +76,38 @@ export default function PersonDetail() {
   let noteInput: HTMLTextAreaElement | undefined;
 
   const openPerson = async (id: string, replace = false) => navigate(await fetchContactPath(id), { replace });
+  const [detail, { refetch }] = createResource(
+    () => isContactStoreReady() ? routeSlug() : null,
+    async (slug) => {
+      const nextPerson = await fetchContactBySlug(slug);
+      if (!nextPerson) return null;
+      const [nextNotes, nextRelationships] = await Promise.all([
+        fetchNotes(nextPerson.id),
+        fetchRelationships(nextPerson.id),
+      ]);
+      return { person: nextPerson, notes: nextNotes, relationships: nextRelationships };
+    },
+  );
   const tags = () => [...new Set(notes().flatMap((note) => note.tags.trim().split(/\s+/).filter(Boolean)))].sort();
   const visibleNotes = () => selectedTag()
     ? notes().filter((note) => note.tags.includes(` ${selectedTag()} `))
     : notes();
 
-  createEffect(async () => {
-    const slug = routeSlug();
-    dbVersion();
-    if (!slug) return;
-    const nextPerson = await fetchContactBySlug(slug);
-    if (routeSlug() !== slug) return;
-    if (!nextPerson) {
-      if (!isSaving()) navigate("/");
+  createEffect(() => {
+    const next = detail();
+    if (!next) {
+      if (!detail.loading && isContactStoreReady() && !isSaving()) navigate("/");
       return;
     }
-    setPerson(nextPerson);
-    setEditName(nextPerson.name);
-    setEditRelationship(nextPerson.relationship);
-    setEditLocation(nextPerson.location);
-    setEditBirthday(nextPerson.birthday);
-    setEditPhone(nextPerson.phone);
-    setEditEmail(nextPerson.email);
-    setNotes(await fetchNotes(nextPerson.id));
-    setRelationships(await fetchRelationships(nextPerson.id));
+    setPerson(next.person);
+    setEditName(next.person.name);
+    setEditRelationship(next.person.relationship);
+    setEditLocation(next.person.location);
+    setEditBirthday(next.person.birthday);
+    setEditPhone(next.person.phone);
+    setEditEmail(next.person.email);
+    setNotes(next.notes);
+    setRelationships(next.relationships);
   });
 
   const removePerson = async () => {
@@ -117,6 +131,7 @@ export default function PersonDetail() {
         name: editName(), relationship: editRelationship(), location: editLocation(), birthday: editBirthday(), phone: editPhone(), email: editEmail(),
       });
       setIsEditing(false);
+      await refetch();
       await openPerson(contactId(), true);
     } catch { window.alert("Failed to update person."); }
     finally { setIsSaving(false); }
@@ -130,6 +145,7 @@ export default function PersonDetail() {
       await createNote(contactId(), body, false, dateInputTimestamp(noteDate()));
       setNoteBody("");
       setNoteDate(dateInputValue());
+      await refetch();
     } catch { window.alert("Failed to save note."); }
   };
 
@@ -145,17 +161,18 @@ export default function PersonDetail() {
     try {
       await updateNote(note.id, body, note.is_pinned === 1);
       setEditingNoteId(null);
+      await refetch();
     } catch {
       window.alert("Failed to update timeline entry.");
     }
   };
 
   const saveNoteDate = async (note: ContactNote, value: string) => {
-    const createdAt = dateInputTimestamp(value);
+    const createdAt = dateInputTimestamp(value, note.created_at);
     try {
       await updateNote(note.id, note.body, note.is_pinned === 1, createdAt);
-      setNotes(current => current.map(item => item.id === note.id ? { ...item, created_at: createdAt } : item));
       setEditingDateNoteId(null);
+      await refetch();
     } catch {
       window.alert("Failed to update timeline date.");
     }
@@ -169,9 +186,27 @@ export default function PersonDetail() {
       setRelationshipTarget("");
       setRelationshipRole("");
       setIsAddingRelationship(false);
+      await refetch();
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "Failed to add relationship.");
     }
+  };
+
+  const removeRelationship = async (relationship: SymmetricalRelationship) => {
+    if (!window.confirm("Remove this relationship?")) return;
+    await deleteRelationship(contactId(), relationship.contactId);
+    await refetch();
+  };
+
+  const pinNote = async (note: ContactNote) => {
+    await togglePinNote(note.id, note.is_pinned);
+    await refetch();
+  };
+
+  const removeNote = async (note: ContactNote) => {
+    if (!window.confirm("Delete this timeline entry?")) return;
+    await deleteNote(note.id);
+    await refetch();
   };
 
   const handleNoteClick = async (event: MouseEvent, note: ContactNote) => {
@@ -180,7 +215,7 @@ export default function PersonDetail() {
       const body = toggleMarkdownTask(note.body, taskIndex);
       try {
         await updateNote(note.id, body, note.is_pinned === 1);
-        setNotes(current => current.map(item => item.id === note.id ? { ...item, body } : item));
+        await refetch();
       } catch {
         window.alert("Failed to update task.");
       }
@@ -200,7 +235,7 @@ export default function PersonDetail() {
     <main class="kin-page">
       <AppNav active="people" />
       <section class={`kin-content ${styles.layout}`}>
-        <Show when={person()} fallback={<p class={styles.loading}>Reading contact… █</p>}>
+        <Show when={person()} fallback={<PersonLoading />}>
           <button
             type="button"
             class={styles.mobileToggle}
@@ -264,7 +299,7 @@ export default function PersonDetail() {
                       type="button"
                       class="kin-link-button kin-danger-link"
                       aria-label={`Remove relationship with ${relationship.name}`}
-                      onClick={async () => { if (window.confirm("Remove this relationship?")) await deleteRelationship(contactId(), relationship.contactId); }}
+                      onClick={() => void removeRelationship(relationship)}
                     >[×]</button>
                   </li>
                 )}</For>
@@ -364,13 +399,13 @@ export default function PersonDetail() {
                             }}
                           />
                         </Show>
-                        <button type="button" class="kin-link-button" onClick={() => void togglePinNote(note.id, note.is_pinned)}>
+                        <button type="button" class="kin-link-button" onClick={() => void pinNote(note)}>
                           {note.is_pinned === 1 ? "[ unpin ]" : "[ pin ]"}
                         </button>
                       </div>
                       <div>
                         <button type="button" class="kin-link-button" onClick={() => beginNoteEdit(note)}>[ edit ]</button>
-                        <button type="button" class="kin-link-button kin-danger-link" onClick={async () => { if (window.confirm("Delete this timeline entry?")) await deleteNote(note.id); }}>[ delete ]</button>
+                        <button type="button" class="kin-link-button kin-danger-link" onClick={() => void removeNote(note)}>[ delete ]</button>
                       </div>
                     </div>
                     <Show when={editingNoteId() === note.id} fallback={(
