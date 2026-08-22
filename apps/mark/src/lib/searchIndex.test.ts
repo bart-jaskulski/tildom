@@ -19,6 +19,8 @@ const baseRow = {
   updated_at: 1,
   created_at: 1,
   last_commented_at: null,
+  first_opened_at: null,
+  last_opened_at: null,
 };
 
 describe("searchIndex", () => {
@@ -74,6 +76,15 @@ describe("searchIndex", () => {
     expect(queryMock).toHaveBeenNthCalledWith(1, expect.any(String), ["\"disc\"*"]);
     expect(queryMock).toHaveBeenNthCalledWith(2, expect.any(String), ["%disc%"]);
     expect(queryMock).toHaveBeenNthCalledWith(3, expect.any(String), ["%disc%"]);
+  });
+
+  it("limits domain links to exact domain matches", async () => {
+    queryMock.mockResolvedValue([]);
+
+    await searchLocalEntries("example.com", "example.com");
+
+    expect(queryMock).toHaveBeenCalledWith(expect.stringContaining("search_documents_fts.domain = ?"), ["\"example\"* AND \"com\"*", "example.com"]);
+    expect(queryMock).toHaveBeenCalledWith(expect.stringContaining("search_documents.domain = ?"), ["%example%", "%com%", "example.com"]);
   });
 
   it("tokenizes punctuation before building the FTS query", async () => {

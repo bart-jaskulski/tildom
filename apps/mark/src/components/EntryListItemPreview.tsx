@@ -1,6 +1,7 @@
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
 import { formatRelativeTimestamp, hasEntryLink, type Entry, type SearchResult } from "~/lib/entries";
+import { recordEntryOpen } from "~/stores/entryStore";
 import styles from "./EntryListItemPreview.module.css";
 import TextButton from "./TextButton";
 
@@ -61,24 +62,39 @@ export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
         )}
       >
         <div class={styles.titleline}>
-          <A href={`/item/${entry().id}`} class={styles.title}>{highlighted(title())}</A>
+          <A href={`/item/${entry().id}`} class={styles.title}>
+            <Show when={!entry().firstOpenedAt}>
+              <span class={styles.unopenedMarker} title="Not opened yet" aria-label="Not opened yet">•</span>
+            </Show>
+            {highlighted(title())}
+          </A>
           <Show when={entry().domain}>
-            <span class={styles.domain}>({entry().domain})</span>
+            <A href={`/?q=${encodeURIComponent(entry().domain!)}&domain=${encodeURIComponent(entry().domain!)}`} class={styles.domain}>
+              ({entry().domain})
+            </A>
           </Show>
         </div>
 
         <div class={styles.subtext}>
-          <span>{formatRelativeTimestamp(timestamp())}</span>
-          <span> | {entry().commentCount} {entry().commentCount === 1 ? "comment" : "comments"}</span>
+          <Show
+            when={entry().lastOpenedAt}
+            fallback={<span>{formatRelativeTimestamp(timestamp())}</span>}
+          >
+            <span>opened {formatRelativeTimestamp(entry().lastOpenedAt!)}</span>
+          </Show>
+          <span> | {entry().commentCount} {entry().commentCount === 1 ? "note" : "notes"}</span>
           <Show when={entry().canonicalUrl}>
             <span> | </span>
             <a
               href={entry().canonicalUrl!}
               target="_blank"
               rel="noreferrer"
-              onClick={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                void recordEntryOpen(entry().id);
+              }}
             >
-              open
+              read
             </a>
           </Show>
           <Show when={props.onDelete}>

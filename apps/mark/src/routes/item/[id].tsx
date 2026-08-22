@@ -1,6 +1,6 @@
 import { Title } from "@solidjs/meta";
 import { A, useNavigate, useParams } from "@solidjs/router";
-import { For, Show, createResource, createSignal, onCleanup } from "solid-js";
+import { For, Show, createEffect, createResource, createSignal, onCleanup } from "solid-js";
 import { isServer } from "solid-js/web";
 import {
   findMarkdownTaskIndex,
@@ -12,7 +12,7 @@ import Button from "~/components/Button";
 import ItemLoading from "~/components/ItemLoading";
 import Textarea from "~/components/Textarea";
 import { formatRelativeTimestamp } from "~/lib/entries";
-import { addCommentToEntry, deleteComment, deleteEntry, fetchEntryDetail, isEntryStoreReady, updateComment, updateEntry } from "~/stores/entryStore";
+import { addCommentToEntry, deleteComment, deleteEntry, fetchEntryDetail, isEntryStoreReady, recordEntryOpen, updateComment, updateEntry } from "~/stores/entryStore";
 import TextButton from "~/components/TextButton";
 import styles from "./[id].module.css";
 
@@ -39,11 +39,27 @@ export default function ItemPage() {
     (entryId) => fetchEntryDetail(entryId),
   );
   const entry = () => detail()?.entry ?? null;
+  let openedEntryId: string | undefined;
+  createEffect(() => {
+    const currentEntry = entry();
+    if (!currentEntry || currentEntry.id === openedEntryId) return;
+
+    openedEntryId = currentEntry.id;
+    void recordEntryOpen(currentEntry.id).then((opened) => {
+      mutate((current) => current?.entry?.id === currentEntry.id ? {
+        ...current,
+        entry: { ...current.entry, ...opened },
+      } : current);
+    });
+  });
   useVimKeymaps([
     { lhs: "i", callback: () => startEditing(), help: "edit entry" },
     { lhs: ["o", "gx"], callback: () => {
       const currentEntry = entry();
-      if (currentEntry?.canonicalUrl) window.open(currentEntry.canonicalUrl, "_blank", "noreferrer");
+      if (currentEntry?.canonicalUrl) {
+        void recordEntryOpen(currentEntry.id);
+        window.open(currentEntry.canonicalUrl, "_blank", "noreferrer");
+      }
     }, help: "open original URL" },
     { lhs: "d", callback: () => void handleDelete(), help: "delete entry" },
   ]);
@@ -325,7 +341,13 @@ export default function ItemPage() {
                   <h1 class={styles.title}>{currentEntry().title}</h1>
 
                   <Show when={currentEntry().canonicalUrl}>
-                    <a href={currentEntry().canonicalUrl!} target="_blank" rel="noreferrer" class={`${styles.url} ${styles.subtext}`}>
+                    <a
+                      href={currentEntry().canonicalUrl!}
+                      target="_blank"
+                      rel="noreferrer"
+                      class={`${styles.url} ${styles.subtext}`}
+                      onClick={() => void recordEntryOpen(currentEntry().id)}
+                    >
                       {currentEntry().canonicalUrl}
                     </a>
                   </Show>

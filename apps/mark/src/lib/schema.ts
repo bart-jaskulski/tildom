@@ -1,4 +1,8 @@
-export const MARK_DB_SCHEMA = `
+import type { DbMigration } from "@tildom/browser-db";
+
+export const MARK_DB_MIGRATIONS: DbMigration[] = [{
+  version: 1,
+  sql: `
 CREATE TABLE IF NOT EXISTS entries (
   id TEXT NOT NULL PRIMARY KEY DEFAULT '',
   source_url TEXT,
@@ -253,4 +257,11 @@ BEGIN
   SET updated_at = updated_at
   WHERE id = OLD.entry_id;
 END;
-`;
+`,
+}, {
+  version: 2,
+  sql: `
+    ALTER TABLE entries ADD COLUMN first_opened_at INTEGER;
+    ALTER TABLE entries ADD COLUMN last_opened_at INTEGER;
+  `,
+}];

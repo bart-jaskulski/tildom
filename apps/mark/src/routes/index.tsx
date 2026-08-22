@@ -12,7 +12,7 @@ import EntryListItemPreview from "~/components/EntryListItemPreview";
 import { client } from "~/lib/db";
 import { isUrlOnlyInput, type Entry, type SearchResult } from "~/lib/entries";
 import { searchLocalEntries } from "~/lib/searchIndex";
-import { createEntry, deleteEntry, entries, isEntryStoreReady } from "~/stores/entryStore";
+import { createEntry, deleteEntry, entries, isEntryStoreReady, recordEntryOpen } from "~/stores/entryStore";
 
 const PAGE_SIZE = 20;
 const STARTUP_ROWS = [0, 1, 2];
@@ -29,6 +29,8 @@ const STARTUP_ENTRY: Entry = {
   createdAt: 0,
   updatedAt: 0,
   lastCommentedAt: null,
+  firstOpenedAt: null,
+  lastOpenedAt: null,
   commentCount: 0,
   tags: [],
 };
@@ -66,9 +68,10 @@ export default function Home() {
   const [error, setError] = createSignal<string | null>(null);
   const [isSaving, setIsSaving] = createSignal(false);
   const searchQuery = createMemo(() => String(params.q ?? "").trim());
+  const domainFilter = createMemo(() => String(params.domain ?? "").trim().toLowerCase());
   const [results] = createResource(
-    () => (!isServer && isEntryStoreReady() && searchQuery() ? [searchQuery(), client.dbVersion] as const : null),
-    ([query]) => searchLocalEntries(query),
+    () => (!isServer && isEntryStoreReady() && searchQuery() ? [searchQuery(), domainFilter(), client.dbVersion] as const : null),
+    ([query, domain]) => searchLocalEntries(query, domain),
   );
   const visibleEntries = createMemo(() => searchQuery() ? results() ?? [] : entries());
   const isEmpty = createMemo(() => isEntryStoreReady() && !results.loading && visibleEntries().length === 0);
@@ -136,7 +139,10 @@ export default function Home() {
     }, help: "save" },
     { lhs: ["gx", "o"], callback: () => {
       const selected = selectedEntry();
-      if (selected?.canonicalUrl) window.open(selected.canonicalUrl, "_blank", "noreferrer");
+      if (selected?.canonicalUrl) {
+        void recordEntryOpen(selected.id);
+        window.open(selected.canonicalUrl, "_blank", "noreferrer");
+      }
     }, help: "open original URL" },
     { lhs: "gg", callback: () => { setActiveIndex(paginatedEntries().length ? 0 : null); scrollActiveIntoView(); }, help: "first item" },
     { lhs: "G", callback: () => { const max = paginatedEntries().length - 1; setActiveIndex(max < 0 ? null : max); scrollActiveIntoView(); }, help: "last item" },

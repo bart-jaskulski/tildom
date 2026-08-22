@@ -7,7 +7,6 @@ let sqlite3Api: any = null;
 let activeTxId: number | null = null;
 let totalChangesBeforeTx = 0;
 let databaseName = "tildom.sqlite3";
-let schemaSql: string | undefined;
 let databaseMigrations: DbMigration[] = [];
 let requiredTableNames: string[] = [];
 
@@ -97,13 +96,7 @@ const applyMigrations = () => {
   }
 };
 
-const ensureSchema = () => {
-  if (databaseMigrations.length) {
-    applyMigrations();
-  } else if (schemaSql) {
-    execSql(schemaSql);
-  }
-};
+const ensureSchema = () => applyMigrations();
 
 const validateImportedDb = async (bytes: Uint8Array) => {
   const tempFilename = `/browser-db-import-${crypto.randomUUID()}.sqlite3`;
@@ -182,12 +175,17 @@ const deleteDb = async (dbName: string) => {
       // Ignore if file doesn't exist
     }
   }
+
+  try {
+    await navigator.storage.getDirectory().then((root) => root.removeEntry(dbName));
+  } catch {
+    // The SQLite VFS may already have removed the file.
+  }
 };
 
 const initDb = async (
   dbName: string,
-  schema?: string,
-  migrations?: DbMigration[],
+  migrations: DbMigration[],
   requiredTables?: string[],
 ) => {
   try {
@@ -196,8 +194,7 @@ const initDb = async (
     }
 
     databaseName = dbName;
-    schemaSql = schema;
-    databaseMigrations = migrations ?? [];
+    databaseMigrations = migrations;
     requiredTableNames = requiredTables ?? [];
     sqlite3Api ??= await sqlite3InitModule();
     console.debug("SQLite WASM module initialized", sqlite3Api.version.libVersion);
@@ -225,7 +222,7 @@ self.onmessage = async (event: MessageEvent<DbRequest>) => {
     switch (msg.type) {
       case "init": {
         const dbName = msg.dbName || "tildom.sqlite3";
-        await initDb(dbName, msg.schema, msg.migrations, msg.requiredTables);
+        await initDb(dbName, msg.migrations, msg.requiredTables);
         self.postMessage({ id: msg.id, type: "success" } as DbResponse);
         break;
       }

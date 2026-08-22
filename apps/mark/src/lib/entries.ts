@@ -13,6 +13,8 @@ export type Entry = {
   createdAt: number;
   updatedAt: number;
   lastCommentedAt: number | null;
+  firstOpenedAt: number | null;
+  lastOpenedAt: number | null;
   commentCount: number;
   tags: string[];
 };
@@ -138,7 +140,7 @@ export const formatRelativeTimestamp = (timestamp: number) => {
     return `${diffDays}d ago`;
   }
 
-  return new Date(timestamp).toLocaleDateString();
+  return new Intl.DateTimeFormat(navigator.language).format(new Date(timestamp))
 };
 
 export const createRecordId = () => crypto.randomUUID();

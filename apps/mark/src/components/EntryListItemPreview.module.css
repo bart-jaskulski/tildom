@@ -29,6 +29,14 @@
   }
 }
 
+.unopenedMarker {
+  color: var(--syntax-keyword);
+  line-height: 1;
+  font-size: 0.8em;
+  vertical-align: middle;
+  padding-inline-end: 2px;
+}
+
 .title {
   max-width: 75ch;
   color: var(--fg-default);

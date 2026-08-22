@@ -15,6 +15,8 @@ type SearchDocumentRow = {
   updated_at: number;
   created_at: number;
   last_commented_at: number | null;
+  first_opened_at: number | null;
+  last_opened_at: number | null;
 };
 
 const normalizeSearchInput = (input: string) => input.trim().toLowerCase().replace(/\s+/g, " ");
@@ -25,9 +27,15 @@ const buildFtsQuery = (terms: string[]) => terms
   .map((term) => `"${term.replace(/"/g, '""')}"*`)
   .join(" AND ");
 
-const buildContainsClause = (terms: string[]) => terms.map(() => "search_documents.searchable_text LIKE ?").join(" AND ");
+const buildContainsClause = (terms: string[], domain?: string) => [
+  ...terms.map(() => "search_documents.searchable_text LIKE ?"),
+  ...(domain ? ["search_documents.domain = ?"] : []),
+].join(" AND ");
 
-const buildContainsParams = (terms: string[]) => terms.map((term) => `%${term}%`);
+const buildContainsParams = (terms: string[], domain?: string) => [
+  ...terms.map((term) => `%${term}%`),
+  ...(domain ? [domain] : []),
+];
 
 const includesAllTerms = (value: string, terms: string[]) => {
   const haystack = value.toLowerCase();
@@ -152,6 +160,8 @@ const mapSearchRow = (row: SearchDocumentRow, terms: string[], forcedMatchText?:
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     lastCommentedAt: row.last_commented_at,
+    firstOpenedAt: row.first_opened_at,
+    lastOpenedAt: row.last_opened_at,
     commentCount: row.comment_count,
     tags: row.tag_text ? row.tag_text.split(" ").filter(Boolean) : [],
     score,
@@ -168,7 +178,7 @@ const tagTotalsJoin = `
   ) tag_totals ON tag_totals.entry_id = e.id
 `;
 
-const searchStrictTag = async (rawQuery: string): Promise<SearchResult[]> => {
+const searchStrictTag = async (rawQuery: string, domain?: string): Promise<SearchResult[]> => {
   const tag = normalizeTagName(rawQuery.slice(1));
   if (!tag) {
     return [];
@@ -188,30 +198,32 @@ const searchStrictTag = async (rawQuery: string): Promise<SearchResult[]> => {
         search_documents.comment_count,
         search_documents.updated_at,
         e.created_at,
-        e.last_commented_at
+        e.last_commented_at,
+        e.first_opened_at,
+        e.last_opened_at
       FROM search_documents
       JOIN entries e ON e.id = search_documents.entry_id
       JOIN entry_tags ON entry_tags.entry_id = e.id
       JOIN tags ON tags.id = entry_tags.tag_id
       ${tagTotalsJoin}
-      WHERE tags.name = ?
+      WHERE tags.name = ?${domain ? " AND search_documents.domain = ?" : ""}
       ORDER BY COALESCE(e.last_commented_at, e.created_at) DESC
       LIMIT 200
     `,
-    [tag],
+    domain ? [tag, domain] : [tag],
   );
 
   return rows.map((row) => mapSearchRow(row, [tag], `#${tag}`));
 };
 
-export const searchLocalEntries = async (rawQuery: string): Promise<SearchResult[]> => {
+export const searchLocalEntries = async (rawQuery: string, domain?: string): Promise<SearchResult[]> => {
   const normalizedQuery = normalizeSearchInput(rawQuery);
   if (!normalizedQuery) {
     return [];
   }
 
   if (normalizedQuery.startsWith("#")) {
-    return searchStrictTag(normalizedQuery);
+    return searchStrictTag(normalizedQuery, domain);
   }
 
   const terms = extractSearchTerms(normalizedQuery);
@@ -235,17 +247,19 @@ export const searchLocalEntries = async (rawQuery: string): Promise<SearchResult
         search_documents_fts.comment_count,
         search_documents_fts.updated_at,
         e.created_at,
-        e.last_commented_at
+        e.last_commented_at,
+        e.first_opened_at,
+        e.last_opened_at
       FROM search_documents_fts
       JOIN entries e ON e.id = search_documents_fts.entry_id
       ${tagTotalsJoin}
-      WHERE search_documents_fts MATCH ?
+      WHERE search_documents_fts MATCH ?${domain ? " AND search_documents_fts.domain = ?" : ""}
       ORDER BY
         bm25(search_documents_fts, 0.0, 8.0, 5.0, 2.0, 2.0, 3.0, 1.0, 0.0, 0.0) ASC,
         COALESCE(e.last_commented_at, e.created_at) DESC
       LIMIT 200
     `,
-    [ftsQuery],
+    domain ? [ftsQuery, domain] : [ftsQuery],
   );
 
   const containsRows = await client.query<SearchDocumentRow>(
@@ -262,15 +276,17 @@ export const searchLocalEntries = async (rawQuery: string): Promise<SearchResult
         search_documents.comment_count,
         search_documents.updated_at,
         e.created_at,
-        e.last_commented_at
+        e.last_commented_at,
+        e.first_opened_at,
+        e.last_opened_at
       FROM search_documents
       JOIN entries e ON e.id = search_documents.entry_id
       ${tagTotalsJoin}
-      WHERE ${buildContainsClause(terms)}
+      WHERE ${buildContainsClause(terms, domain)}
       ORDER BY COALESCE(e.last_commented_at, e.created_at) DESC
       LIMIT 200
     `,
-    buildContainsParams(terms),
+    buildContainsParams(terms, domain),
   );
 
   const tagRows = await client.query<SearchDocumentRow>(
@@ -287,15 +303,20 @@ export const searchLocalEntries = async (rawQuery: string): Promise<SearchResult
         search_documents.comment_count,
         search_documents.updated_at,
         e.created_at,
-        e.last_commented_at
+        e.last_commented_at,
+        e.first_opened_at,
+        e.last_opened_at
       FROM search_documents
       JOIN entries e ON e.id = search_documents.entry_id
       ${tagTotalsJoin}
-      WHERE ${terms.map(() => "tag_totals.tag_text LIKE ?").join(" AND ")}
+      WHERE ${[
+        ...terms.map(() => "tag_totals.tag_text LIKE ?"),
+        ...(domain ? ["search_documents.domain = ?"] : []),
+      ].join(" AND ")}
       ORDER BY COALESCE(e.last_commented_at, e.created_at) DESC
       LIMIT 200
     `,
-    buildContainsParams(terms),
+    buildContainsParams(terms, domain),
   );
 
   const seenEntryIds = new Set(ftsRows.map((row) => row.entry_id));

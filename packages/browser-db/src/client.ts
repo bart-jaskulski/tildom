@@ -3,8 +3,7 @@ import type { DbMigration, DbRequest, DbRequestBody, DbResponse } from "./types"
 import DbWorker from "./db.worker?worker";
 
 export interface BrowserDbClientOptions {
-  schema?: string;
-  migrations?: DbMigration[];
+  migrations: DbMigration[];
   requiredTables?: string[];
   workerConstructor?: new () => Worker;
 }
@@ -31,7 +30,7 @@ export class BrowserDbClient {
   
   private dbVersionSignal: Signal<number>;
 
-  constructor(private dbName: string, private options?: BrowserDbClientOptions) {
+  constructor(private dbName: string, private options: BrowserDbClientOptions) {
     this.dbVersionSignal = createSignal(0);
   }
 
@@ -55,8 +54,7 @@ export class BrowserDbClient {
       await this.postAndWait({
         type: "init",
         dbName: this.dbName,
-        schema: this.options?.schema,
-        migrations: this.options?.migrations,
+        migrations: this.options.migrations,
         requiredTables: this.options?.requiredTables,
       });
       this.flushQueue();

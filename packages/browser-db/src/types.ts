@@ -7,8 +7,7 @@ export type DbRequestBody =
   | {
       type: 'init';
       dbName: string;
-      schema?: string;
-      migrations?: DbMigration[];
+      migrations: DbMigration[];
       requiredTables?: string[];
     }
   | { type: 'exec'; sql: string; params?: any[]; txId?: number }

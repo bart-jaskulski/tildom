@@ -31,6 +31,8 @@ type EntryRow = {
   created_at: number;
   updated_at: number;
   last_commented_at: number | null;
+  first_opened_at: number | null;
+  last_opened_at: number | null;
   comment_count: number;
   tag_names: string | null;
 };
@@ -56,6 +58,8 @@ const entryRowToEntry = (row: EntryRow): Entry => ({
   createdAt: row.created_at,
   updatedAt: row.updated_at,
   lastCommentedAt: row.last_commented_at,
+  firstOpenedAt: row.first_opened_at,
+  lastOpenedAt: row.last_opened_at,
   commentCount: row.comment_count,
   tags: row.tag_names ? row.tag_names.split(" ").filter(Boolean) : [],
 });
@@ -108,6 +112,8 @@ const entryStore = createRoot(() => {
           e.created_at,
           e.updated_at,
           e.last_commented_at,
+          e.first_opened_at,
+          e.last_opened_at,
           COALESCE(comment_totals.comment_count, 0) AS comment_count,
           tag_totals.tag_names
         FROM entries e
@@ -154,6 +160,8 @@ const fetchEntryRow = async (entryId: string) => {
         e.created_at,
         e.updated_at,
         e.last_commented_at,
+        e.first_opened_at,
+        e.last_opened_at,
         COALESCE(comment_totals.comment_count, 0) AS comment_count,
         tag_totals.tag_names
       FROM entries e
@@ -420,6 +428,22 @@ export const fetchEntryDetail = async (entryId: string): Promise<EntryDetail> =>
     entry: entryRow ? entryRowToEntry(entryRow) : null,
     comments: comments.map(commentRowToComment),
   };
+};
+
+export const recordEntryOpen = async (entryId: string) => {
+  const openedAt = Date.now();
+  await client.exec(
+    `
+      UPDATE entries
+      SET
+        first_opened_at = COALESCE(first_opened_at, ?),
+        last_opened_at = ?
+      WHERE id = ?
+    `,
+    [openedAt, openedAt, entryId],
+  );
+  await markSyncDirty();
+  return { firstOpenedAt: openedAt, lastOpenedAt: openedAt };
 };
 
 const insertUrlEntry = async (urlInput: string) => {

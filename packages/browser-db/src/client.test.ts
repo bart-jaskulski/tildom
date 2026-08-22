@@ -86,7 +86,7 @@ describe("BrowserDbClient Encapsulated Transaction Suite", () => {
     });
     client = new BrowserDbClient("groceries.sqlite3", {
       workerConstructor: mockWorkerConstructor,
-      schema: "CREATE TABLE groceries (id INTEGER PRIMARY KEY, name TEXT);",
+      migrations: [{ version: 1, sql: "CREATE TABLE groceries (id INTEGER PRIMARY KEY, name TEXT);" }],
     });
   });
 

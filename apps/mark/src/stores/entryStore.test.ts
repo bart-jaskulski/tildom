@@ -16,7 +16,7 @@ vi.mock("~/lib/syncState", () => ({
   markSyncDirty: vi.fn(),
 }));
 
-import { addCommentToEntry, createEntry, deleteComment, deleteEntry, fetchEntryDetail, replaceEntryTags, updateComment, updateEntry } from "./entryStore";
+import { addCommentToEntry, createEntry, deleteComment, deleteEntry, fetchEntryDetail, recordEntryOpen, replaceEntryTags, updateComment, updateEntry } from "./entryStore";
 
 describe("entryStore mutations", () => {
   beforeEach(() => {
@@ -172,6 +172,8 @@ describe("entryStore mutations", () => {
             created_at: 10,
             updated_at: 11,
             last_commented_at: 12,
+            first_opened_at: null,
+            last_opened_at: null,
             comment_count: 1,
             tag_names: "ai sqlite",
           },
@@ -211,5 +213,14 @@ describe("entryStore mutations", () => {
 
   it("rejects manual tag edits over the per-entry limit", async () => {
     await expect(replaceEntryTags("entry-1", "one two three four five six")).rejects.toThrow("Use 5 tags or fewer");
+  });
+
+  it("records when an entry is opened without changing its content", async () => {
+    await recordEntryOpen("entry-1");
+
+    expect(execMock).toHaveBeenCalledWith(
+      expect.stringContaining("first_opened_at = COALESCE(first_opened_at, ?),"),
+      expect.arrayContaining(["entry-1"]),
+    );
   });
 });
