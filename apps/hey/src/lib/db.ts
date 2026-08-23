@@ -1,7 +1,10 @@
 import { BrowserDbClient } from "@tildom/browser-db";
+import type { DbMigration } from "@tildom/browser-db";
 import { markSyncDirty } from "./syncState";
 
-const schema = `
+const migrations: DbMigration[] = [{
+  version: 1,
+  sql: `
   PRAGMA foreign_keys = ON;
   CREATE TABLE IF NOT EXISTS chats (
     id TEXT PRIMARY KEY,
@@ -33,9 +36,10 @@ const schema = `
     value TEXT NOT NULL
   );
   PRAGMA user_version = 1;
-`;
+`,
+}];
 
-const client = new BrowserDbClient("hey.sqlite3", { schema });
+const client = new BrowserDbClient("hey.sqlite3", { migrations });
 
 export const initDb = async () => {
   await client.init();

@@ -295,12 +295,14 @@ dialog h2 {
 }
 
 .conversation-header h1 {
-  flex: 1;
+  flex: 1 1 0;
+  width: 0;
 }
 
 .conversation-actions {
   position: relative;
   display: flex;
+  flex: none;
   align-items: center;
 }
 

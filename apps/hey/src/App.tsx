@@ -135,7 +135,7 @@ export default function App() {
     setMessages(await listMessages(id));
     setDraft(await readChatDraft(id));
     queueMicrotask(() => resizeComposer());
-    queueMicrotask(() => scrollToBottom());
+    requestAnimationFrame(() => scrollToBottom());
     setMobileChatOpen(true);
     setSearch("");
     setMobileSearchOpen(false);
