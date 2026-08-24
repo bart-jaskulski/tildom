@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeTagList, normalizeTagName, parseTagInput } from "./tags";
+import { normalizeTagList, normalizeTagName, parseHashTags, parseTagInput, stripTrailingTagLines } from "./tags";
 
 describe("tag normalization", () => {
   it("normalizes supported tag shapes", () => {
@@ -20,5 +20,13 @@ describe("tag normalization", () => {
   it("normalizes AI tag arrays without splitting phrases", () => {
     expect(normalizeTagList(["Machine Learning", "machine-learning"])).toEqual(["machine-learning"]);
   });
-});
 
+  it("extracts unique hashtags without treating URL fragments as tags", () => {
+    expect(parseHashTags("Plan #Local_First with #local-first at https://example.com/#not-a-tag"))
+      .toEqual(["local-first"]);
+  });
+
+  it("keeps inline tags but removes a trailing tag-only block from excerpts", () => {
+    expect(stripTrailingTagLines("A note about #gardening\n\n#plants #spring")).toBe("A note about #gardening");
+  });
+});

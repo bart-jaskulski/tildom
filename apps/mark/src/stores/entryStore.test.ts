@@ -33,6 +33,15 @@ describe("entryStore mutations", () => {
     expect(execMock).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO entries"), expect.arrayContaining(["00000000-0000-4000-8000-000000000001", "A useful note"]));
   });
 
+  it("indexes hashtags written in a note", async () => {
+    await createEntry("Garden plans\nPlant #herbs with #local-first notes");
+
+    expect(execMock).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO entry_tags"),
+      expect.arrayContaining(["00000000-0000-4000-8000-000000000001"]),
+    );
+  });
+
   it("uses first line as title and keeps the rest as note body", async () => {
     await createEntry("Trip notes\n- day 1\n- day 2");
 
@@ -94,7 +103,7 @@ describe("entryStore mutations", () => {
     expect(execMock).toHaveBeenCalledWith(
       expect.stringContaining("UPDATE entries"),
       expect.arrayContaining([
-        "example.com/updated#fragment",
+        "https://example.com/updated",
         "https://example.com/updated",
         "example.com",
         "Updated title",
@@ -129,6 +138,18 @@ describe("entryStore mutations", () => {
         "updated note body",
         "entry-1",
       ]),
+    );
+  });
+
+  it("keeps a leading URL when tags follow it", async () => {
+    await updateEntry("entry-1", {
+      title: "Saved article",
+      content: "example.com/article\n\n#read #research",
+    });
+
+    expect(execMock).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE entries"),
+      expect.arrayContaining(["https://example.com/article", "#read #research", "entry-1"]),
     );
   });
 

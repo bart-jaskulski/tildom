@@ -1,0 +1,24 @@
+.editor {
+  width: 100%;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.editor :global(.cm-editor) {
+  min-height: 14rem;
+}
+
+.compact :global(.cm-editor),
+.compact :global(.cm-content) {
+  min-height: 6rem;
+}
+
+@media (max-width: 768px) {
+  .editor :global(.cm-content) {
+    min-height: 18rem;
+    font-size: 16px;
+  }
+
+  .compact :global(.cm-content) {
+    min-height: 6rem;
+  }
+}

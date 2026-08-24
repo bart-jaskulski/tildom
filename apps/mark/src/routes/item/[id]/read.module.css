@@ -1,0 +1,100 @@
+.reader {
+  max-width: 75ch;
+  margin: 0 auto;
+}
+
+.header {
+  margin-bottom: 1rem;
+  padding-bottom: .25rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.actions,
+.meta {
+  margin: 0 0 0.75rem;
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+
+.actions a,
+.content :global(a) {
+  color: var(--syntax-string);
+  font-weight: bold;
+}
+
+.header h1 {
+  max-width: 32ch;
+  margin: 0;
+  color: var(--fg-default);
+  font-size: 24px;
+  line-height: 1.25;
+}
+
+.content {
+  max-width: 72ch;
+  color: var(--fg-default);
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.content :global(*) {
+  border-radius: 0 !important;
+  font-family: inherit !important;
+}
+
+.content :global(p) {
+  margin: 0 0 1.25rem;
+}
+
+.content :global(pre) {
+  overflow-x: auto;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-canvas);
+}
+
+.content :global(code) {
+  padding: 0.2em 0.4em;
+  background: var(--bg-canvas);
+}
+
+.content :global(pre code) {
+  padding: 0;
+  background: transparent;
+}
+
+.scrollTop {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1;
+  min-height: 44px;
+  padding: 0 1.5ch;
+  border: 1px solid var(--syntax-error);
+  background: var(--bg-surface);
+  color: var(--syntax-error);
+  font: inherit;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.scrollTop:hover {
+  background: var(--syntax-error);
+  color: var(--bg-surface);
+}
+
+.progress {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  height: 2px;
+  background: transparent;
+}
+
+.progress > div {
+  height: 100%;
+  background: var(--syntax-error);
+}

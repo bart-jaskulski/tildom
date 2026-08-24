@@ -16,6 +16,7 @@ export type Entry = {
   firstOpenedAt: number | null;
   lastOpenedAt: number | null;
   commentCount: number;
+  readerTextLength: number;
   tags: string[];
 };
 
@@ -27,9 +28,26 @@ export type EntryComment = {
   updatedAt: number;
 };
 
+export type ReaderCaptureStatus = "pending" | "ready" | "unavailable" | "failed";
+
+export type ReaderCapture = {
+  entryId: string;
+  status: ReaderCaptureStatus;
+  markdown: string;
+  textContent: string;
+  byline: string | null;
+  siteName: string | null;
+  publishedAt: string | null;
+  language: string | null;
+  capturedAt: number | null;
+  sourceUrl: string | null;
+  error: string | null;
+};
+
 export type EntryDetail = {
   entry: Entry | null;
   comments: EntryComment[];
+  capture: ReaderCapture | null;
 };
 
 export type SearchResult = Entry & {
@@ -96,6 +114,16 @@ export const normalizeUrlInput = (input: string): NormalizedUrl => {
 };
 
 export const isUrlOnlyInput = (input: string) => URL_ONLY_PATTERN.test(input.trim());
+
+export const splitLeadingUrl = (input: string) => {
+  const [firstLine = "", ...rest] = input.replace(/\r\n?/g, "\n").split("\n");
+  if (!isUrlOnlyInput(firstLine)) return null;
+
+  return {
+    url: firstLine.trim(),
+    body: rest.join("\n").replace(/^\n+/, ""),
+  };
+};
 
 export const hasEntryLink = (entry: Pick<Entry, "sourceUrl" | "canonicalUrl">) =>
   Boolean(entry.sourceUrl || entry.canonicalUrl);

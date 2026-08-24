@@ -14,6 +14,20 @@
   word-break: break-all;
 }
 
+.readerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1ch;
+  margin: 0 0 0.75rem;
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+
+.captureStatus {
+  color: var(--fg-muted);
+}
+
 .subtext {
   display: flex;
   flex-wrap: wrap;
@@ -30,6 +44,25 @@
       color: var(--syntax-keyword);
     }
   }
+}
+
+.entryActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1ch;
+  margin-top: 0.2rem;
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+
+.entryActions a {
+  color: var(--fg-default);
+  font-weight: bold;
+}
+
+.entryActions a:hover {
+  color: var(--syntax-keyword);
 }
 
 .tags {
@@ -66,9 +99,7 @@
 
 .body {
   margin-top: 1rem;
-  padding: 1rem 0;
-  border-top: 1px dashed var(--border-color);
-  border-bottom: 1px dashed var(--border-color);
+  padding: 0;
   font-size: 14px;
   line-height: 1.6;
 }
@@ -95,6 +126,15 @@
   & a {
     color: var(--highlight-blue);
     font-weight: bold;
+  }
+
+  & :global(a.markdownish-tag) {
+    color: var(--fg-muted);
+    font-weight: 500;
+
+    &:hover {
+      color: var(--syntax-keyword);
+    }
   }
 
   & pre {
@@ -155,6 +195,10 @@
   margin-top: 1rem;
 }
 
+.memoForm {
+  max-width: 75ch;
+}
+
 @media (max-width: 768px) {
   .comment {
     padding-left: 2ch;
@@ -163,5 +207,9 @@
   .actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .readerActions {
+    min-height: 44px;
   }
 }

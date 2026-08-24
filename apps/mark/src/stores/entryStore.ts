@@ -7,16 +7,19 @@ import {
   deriveNoteTitle,
   isUrlOnlyInput,
   normalizeUrlInput,
+  splitLeadingUrl,
   splitNoteIntoTitleAndBody,
   type Entry,
   type EntryComment,
   type EntryDetail,
+  type ReaderCapture,
+  type ReaderCaptureStatus,
 } from "~/lib/entries";
-import { fetchLinkMetadata } from "~/lib/linkMetadata";
+import { fetchLinkMetadata, type ExtractedCapture } from "~/lib/linkMetadata";
 import { markStartup, measureStartup } from "~/lib/startupPerformance";
 import { markSyncDirty } from "~/lib/syncState";
 import { fetchSuggestedTags } from "~/lib/tagSuggestions";
-import { MAX_TAGS_PER_ENTRY, MAX_USED_TAGS, normalizeTagList, parseTagInput } from "~/lib/tags";
+import { MAX_TAGS_PER_ENTRY, MAX_USED_TAGS, normalizeTagList, parseHashTags, parseTagInput } from "~/lib/tags";
 
 type EntryRow = {
   id: string;
@@ -34,6 +37,7 @@ type EntryRow = {
   first_opened_at: number | null;
   last_opened_at: number | null;
   comment_count: number;
+  reader_text_length: number;
   tag_names: string | null;
 };
 
@@ -43,6 +47,20 @@ type CommentRow = {
   body: string;
   created_at: number;
   updated_at: number;
+};
+
+type ReaderCaptureRow = {
+  entry_id: string;
+  status: ReaderCaptureStatus;
+  markdown: string;
+  text_content: string;
+  byline: string | null;
+  site_name: string | null;
+  published_at: string | null;
+  language: string | null;
+  captured_at: number | null;
+  source_url: string | null;
+  error: string | null;
 };
 
 const entryRowToEntry = (row: EntryRow): Entry => ({
@@ -61,6 +79,7 @@ const entryRowToEntry = (row: EntryRow): Entry => ({
   firstOpenedAt: row.first_opened_at,
   lastOpenedAt: row.last_opened_at,
   commentCount: row.comment_count,
+  readerTextLength: row.reader_text_length,
   tags: row.tag_names ? row.tag_names.split(" ").filter(Boolean) : [],
 });
 
@@ -90,6 +109,20 @@ const commentRowToComment = (row: CommentRow): EntryComment => ({
   updatedAt: row.updated_at,
 });
 
+const readerCaptureRowToCapture = (row: ReaderCaptureRow): ReaderCapture => ({
+  entryId: row.entry_id,
+  status: row.status,
+  markdown: row.markdown,
+  textContent: row.text_content,
+  byline: row.byline,
+  siteName: row.site_name,
+  publishedAt: row.published_at,
+  language: row.language,
+  capturedAt: row.captured_at,
+  sourceUrl: row.source_url,
+  error: row.error,
+});
+
 const entryStore = createRoot(() => {
   const [state, setState] = createStore({
     entries: [] as Entry[],
@@ -115,8 +148,10 @@ const entryStore = createRoot(() => {
           e.first_opened_at,
           e.last_opened_at,
           COALESCE(comment_totals.comment_count, 0) AS comment_count,
+          COALESCE(length(reader_captures.text_content), 0) AS reader_text_length,
           tag_totals.tag_names
         FROM entries e
+        LEFT JOIN reader_captures ON reader_captures.entry_id = e.id
         LEFT JOIN (
           SELECT entry_id, COUNT(*) AS comment_count
           FROM comments
@@ -163,8 +198,10 @@ const fetchEntryRow = async (entryId: string) => {
         e.first_opened_at,
         e.last_opened_at,
         COALESCE(comment_totals.comment_count, 0) AS comment_count,
+        COALESCE(length(reader_captures.text_content), 0) AS reader_text_length,
         tag_totals.tag_names
       FROM entries e
+      LEFT JOIN reader_captures ON reader_captures.entry_id = e.id
       LEFT JOIN (
         SELECT entry_id, COUNT(*) AS comment_count
         FROM comments
@@ -371,6 +408,10 @@ const enrichUrlEntryInBackground = (
       );
     }
 
+    if (metadata.capture) {
+      await saveReaderCapture(entryId, "ready", metadata.capture);
+    }
+
     tagEntryInBackground(entryId, {
       title: metadata.title ?? input.title,
       url: input.url,
@@ -379,6 +420,46 @@ const enrichUrlEntryInBackground = (
   })().catch(() => {
     // Enrichment is intentionally best-effort.
   });
+};
+
+const saveReaderCapture = async (
+  entryId: string,
+  status: ReaderCaptureStatus,
+  capture?: ExtractedCapture,
+  error: string | null = null,
+) => {
+  await client.exec(
+    `
+      INSERT INTO reader_captures (
+        entry_id, status, markdown, text_content, byline, site_name,
+        published_at, language, captured_at, source_url, error
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(entry_id) DO UPDATE SET
+        status = excluded.status,
+        markdown = excluded.markdown,
+        text_content = excluded.text_content,
+        byline = excluded.byline,
+        site_name = excluded.site_name,
+        published_at = excluded.published_at,
+        language = excluded.language,
+        captured_at = excluded.captured_at,
+        source_url = excluded.source_url,
+        error = excluded.error
+    `,
+    [
+      entryId,
+      status,
+      capture?.markdown ?? "",
+      capture?.textContent ?? "",
+      capture?.byline ?? null,
+      capture?.siteName ?? null,
+      capture?.publishedAt ?? null,
+      capture?.language ?? null,
+      capture ? Date.now() : null,
+      capture?.sourceUrl ?? null,
+      error,
+    ],
+  );
 };
 
 export const initializeEntryStore = async () => {
@@ -413,8 +494,9 @@ export const isEntryStoreReady = () => entryStore.state.isReady;
 export const refreshEntries = entryStore.refreshEntries;
 
 export const fetchEntryDetail = async (entryId: string): Promise<EntryDetail> => {
-  const entryRow = await fetchEntryRow(entryId);
-  const comments = await client.query<CommentRow>(
+  const [entryRow, comments, captures] = await Promise.all([
+    fetchEntryRow(entryId),
+    client.query<CommentRow>(
     `
       SELECT id, entry_id, body, created_at, updated_at
       FROM comments
@@ -422,12 +504,39 @@ export const fetchEntryDetail = async (entryId: string): Promise<EntryDetail> =>
       ORDER BY created_at ASC
     `,
     [entryId],
-  );
+    ),
+    client.query<ReaderCaptureRow>(
+      `
+        SELECT entry_id, status, markdown, text_content, byline, site_name,
+          published_at, language, captured_at, source_url, error
+        FROM reader_captures
+        WHERE entry_id = ?
+        LIMIT 1
+      `,
+      [entryId],
+    ),
+  ]);
 
   return {
     entry: entryRow ? entryRowToEntry(entryRow) : null,
     comments: comments.map(commentRowToComment),
+    capture: captures[0] ? readerCaptureRowToCapture(captures[0]) : null,
   };
+};
+
+export const captureEntry = async (entryId: string, url: string) => {
+  await saveReaderCapture(entryId, "pending");
+  const metadata = await fetchLinkMetadata(url);
+
+  if (!metadata.capture) {
+    await saveReaderCapture(entryId, "unavailable", undefined, "Reader view is unavailable for this page");
+    await markSyncDirty();
+    return null;
+  }
+
+  await saveReaderCapture(entryId, "ready", metadata.capture);
+  await markSyncDirty();
+  return metadata.capture;
 };
 
 export const recordEntryOpen = async (entryId: string) => {
@@ -539,7 +648,11 @@ export const createEntry = async (bodyInput: string) => {
     throw new Error("Entry is required");
   }
 
+  const tags = await validateManualTags("", parseHashTags(body).join(" "));
   const entryId = isUrlOnlyInput(body) ? await insertUrlEntry(body) : await insertNoteEntry(body);
+  if (tags.length > 0) {
+    await setEntryTags(entryId, tags);
+  }
   await markSyncDirty();
   return entryId;
 };
@@ -549,7 +662,8 @@ export const updateEntry = async (
   input: { title: string; content: string; tags?: string },
 ) => {
   const content = input.content.trim();
-  const normalizedUrl = content && isUrlOnlyInput(content) ? normalizeUrlInput(content) : null;
+  const leadingUrl = content ? splitLeadingUrl(content) : null;
+  const normalizedUrl = leadingUrl ? normalizeUrlInput(leadingUrl.url) : null;
   const titleInput = input.title.trim();
 
   if (!titleInput && !content) {
@@ -559,7 +673,7 @@ export const updateEntry = async (
   const nextTags = input.tags === undefined ? null : await validateManualTags(entryId, input.tags);
 
   const title = titleInput || (normalizedUrl ? buildUrlFallbackTitle(normalizedUrl) : deriveNoteTitle(content));
-  const body = normalizedUrl ? "" : content;
+  const body = normalizedUrl ? leadingUrl!.body : content;
   const updatedAt = Date.now();
 
   try {
@@ -620,7 +734,7 @@ export const deleteEntry = async (entryId: string) => {
 export const addCommentToEntry = async (entryId: string, bodyInput: string) => {
   const body = bodyInput.trim();
   if (!body) {
-    throw new Error("Comment is required");
+    throw new Error("Note is required");
   }
 
   const now = Date.now();
@@ -656,7 +770,7 @@ export const addCommentToEntry = async (entryId: string, bodyInput: string) => {
 export const updateComment = async (commentId: string, bodyInput: string) => {
   const body = bodyInput.trim();
   if (!body) {
-    throw new Error("Comment is required");
+    throw new Error("Note is required");
   }
 
   const updatedAt = Date.now();

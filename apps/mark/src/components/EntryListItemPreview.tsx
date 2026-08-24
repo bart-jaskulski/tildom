@@ -1,9 +1,10 @@
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
-import { formatRelativeTimestamp, hasEntryLink, type Entry, type SearchResult } from "~/lib/entries";
-import { recordEntryOpen } from "~/stores/entryStore";
+import { hasEntryLink, type Entry, type SearchResult } from "~/lib/entries";
+import { stripTrailingTagLines } from "~/lib/tags";
 import styles from "./EntryListItemPreview.module.css";
 import TextButton from "./TextButton";
+import ExternalLink from "lucide-solid/icons/external-link";
 
 type EntryListItemPreviewProps = {
   entry: Entry | SearchResult;
@@ -25,17 +26,19 @@ const highlightText = (value: string, query: string) => {
 };
 
 const previewText = (entry: Entry | SearchResult) => {
+  const body = stripTrailingTagLines(entry.body);
   if (!hasEntryLink(entry)) {
-    return entry.body;
+    return body;
   }
 
-  return entry.excerpt || entry.body || entry.canonicalUrl || entry.sourceUrl || "";
+  return entry.excerpt || body || entry.canonicalUrl || entry.sourceUrl || "";
 };
 
 export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
   const entry = () => props.entry;
+  let touchStart: { x: number; y: number } | undefined;
   const title = () => entry().title || entry().domain || "Untitled";
-  const timestamp = () => entry().lastCommentedAt ?? entry().createdAt;
+  const readingTime = () => Math.max(1, Math.ceil(entry().readerTextLength / 1_000));
   const hasVisibleMatch = () => searchTerms(props.searchQuery ?? "").every((term) => [
     title(),
     previewText(entry()),
@@ -48,9 +51,38 @@ export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
         : part}
     </For>
   );
+  const resetTouch = () => {
+    touchStart = undefined;
+  };
+  const handlePointerDown = (event: PointerEvent) => {
+    if (event.pointerType === "touch") touchStart = { x: event.clientX, y: event.clientY };
+  };
+  const handlePointerUp = (event: PointerEvent) => {
+    const start = touchStart;
+    resetTouch();
+    if (!start || event.pointerType !== "touch") return;
+
+    const horizontalDistance = event.clientX - start.x;
+    const verticalDistance = event.clientY - start.y;
+    if (!props.onDelete || horizontalDistance > -72 || Math.abs(horizontalDistance) <= Math.abs(verticalDistance)) return;
+
+    window.addEventListener("click", (clickEvent) => {
+      clickEvent.preventDefault();
+      clickEvent.stopPropagation();
+    }, { capture: true, once: true });
+    props.onDelete(entry().id);
+  };
 
   return (
-    <article class={styles.row} classList={{ [styles.activeRow]: props.isActive }} data-entry-row data-active={props.isActive ? "" : undefined}>
+    <article
+      class={styles.row}
+      classList={{ [styles.activeRow]: props.isActive }}
+      data-entry-row
+      data-active={props.isActive ? "" : undefined}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={resetTouch}
+    >
       <Show
         when={!props.loading}
         fallback={(
@@ -68,37 +100,41 @@ export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
             </Show>
             {highlighted(title())}
           </A>
+          <Show when={entry().canonicalUrl}>
+            {" "}
+            <a
+              href={entry().canonicalUrl!}
+              rel="noreferrer"
+              target="_blank"
+              class={styles.externalLink}
+            >[<ExternalLink />]</a>
+          </Show>
+        </div>
+
+        <div class={styles.meta}>
           <Show when={entry().domain}>
             <A href={`/?q=${encodeURIComponent(entry().domain!)}&domain=${encodeURIComponent(entry().domain!)}`} class={styles.domain}>
               ({entry().domain})
             </A>
           </Show>
+          <Show when={entry().readerTextLength > 0}>
+            <span>≈{readingTime()}m</span>
+          </Show>
+          <Show when={entry().commentCount > 0}>
+            <span>{entry().commentCount} {entry().commentCount === 1 ? "note" : "notes"}</span>
+          </Show>
         </div>
 
-        <div class={styles.subtext}>
-          <Show
-            when={entry().lastOpenedAt}
-            fallback={<span>{formatRelativeTimestamp(timestamp())}</span>}
-          >
-            <span>opened {formatRelativeTimestamp(entry().lastOpenedAt!)}</span>
-          </Show>
-          <span> | {entry().commentCount} {entry().commentCount === 1 ? "note" : "notes"}</span>
+        <div class={styles.actions}>
+          <A href={`/item/${entry().id}`}>edit</A>
           <Show when={entry().canonicalUrl}>
-            <span> | </span>
-            <a
-              href={entry().canonicalUrl!}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(event) => {
-                event.stopPropagation();
-                void recordEntryOpen(entry().id);
-              }}
-            >
+            <span aria-hidden="true">|</span>
+            <A href={`/item/${entry().id}/read`}>
               read
-            </a>
+            </A>
           </Show>
           <Show when={props.onDelete}>
-            <span> | </span>
+            <span aria-hidden="true">|</span>
             <TextButton
               type="button"
               inline

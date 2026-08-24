@@ -17,6 +17,7 @@ type SearchDocumentRow = {
   last_commented_at: number | null;
   first_opened_at: number | null;
   last_opened_at: number | null;
+  reader_text_length: number;
 };
 
 const normalizeSearchInput = (input: string) => input.trim().toLowerCase().replace(/\s+/g, " ");
@@ -163,6 +164,7 @@ const mapSearchRow = (row: SearchDocumentRow, terms: string[], forcedMatchText?:
     firstOpenedAt: row.first_opened_at,
     lastOpenedAt: row.last_opened_at,
     commentCount: row.comment_count,
+    readerTextLength: row.reader_text_length,
     tags: row.tag_text ? row.tag_text.split(" ").filter(Boolean) : [],
     score,
     matchText,
@@ -200,9 +202,11 @@ const searchStrictTag = async (rawQuery: string, domain?: string): Promise<Searc
         e.created_at,
         e.last_commented_at,
         e.first_opened_at,
-        e.last_opened_at
+        e.last_opened_at,
+        COALESCE(length(reader_captures.text_content), 0) AS reader_text_length
       FROM search_documents
       JOIN entries e ON e.id = search_documents.entry_id
+      LEFT JOIN reader_captures ON reader_captures.entry_id = e.id
       JOIN entry_tags ON entry_tags.entry_id = e.id
       JOIN tags ON tags.id = entry_tags.tag_id
       ${tagTotalsJoin}
@@ -249,9 +253,11 @@ export const searchLocalEntries = async (rawQuery: string, domain?: string): Pro
         e.created_at,
         e.last_commented_at,
         e.first_opened_at,
-        e.last_opened_at
+        e.last_opened_at,
+        COALESCE(length(reader_captures.text_content), 0) AS reader_text_length
       FROM search_documents_fts
       JOIN entries e ON e.id = search_documents_fts.entry_id
+      LEFT JOIN reader_captures ON reader_captures.entry_id = e.id
       ${tagTotalsJoin}
       WHERE search_documents_fts MATCH ?${domain ? " AND search_documents_fts.domain = ?" : ""}
       ORDER BY
@@ -278,9 +284,11 @@ export const searchLocalEntries = async (rawQuery: string, domain?: string): Pro
         e.created_at,
         e.last_commented_at,
         e.first_opened_at,
-        e.last_opened_at
+        e.last_opened_at,
+        COALESCE(length(reader_captures.text_content), 0) AS reader_text_length
       FROM search_documents
       JOIN entries e ON e.id = search_documents.entry_id
+      LEFT JOIN reader_captures ON reader_captures.entry_id = e.id
       ${tagTotalsJoin}
       WHERE ${buildContainsClause(terms, domain)}
       ORDER BY COALESCE(e.last_commented_at, e.created_at) DESC
@@ -305,9 +313,11 @@ export const searchLocalEntries = async (rawQuery: string, domain?: string): Pro
         e.created_at,
         e.last_commented_at,
         e.first_opened_at,
-        e.last_opened_at
+        e.last_opened_at,
+        COALESCE(length(reader_captures.text_content), 0) AS reader_text_length
       FROM search_documents
       JOIN entries e ON e.id = search_documents.entry_id
+      LEFT JOIN reader_captures ON reader_captures.entry_id = e.id
       ${tagTotalsJoin}
       WHERE ${[
         ...terms.map(() => "tag_totals.tag_text LIKE ?"),

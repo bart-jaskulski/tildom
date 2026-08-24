@@ -10,6 +10,11 @@
   overflow-x: auto;
 }
 
+.markdownish pre,
+.markdownish :not(pre) > code {
+  border: 1px solid var(--border-color);
+}
+
 .markdownish table {
   display: block;
 }
@@ -22,8 +27,8 @@
 .markdownish pre::after,
 .markdownish :not(pre) > code::before,
 .markdownish :not(pre) > code::after,
-.markdownish a:not(.markdownish-tag)::before,
-.markdownish a:not(.markdownish-tag)::after,
+.markdownish a:not(.markdownish-tag):not(.markdownish-link-compact)::before,
+.markdownish a:not(.markdownish-tag):not(.markdownish-link-compact)::after,
 .markdownish li::before {
   color: var(--fg-muted);
   opacity: 0.75;
@@ -38,8 +43,8 @@
 .markdownish :is(strong, em, del)::after,
 .markdownish :not(pre) > code::before,
 .markdownish :not(pre) > code::after,
-.markdownish a:not(.markdownish-tag)::before,
-.markdownish a:not(.markdownish-tag)::after {
+.markdownish a:not(.markdownish-tag):not(.markdownish-link-compact)::before,
+.markdownish a:not(.markdownish-tag):not(.markdownish-link-compact)::after {
   color: inherit;
   opacity: 1;
 }
@@ -85,7 +90,7 @@
 .markdownish blockquote {
   position: relative;
   margin-left: 0;
-  padding-left: 2ch;
+  padding-inline-start: 1ch;
   border-left: 2px solid var(--border-color);
 }
 
@@ -108,17 +113,17 @@
   content: "```";
 }
 
-.markdownish a:not(.markdownish-tag)::before {
+.markdownish a:not(.markdownish-tag):not(.markdownish-link-compact)::before {
   content: "[";
 }
 
-.markdownish a:not(.markdownish-tag)::after {
+.markdownish a:not(.markdownish-tag):not(.markdownish-link-compact)::after {
   content: "](" attr(href) ")";
 }
 
 .markdownish :is(ul, ol) {
   margin: 0.75rem 0;
-  padding-left: 2ch;
+  padding-inline-start: 1ch;
   list-style: none;
 }
 

@@ -1,5 +1,6 @@
 .row {
   position: relative;
+  touch-action: pan-y;
   border-left: 2px solid var(--border-color);
   transition: background-color 0.15s ease-out, border-color 0.15s ease-out;
   padding-inline: 1.5ch;
@@ -18,15 +19,7 @@
 }
 
 .titleline {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px;
   min-width: 0;
-
-  @media (min-width: 769px) {
-    gap: 1ch;
-  }
 }
 
 .unopenedMarker {
@@ -49,6 +42,11 @@
   }
 }
 
+.externalLink {
+  background: transparent;
+  white-space: nowrap;
+}
+
 .domain {
   color: var(--highlight-blue);
   font-size: 12px;
@@ -67,14 +65,22 @@
   overflow-wrap: anywhere;
 }
 
-.subtext {
+.meta,
+.actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 1ch;
-  margin-top: 0.35rem;
   color: var(--fg-muted);
   font-size: 12px;
+}
+
+.meta {
+  margin-top: 0.35rem;
+}
+
+.actions {
+  margin-top: 0.2rem;
 
   & a {
     color: var(--fg-default);

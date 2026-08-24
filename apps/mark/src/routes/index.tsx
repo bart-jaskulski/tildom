@@ -32,6 +32,7 @@ const STARTUP_ENTRY: Entry = {
   firstOpenedAt: null,
   lastOpenedAt: null,
   commentCount: 0,
+  readerTextLength: 0,
   tags: [],
 };
 

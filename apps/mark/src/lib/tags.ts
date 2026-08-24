@@ -38,3 +38,11 @@ export const normalizeTagList = (values: string[]) => {
 
 export const parseTagInput = (input: string) => normalizeTagList(input.split(/[,\s]+/));
 
+export const parseHashTags = (input: string) => {
+  const matches = input.matchAll(/(?:^|[^\w/])#([a-z0-9][a-z0-9_-]*)/gi);
+  return normalizeTagList(Array.from(matches, (match) => match[1]));
+};
+
+export const stripTrailingTagLines = (input: string) => input
+  .replace(/(?:^|\n)(?:\s*#[a-z0-9_-]+(?:\s+#[a-z0-9_-]+)*)+\s*$/i, "")
+  .trim();

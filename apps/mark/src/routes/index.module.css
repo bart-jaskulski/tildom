@@ -33,7 +33,7 @@
 }
 .entryList {
   margin: 0;
-  padding: 0 0 calc(5.5rem + env(safe-area-inset-bottom));
+  padding: 0 0 calc(2.5rem + env(safe-area-inset-bottom));
   list-style: none;
 }
 
@@ -57,7 +57,7 @@
   right: 0;
   bottom: 0;
   left: 0;
-  padding: 0.75rem 1.5ch env(safe-area-inset-bottom);
+  padding: 0.75rem 1.5ch max(1ch, env(safe-area-inset-bottom));
   border-top: 1px solid var(--border-color);
   background: var(--bg-canvas);
   display: grid;

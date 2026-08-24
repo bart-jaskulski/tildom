@@ -264,4 +264,24 @@ END;
     ALTER TABLE entries ADD COLUMN first_opened_at INTEGER;
     ALTER TABLE entries ADD COLUMN last_opened_at INTEGER;
   `,
+}, {
+  version: 3,
+  sql: `
+    CREATE TABLE IF NOT EXISTS reader_captures (
+      entry_id TEXT NOT NULL PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'pending',
+      markdown TEXT NOT NULL DEFAULT '',
+      text_content TEXT NOT NULL DEFAULT '',
+      byline TEXT,
+      site_name TEXT,
+      published_at TEXT,
+      language TEXT,
+      captured_at INTEGER,
+      source_url TEXT,
+      error TEXT,
+      FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS reader_captures_status_idx ON reader_captures(status);
+  `,
 }];

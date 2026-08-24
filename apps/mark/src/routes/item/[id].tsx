@@ -10,19 +10,44 @@ import {
 import { useVimKeymaps } from "@tildom/ui";
 import Button from "~/components/Button";
 import ItemLoading from "~/components/ItemLoading";
-import Textarea from "~/components/Textarea";
-import { formatRelativeTimestamp } from "~/lib/entries";
+import MemoEditor from "~/components/MemoEditor";
+import { formatRelativeTimestamp, splitNoteIntoTitleAndBody } from "~/lib/entries";
+import { parseHashTags } from "~/lib/tags";
 import { addCommentToEntry, deleteComment, deleteEntry, fetchEntryDetail, isEntryStoreReady, recordEntryOpen, updateComment, updateEntry } from "~/stores/entryStore";
 import TextButton from "~/components/TextButton";
 import styles from "./[id].module.css";
+
+const bodyWithMissingTags = (entry: { body: string; tags: string[] }) => {
+  const inlineTags = new Set(parseHashTags(entry.body));
+  const missingTags = entry.tags.filter((tag) => !inlineTags.has(tag));
+  return [entry.body, missingTags.map((tag) => `#${tag}`).join(" ")].filter(Boolean).join("\n\n");
+};
+
+const collapseTrailingTags = (content: string) => {
+  const lines = content.split("\n");
+  const tags: string[] = [];
+
+  while (lines.length > 0) {
+    const line = lines.at(-1)!.trim();
+    if (!line && tags.length > 0) {
+      lines.pop();
+      continue;
+    }
+    if (!/^#[a-z0-9_-]+(?:\s+#[a-z0-9_-]+)*$/i.test(line)) break;
+    tags.unshift(...line.split(/\s+/));
+    lines.pop();
+  }
+
+  return tags.length > 0
+    ? [lines.join("\n").trimEnd(), tags.join(" ")].filter(Boolean).join("\n\n")
+    : content;
+};
 
 export default function ItemPage() {
   const params = useParams();
   const navigate = useNavigate();
   const [commentBody, setCommentBody] = createSignal("");
-  const [editTitle, setEditTitle] = createSignal("");
-  const [editContent, setEditContent] = createSignal("");
-  const [editTags, setEditTags] = createSignal("");
+  const [editMemo, setEditMemo] = createSignal("");
   const [actionError, setActionError] = createSignal<string | null>(null);
   const [commentError, setCommentError] = createSignal<string | null>(null);
   const [commentActionError, setCommentActionError] = createSignal<string | null>(null);
@@ -70,9 +95,10 @@ export default function ItemPage() {
       return;
     }
 
-    setEditTitle(currentEntry.title);
-    setEditContent((currentEntry.sourceUrl ?? currentEntry.canonicalUrl ?? currentEntry.body).replace(/^\n/, ""));
-    setEditTags(currentEntry.tags.join(" "));
+    const content = collapseTrailingTags((currentEntry.sourceUrl ?? currentEntry.canonicalUrl ?? currentEntry.body).replace(/^\n/, ""));
+    const existingTags = new Set(parseHashTags(`${currentEntry.title}\n${content}`));
+    const missingTags = currentEntry.tags.filter((tag) => !existingTags.has(tag));
+    setEditMemo([currentEntry.title, content, missingTags.map((tag) => `#${tag}`).join(" ")].filter(Boolean).join("\n"));
     setActionError(null);
     setIsEditing(true);
   };
@@ -93,10 +119,11 @@ export default function ItemPage() {
     setActionError(null);
 
     try {
+      const memo = splitNoteIntoTitleAndBody(editMemo());
       const updatedEntry = await updateEntry(currentEntry.id, {
-        title: editTitle(),
-        content: editContent(),
-        tags: editTags(),
+        title: memo.title,
+        content: memo.body,
+        tags: parseHashTags(editMemo()).join(" "),
       });
       setIsEditing(false);
       mutate((current) => current?.entry ? {
@@ -147,6 +174,7 @@ export default function ItemPage() {
       const comment = await addCommentToEntry(currentEntry.id, commentBody());
       setCommentBody("");
       mutate((current) => current?.entry ? {
+        ...current,
         entry: {
           ...current.entry,
           updatedAt: comment.updatedAt,
@@ -156,7 +184,7 @@ export default function ItemPage() {
         comments: [...current.comments, comment],
       } : current);
     } catch (err) {
-      setCommentError(err instanceof Error ? err.message : "Failed to add comment");
+      setCommentError(err instanceof Error ? err.message : "Failed to add note");
     } finally {
       setIsCommentSaving(false);
     }
@@ -190,14 +218,14 @@ export default function ItemPage() {
         } : comment),
       } : current);
     } catch (err) {
-      setCommentActionError(err instanceof Error ? err.message : "Failed to update comment");
+      setCommentActionError(err instanceof Error ? err.message : "Failed to update note");
     } finally {
       setCommentSavingId(null);
     }
   };
 
   const handleCommentDelete = async (commentId: string) => {
-    if (!window.confirm("Delete this comment?")) {
+    if (!window.confirm("Delete this note?")) {
       return;
     }
 
@@ -210,6 +238,7 @@ export default function ItemPage() {
         cancelCommentEditing();
       }
       mutate((current) => current?.entry ? {
+        ...current,
         entry: {
           ...current.entry,
           commentCount: Math.max(0, current.entry.commentCount - 1),
@@ -217,7 +246,7 @@ export default function ItemPage() {
         comments: current.comments.filter((comment) => comment.id !== commentId),
       } : current);
     } catch (err) {
-      setCommentActionError(err instanceof Error ? err.message : "Failed to delete comment");
+      setCommentActionError(err instanceof Error ? err.message : "Failed to delete note");
     } finally {
       setCommentDeletingId(null);
     }
@@ -246,6 +275,17 @@ export default function ItemPage() {
       setActionError(error instanceof Error ? error.message : "Failed to update task");
     }
   };
+
+  const handleEntryTagClick = (event: MouseEvent) => {
+    const tag = event.target instanceof Element
+      ? event.target.closest<HTMLAnchorElement>("a.markdownish-tag")?.textContent?.slice(1)
+      : undefined;
+    if (!tag) return;
+    event.preventDefault();
+    navigate(`/?q=${encodeURIComponent(`#${tag}`)}`);
+  };
+
+  const readingTime = () => Math.max(1, Math.ceil((entry()?.readerTextLength ?? 0) / 1_000));
 
   const handleCommentTaskClick = async (event: MouseEvent, commentId: string, body: string) => {
     const taskIndex = findMarkdownTaskIndex(event.target);
@@ -278,15 +318,22 @@ export default function ItemPage() {
               <article>
                 <div class={styles.subtext}>
                   <Show when={currentEntry().domain}>
-                    <span>{currentEntry().domain}</span>
+                    <span>({currentEntry().domain})</span>
                   </Show>
-                  <span>{currentEntry().domain ? " | " : ""}{formatRelativeTimestamp(currentEntry().createdAt)}</span>
-                  <Show when={!isEditing()}>
-                    <span> | </span>
+                  <Show when={currentEntry().readerTextLength > 0}>
+                    <span>≈{readingTime()}m</span>
+                  </Show>
+                </div>
+                <Show when={!isEditing()}>
+                  <div class={styles.entryActions}>
                     <TextButton type="button" inline onClick={startEditing}>
                       edit
                     </TextButton>
-                    <span> | </span>
+                    <Show when={currentEntry().canonicalUrl}>
+                      <span aria-hidden="true">|</span>
+                      <A href={`/item/${currentEntry().id}/read`}>read</A>
+                    </Show>
+                    <span aria-hidden="true">|</span>
                     <TextButton
                       type="button"
                       inline
@@ -295,33 +342,18 @@ export default function ItemPage() {
                     >
                       {isDeleting() ? "deleting..." : "delete"}
                     </TextButton>
-                  </Show>
-                </div>
+                  </div>
+                </Show>
 
                 <Show when={!isEditing()} fallback={
-                  <form class="hn-form item-edit-form" onSubmit={submitEdit}>
-                    <label class="hn-label" for="edit-title">title</label>
-                    <input
-                      id="edit-title"
-                      value={editTitle()}
-                      onInput={(event) => setEditTitle(event.currentTarget.value)}
-                      class="hn-input"
-                    />
-
-                    <label class="hn-label" for="edit-content">content</label>
-                    <Textarea
-                      id="edit-content"
-                      value={editContent()}
-                      onInput={(event) => setEditContent(event.currentTarget.value)}
-                      rows={5}
-                    />
-
-                    <label class="hn-label" for="edit-tags">tags</label>
-                    <input
-                      id="edit-tags"
-                      value={editTags()}
-                      onInput={(event) => setEditTags(event.currentTarget.value)}
-                      class="hn-input"
+                  <form class={`${styles.memoForm} hn-form item-edit-form`} onSubmit={submitEdit}>
+                    <span id="edit-memo-label" class="visually-hidden">edit entry</span>
+                    <MemoEditor
+                      id="edit-memo"
+                      value={editMemo()}
+                      onInput={setEditMemo}
+                      onSubmit={() => void submitEdit(new Event("submit") as SubmitEvent)}
+                      placeholder={"Title\nWrite your note… #tag"}
                     />
 
                     <Show when={actionError()}>
@@ -356,23 +388,19 @@ export default function ItemPage() {
                     <p class={styles.preview}>{currentEntry().excerpt}</p>
                   </Show>
 
-                  <Show when={currentEntry().tags.length > 0}>
-                    <p class={styles.tags}>
-                      <For each={currentEntry().tags}>
-                        {(tag) => (
-                          <A href={`/?q=${encodeURIComponent(`#${tag}`)}`} class={styles.tag}>
-                            #{tag}
-                          </A>
-                        )}
-                      </For>
-                    </p>
-                  </Show>
-
-                  <Show when={currentEntry().body}>
+                  <Show when={bodyWithMissingTags(currentEntry())}>
                     <div
                       class={`${styles.body} ${styles.markdown} ${styles.prose} markdownish`}
-                      innerHTML={renderMarkdownishToHtml(currentEntry().body, { tasks: true })}
-                      onClick={(event) => void handleEntryTaskClick(event)}
+                      innerHTML={renderMarkdownishToHtml(bodyWithMissingTags(currentEntry()), {
+                        compactLinks: true,
+                        hashtagHref: "/?q=%23",
+                        hashtags: true,
+                        tasks: true,
+                      })}
+                      onClick={(event) => {
+                        handleEntryTagClick(event);
+                        void handleEntryTaskClick(event);
+                      }}
                     />
                   </Show>
 
@@ -384,7 +412,7 @@ export default function ItemPage() {
 
               <section class="hn-panel hn-stack">
                 <h2 class="hn-heading">
-                  {currentEntry().commentCount} {currentEntry().commentCount === 1 ? "comment" : "comments"}
+                  {currentEntry().commentCount} {currentEntry().commentCount === 1 ? "note" : "notes"}
                 </h2>
 
                 <For each={detail()?.comments ?? []}>
@@ -424,12 +452,13 @@ export default function ItemPage() {
                         }
                       >
                         <form class="hn-form hn-stack item-edit-form" onSubmit={(event) => submitCommentEdit(event, comment.id)}>
-                          <label class="hn-label visually-hidden" for={`comment-edit-${comment.id}`}>edit comment</label>
-                          <Textarea
+                          <span id={`comment-edit-${comment.id}-label`} class="visually-hidden">edit note</span>
+                          <MemoEditor
                             id={`comment-edit-${comment.id}`}
                             value={editingCommentBody()}
-                            onInput={(event) => setEditingCommentBody(event.currentTarget.value)}
-                            rows={4}
+                            compact
+                            onInput={setEditingCommentBody}
+                            onSubmit={() => void submitCommentEdit(new Event("submit") as SubmitEvent, comment.id)}
                           />
                           <div class={styles.actions}>
                             <Button type="submit" disabled={commentSavingId() === comment.id}>
@@ -450,12 +479,13 @@ export default function ItemPage() {
                 </Show>
 
                 <form class="hn-form" onSubmit={submitComment}>
-                  <label class="hn-label" for="comment-body">add comment</label>
-                  <Textarea
+                  <span id="comment-body-label" class="hn-label">add note</span>
+                  <MemoEditor
                     id="comment-body"
                     value={commentBody()}
-                    onInput={(event) => setCommentBody(event.currentTarget.value)}
-                    rows={4}
+                    compact
+                    onInput={setCommentBody}
+                    onSubmit={() => void submitComment(new Event("submit") as SubmitEvent)}
                     placeholder="private note, quote, or follow-up"
                   />
                   <Show when={commentError()}>
@@ -465,7 +495,7 @@ export default function ItemPage() {
                     type="submit"
                     disabled={isCommentSaving()}
                   >
-                    {isCommentSaving() ? "adding..." : "add comment"}
+                    {isCommentSaving() ? "adding..." : "add note"}
                   </Button>
                 </form>
               </section>

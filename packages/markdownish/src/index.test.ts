@@ -21,6 +21,13 @@ describe("renderMarkdownishToHtml", () => {
       .not.toContain('data-markdownish-tag="code"');
   });
 
+  it("can render hashtags as links and hide repeated markdown link URLs", () => {
+    expect(renderMarkdownishToHtml("#hello", { hashtags: true, hashtagHref: "/?q=%23" }))
+      .toContain('href="/?q=%23hello"');
+    expect(renderMarkdownishToHtml("[Read this](https://example.com)", { compactLinks: true }))
+      .toContain('class="markdownish-link-compact"');
+  });
+
   it("renders interactive GFM tasks when requested", () => {
     expect(renderMarkdownishToHtml("- [ ] todo\n- [x] done", { tasks: true }))
       .toContain('data-markdownish-task="0"');

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveNoteTitle, isUrlOnlyInput, normalizeUrlInput, splitNoteIntoTitleAndBody } from "./entries";
+import { deriveNoteTitle, isUrlOnlyInput, normalizeUrlInput, splitLeadingUrl, splitNoteIntoTitleAndBody } from "./entries";
 
 describe("entry helpers", () => {
   it("normalizes URLs for capture and search", () => {
@@ -43,5 +43,12 @@ describe("entry helpers", () => {
     expect(isUrlOnlyInput(" https://example.com/post?x=1 ")).toBe(true);
     expect(isUrlOnlyInput("example.com/post")).toBe(true);
     expect(isUrlOnlyInput("read https://example.com/post later")).toBe(false);
+  });
+
+  it("keeps a leading link when it has note text or tags after it", () => {
+    expect(splitLeadingUrl("https://example.com/article\n\n#read #research")).toEqual({
+      url: "https://example.com/article",
+      body: "#read #research",
+    });
   });
 });

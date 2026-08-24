@@ -6,9 +6,11 @@ import { initializeEntryStore } from "~/stores/entryStore";
 import Layout from "~/components/Layout";
 import { pwaInstall } from "~/lib/pwaInstall";
 import "./app.css";
+import { LucideProvider } from "lucide-solid";
 
 const NotFound = lazy(() => import("~/routes/[...404]"));
 const ItemPage = lazy(() => import("~/routes/item/[id]"));
+const ItemReaderPage = lazy(() => import("~/routes/item/[id]/read"));
 const Pair = lazy(() => import("~/routes/pair"));
 const Settings = lazy(() => import("~/routes/settings"));
 const ShareTarget = lazy(() => import("~/routes/share-target"));
@@ -27,15 +29,21 @@ export default function App() {
   });
 
   return (
+    <LucideProvider
+      size={12}
+      strokeWidth={1.5}
+      >
     <Router
       root={Layout}
     >
       <Route path="/" component={Home} />
       <Route path="/item/:id" component={ItemPage} />
+      <Route path="/item/:id/read" component={ItemReaderPage} />
       <Route path="/pair" component={Pair} />
       <Route path="/settings" component={Settings} />
       <Route path="/share-target" component={ShareTarget} />
       <Route path="*404" component={NotFound} />
     </Router>
+    </LucideProvider>
   );
 }

@@ -1,9 +1,23 @@
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import { Readability } from "@mozilla/readability";
+import { JSDOM } from "jsdom";
+import TurndownService from "turndown";
 
 export type PageMetadata = {
   title: string | null;
   excerpt: string | null;
+  capture: PageCapture | null;
+};
+
+export type PageCapture = {
+  markdown: string;
+  textContent: string;
+  byline: string | null;
+  siteName: string | null;
+  publishedAt: string | null;
+  language: string | null;
+  sourceUrl: string;
 };
 
 const MAX_HTML_BYTES = 2_000_000;
@@ -69,7 +83,7 @@ const decodeHtmlEntities = (value: string) =>
     }[normalizedEntity] ?? match;
   });
 
-const normalizeMetadataText = (value: string | null) => {
+const normalizeMetadataText = (value: string | null | undefined) => {
   if (!value) return null;
   return decodeHtmlEntities(value).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() || null;
 };
@@ -114,11 +128,68 @@ const findMetaContent = (html: string, names: string[]) => {
   return null;
 };
 
-export const parsePageMetadata = (html: string): PageMetadata => ({
-  title: findMetaContent(html, ["og:title", "twitter:title"])
-    ?? normalizeMetadataText(/<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] ?? null),
-  excerpt: findMetaContent(html, ["og:description", "description", "twitter:description"]),
+const markdown = new TurndownService({
+  headingStyle: "atx",
+  bulletListMarker: "-",
+  codeBlockStyle: "fenced",
+  emDelimiter: "*",
+  strongDelimiter: "**",
 });
+
+const TRACKING_QUERY_PARAM = /^(?:utm_|fbclid$|gclid$|dclid$|msclkid$|_ga$|_gl$|mc_(?:cid|eid)$|igshid$)/i;
+
+const normalizeReaderLink = (value: string, sourceUrl: string) => {
+  try {
+    const url = new URL(value, sourceUrl);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return value;
+    for (const name of [...url.searchParams.keys()]) {
+      if (TRACKING_QUERY_PARAM.test(name)) url.searchParams.delete(name);
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
+};
+
+const prepareReaderContent = (content: string, sourceUrl: string) => {
+  const document = new JSDOM(`<body>${content}</body>`, { url: sourceUrl }).window.document;
+  document.querySelectorAll("img, picture, source").forEach((element) => element.remove());
+  document.querySelectorAll("a").forEach((anchor) => {
+    if (!anchor.textContent?.trim() && anchor.children.length === 0) anchor.remove();
+  });
+  document.querySelectorAll("a[href]").forEach((anchor) => {
+    const href = normalizeReaderLink(anchor.getAttribute("href")!, sourceUrl);
+    if (href) anchor.setAttribute("href", href);
+    else anchor.removeAttribute("href");
+  });
+  return document.body.innerHTML;
+};
+
+export const parsePageMetadata = (html: string, sourceUrl = "https://example.com"): PageMetadata => {
+  const fallback = {
+    title: findMetaContent(html, ["og:title", "twitter:title"])
+      ?? normalizeMetadataText(/<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] ?? null),
+    excerpt: findMetaContent(html, ["og:description", "description", "twitter:description"]),
+  };
+  const document = new JSDOM(html, { url: sourceUrl }).window.document;
+  const article = new Readability(document).parse();
+  const textContent = article?.textContent?.trim();
+  if (!article || !textContent) return { ...fallback, capture: null };
+
+  return {
+    title: normalizeMetadataText(article.title) ?? fallback.title,
+    excerpt: normalizeMetadataText(article.excerpt) ?? fallback.excerpt,
+    capture: {
+      markdown: markdown.turndown(prepareReaderContent(article.content ?? "", sourceUrl)).trim(),
+      textContent,
+      byline: normalizeMetadataText(article.byline),
+      siteName: normalizeMetadataText(article.siteName),
+      publishedAt: normalizeMetadataText(article.publishedTime),
+      language: normalizeMetadataText(article.lang),
+      sourceUrl,
+    },
+  };
+};
 
 export const fetchPageMetadata = async (
   urlInput: string,
@@ -153,5 +224,5 @@ export const fetchPageMetadata = async (
   if (contentType && !/\b(?:text\/html|application\/xhtml\+xml)\b/i.test(contentType)) {
     throw new Error("URL did not return HTML");
   }
-  return parsePageMetadata(await readResponseHtml(response));
+  return parsePageMetadata(await readResponseHtml(response), url.toString());
 };

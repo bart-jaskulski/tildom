@@ -4,6 +4,8 @@ import remend from "remend";
 import sanitizeHtml from "sanitize-html";
 
 type RenderMarkdownishOptions = {
+  compactLinks?: boolean;
+  hashtagHref?: string;
   hashtags?: boolean;
   streaming?: boolean;
   tasks?: boolean;
@@ -19,6 +21,11 @@ export const renderMarkdownishToHtml = (
   if (!markdown) return "";
 
   let taskIndex = 0;
+  const linkAttributes = {
+    ...(options.compactLinks ? { class: "markdownish-link-compact" } : {}),
+    rel: "noreferrer noopener",
+    target: "_blank",
+  };
   const html = micromark(markdown, {
     extensions: [gfm()],
     htmlExtensions: [gfmHtml()],
@@ -35,24 +42,22 @@ export const renderMarkdownishToHtml = (
     allowedTags: sanitizeHtml.defaults.allowedTags.concat(["button", "h1", "h2", "img", "span"]),
     allowedAttributes: {
       ...sanitizeHtml.defaults.allowedAttributes,
-      a: ["href", "name", "target", "rel"],
+      a: ["class", "href", "name", "target", "rel"],
       button: ["aria-label", "aria-pressed", "class", "data-markdownish-task", "type"],
       img: ["src", "alt", "title"],
       span: ["class", "data-markdownish-task"],
     },
     transformTags: {
-      a: sanitizeHtml.simpleTransform("a", {
-        rel: "noreferrer noopener",
-        target: "_blank",
-      }),
+      a: sanitizeHtml.simpleTransform("a", linkAttributes),
     },
     textFilter: options.hashtags
       ? (text, tagName) => {
           if (tagName === "a" || tagName === "code" || tagName === "pre") return text;
-          return text.replace(
-            /(^|[^\w])#([a-zA-Z0-9_-]+)/g,
-            '$1<button type="button" class="markdownish-tag" data-markdownish-tag="$2">#$2</button>',
-          );
+          return text.replace(/(^|[^\w])#([a-zA-Z0-9_-]+)/g, (_, prefix: string, tag: string) => (
+            options.hashtagHref
+              ? `${prefix}<a class="markdownish-tag" href="${options.hashtagHref}${encodeURIComponent(tag)}">#${tag}</a>`
+              : `${prefix}<button type="button" class="markdownish-tag" data-markdownish-tag="${tag}">#${tag}</button>`
+          ));
         }
       : undefined,
   });
