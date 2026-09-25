@@ -128,6 +128,10 @@ export const createSyncClient = (options: Options) => {
       await options.state.setSyncRuntime(defaultRuntimeState());
       const remote = await downloadLatest(config);
       if (remote) await importRemote(config, remote.revision, remote.body);
+      else {
+        await options.state.markSyncDirty();
+        await syncNow();
+      }
       await refreshSyncState();
       return config;
     },

@@ -153,6 +153,9 @@ importers:
 
   apps/home:
     dependencies:
+      '@tildom/sync-client':
+        specifier: workspace:*
+        version: link:../../packages/sync-client
       '@tildom/ui':
         specifier: workspace:*
         version: link:../../packages/ui

@@ -10,6 +10,7 @@
     "test": "node --test"
   },
   "dependencies": {
+    "@tildom/sync-client": "workspace:*",
     "@tildom/ui": "workspace:*",
     "solid-js": "^1.9.13"
   },

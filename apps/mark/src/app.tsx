@@ -14,6 +14,7 @@ const ItemReaderPage = lazy(() => import("~/routes/item/[id]/read"));
 const Pair = lazy(() => import("~/routes/pair"));
 const Settings = lazy(() => import("~/routes/settings"));
 const ShareTarget = lazy(() => import("~/routes/share-target"));
+const SuiteCallback = lazy(() => import("~/routes/suite"));
 
 export default function App() {
   onMount(async () => {
@@ -42,6 +43,7 @@ export default function App() {
       <Route path="/pair" component={Pair} />
       <Route path="/settings" component={Settings} />
       <Route path="/share-target" component={ShareTarget} />
+      <Route path="/suite/:operation" component={SuiteCallback} />
       <Route path="*404" component={NotFound} />
     </Router>
     </LucideProvider>

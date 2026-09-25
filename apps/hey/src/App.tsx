@@ -9,6 +9,7 @@ import {
 import { initDb } from "./lib/db";
 import { generateChatTitle, streamChat } from "./lib/chat";
 import { buildPairingUrl, clearPairingHash, parsePairingSecret } from "@tildom/sync-client";
+import { connectAppToSuite, registerAppWithSuite } from "@tildom/sync-client";
 import {
   createSyncVault,
   disconnectSync,
@@ -44,6 +45,20 @@ import { compactDate } from "./lib/presentation";
 
 const time = (timestamp: number) => new Intl.DateTimeFormat([], { hour: "2-digit", minute: "2-digit" }).format(timestamp);
 
+const brokerOrigin = import.meta.env.VITE_HOME_BASE_URL ?? (import.meta.env.DEV ? "http://localhost:5170" : "https://tildom.app");
+
+function SuiteCallback() {
+  const [error, setError] = createSignal("");
+  onMount(async () => {
+    try {
+      await initDb();
+      if (location.pathname.endsWith("/register")) await registerAppWithSuite("hey", brokerOrigin, getSyncConfig);
+      else await connectAppToSuite("hey", brokerOrigin, getSyncConfig, joinSyncVault);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Suite connection failed"); }
+  });
+  return <main><p>Connecting hey to suite sync…</p><Show when={error()}><p role="alert">{error()}</p></Show></main>;
+}
+
 const searchTerms = (query: string): string[] => query.toLowerCase().match(/[\p{L}\p{N}_/-]+/gu) ?? [];
 
 const Highlight = (props: { text: string; query: string }) => {
@@ -56,6 +71,7 @@ const Highlight = (props: { text: string; query: string }) => {
 };
 
 export default function App() {
+  if (location.pathname.startsWith("/suite/")) return <SuiteCallback />;
   const [surface, setSurface] = createSignal<Surface>("chats");
   const [chats, setChats] = createSignal<Chat[]>([]);
   const [messages, setMessages] = createSignal<Message[]>([]);

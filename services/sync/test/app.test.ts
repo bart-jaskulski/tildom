@@ -86,3 +86,13 @@ test("accepts kin vaults when configured", async () => {
   });
   expect(response.status).toBe(201);
 });
+
+test("accepts the reserved suite keyring vault when configured", async () => {
+  const sync = await createApp(["suite"]);
+  const response = await sync.request("http://sync.test/v1/apps/suite/vaults/vault_1/snapshots", {
+    method: "POST",
+    headers: { Authorization: "Bearer token", "If-None-Match": "*" },
+    body: new Uint8Array([1]),
+  });
+  expect(response.status).toBe(201);
+});

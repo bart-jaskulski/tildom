@@ -46,5 +46,16 @@ describe("sync client", () => {
 
     expect(config?.appId).toBe("kin");
     expect(runtime).toMatchObject({ lastSeenRevision: "revision-1", hasLocalChanges: false });
+
+    const secret = config!.secret;
+    await client.disconnectSync();
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(null, { status: 404 }))
+      .mockResolvedValueOnce(new Response(null, { status: 404 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ revision: "revision-2" }), {
+        status: 201, headers: { "Content-Type": "application/json" },
+      }));
+    await client.joinSyncVault(secret);
+    expect(runtime).toMatchObject({ lastSeenRevision: "revision-2", hasLocalChanges: false });
   });
 });

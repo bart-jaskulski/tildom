@@ -30,7 +30,7 @@ const importSecret = (secret: string) => {
   return crypto.subtle.importKey("raw", toArrayBuffer(bytes), "HKDF", false, ["deriveBits", "deriveKey"]);
 };
 
-const deriveBits = async (secret: string, info: string, bits: number) =>
+export const deriveBits = async (secret: string, info: string, bits: number) =>
   new Uint8Array(await crypto.subtle.deriveBits({
     name: "HKDF", hash: "SHA-256", salt: HKDF_SALT, info: encoder.encode(info),
   }, await importSecret(secret), bits));

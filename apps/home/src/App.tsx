@@ -1,6 +1,8 @@
 import { AppIcon } from "@tildom/ui";
+import SuitePage from "./SuitePage";
 
 export default function App() {
+  if (window.location.pathname.startsWith("/sync")) return <SuitePage />;
   return (
     <div class="shell">
       <header class="topline">

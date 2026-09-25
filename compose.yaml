@@ -33,7 +33,7 @@ services:
       NODE_ENV: production
       PORT: 8787
       SYNC_STORAGE_ROOT: /app/storage/vaults
-      SYNC_APP_IDS: mark,kin
+      SYNC_APP_IDS: ${SYNC_APP_IDS:-mark,kin,suite}
       SYNC_HOSTED_ORIGINS: ${SYNC_HOSTED_ORIGINS:-http://localhost:3000,http://localhost:3002}
     volumes:
       - sync-storage:/app/storage

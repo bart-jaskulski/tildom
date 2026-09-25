@@ -313,6 +313,24 @@ h1 {
   }
 }
 
+.suite-main { display: block; min-height: calc(100dvh - 48px); }
+.suite-panel { max-width: 82ch; padding: clamp(2rem, 6vw, 5rem) clamp(1.25rem, 5vw, 4rem); }
+.suite-panel h1 { font-size: clamp(2rem, 5vw, 4rem); }
+.suite-section { margin-top: 2.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color); }
+.suite-section h2 { font-size: 1rem; }
+.suite-actions { display: grid; gap: 0.75rem; max-width: 66ch; }
+.suite-actions.inline { display: flex; flex-wrap: wrap; margin-top: 0.75rem; }
+.suite-actions label { display: grid; gap: 0.35rem; color: var(--fg-muted); font-size: 12px; }
+.suite-actions input, .recovery-key { min-height: 44px; padding: 0 1ch; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--syntax-string); font: inherit; }
+.suite-actions button, .suite-apps button { min-height: 44px; padding: 0.5rem 1ch; border: 1px solid var(--border-color); border-radius: 0; background: var(--bg-canvas); color: var(--syntax-string); font: inherit; cursor: pointer; }
+.suite-actions button:hover, .suite-apps button:hover { background: var(--syntax-bg-active); }
+.recovery-key { width: 100%; }
+.suite-apps { margin: 1rem 0 0; padding: 0; border-top: 1px solid var(--border-color); list-style: none; }
+.suite-apps li { display: flex; align-items: center; justify-content: space-between; min-height: 60px; border-bottom: 1px solid var(--border-color); }
+.suite-apps span { display: flex; gap: 0.5ch; }
+.suite-status { color: var(--syntax-string); }
+.suite-error { color: var(--syntax-error); }
+
 @media (prefers-reduced-motion: reduce) {
   .arrow {
     transition: none;

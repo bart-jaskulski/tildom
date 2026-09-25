@@ -4,14 +4,14 @@ import styles from "./Checkbox.module.css";
 export interface CheckboxProps extends Omit<JSX.InputHTMLAttributes<HTMLInputElement>, "type" | "onChange"> {
   checked: boolean;
   onChange: (checked: boolean) => void;
-  label?: string;
+  label?: JSX.Element;
 }
 
 export default function Checkbox(props: CheckboxProps) {
-  const [local, others] = splitProps(props, ["checked", "onChange", "label"]);
+  const [local, others] = splitProps(props, ["checked", "onChange", "label", "class"]);
 
   return (
-    <label class={styles.container}>
+    <label class={`${styles.container} ${local.class ?? ""}`.trim()}>
       <input
         type="checkbox"
         class={styles.srOnly}

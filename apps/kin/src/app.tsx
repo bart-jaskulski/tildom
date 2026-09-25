@@ -13,6 +13,7 @@ import "./app.css";
 const PersonDetail = lazy(() => import("./routes/person/[id]"));
 const Settings = lazy(() => import("./routes/settings"));
 const Pair = lazy(() => import("./routes/pair"));
+const SuiteCallback = lazy(() => import("./routes/suite"));
 
 function KinVimNavigation(props: ParentProps) {
   const location = useLocation();
@@ -78,6 +79,7 @@ export default function App() {
       <Route path="/person/:slug" component={PersonDetail} />
       <Route path="/settings" component={Settings} />
       <Route path="/pair" component={Pair} />
+      <Route path="/suite/:operation" component={SuiteCallback} />
     </Router>
   );
 }
