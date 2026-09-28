@@ -1,0 +1,126 @@
+.search {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  margin: 0;
+  padding: 0;
+  border-left: 0;
+  border-bottom: 0;
+  background: var(--bg-surface, #ffffff);
+  overflow: hidden;
+  transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+  @media (min-width: 769px) {
+    position: relative;
+    top: auto;
+    right: auto;
+    z-index: auto;
+    width: 24ch;
+    min-width: 24ch;
+    height: auto;
+    margin-left: auto;
+    border-left: 1px solid var(--border-color, #e1e4e8);
+    overflow: visible;
+
+    &:focus-within {
+      width: min(44ch, 42vw);
+    }
+  }
+
+  &::before {
+    position: absolute;
+    top: 50%;
+    left: 1.25ch;
+    display: none;
+
+    @media (min-width: 769px) {
+      display: block;
+      color: var(--syntax-keyword, #d73a49);
+      content: ">";
+      font-weight: bold;
+      pointer-events: none;
+      transform: translateY(-50%);
+    }
+  }
+
+  & input {
+    display: none;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--fg-default, #24292e);
+    font-size: 13px;
+    font-family: inherit;
+    transition: box-shadow 0.15s ease-out;
+
+    @media (min-width: 769px) {
+      display: block;
+      width: 100%;
+      min-height: 48px;
+      padding: 0 1.5ch 0 3.5ch;
+    }
+
+    &:focus {
+      box-shadow: inset 2px 0 0 var(--syntax-keyword, #d73a49);
+    }
+
+    &::placeholder {
+      color: var(--fg-muted, #6a737d);
+      opacity: 0.8;
+    }
+  }
+
+  &[data-open] {
+    width: 100%;
+    min-width: 0;
+
+    & input {
+      display: block;
+      min-height: 48px;
+      padding: 0 48px 0 1.5ch;
+    }
+
+    & .toggle {
+      position: absolute;
+      top: 0;
+      right: 0;
+    }
+  }
+}
+
+.toggle {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--fg-default, #24292e);
+  cursor: pointer;
+  place-items: center;
+
+  @media (min-width: 769px) {
+    display: none;
+  }
+
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    background: var(--syntax-bg-active, #dbedff);
+  }
+
+  & svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: square;
+    stroke-width: 2;
+  }
+}

@@ -1,9 +1,9 @@
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
+import { Search, TextButton, useSearchContext } from "@tildom/ui";
 import { hasEntryLink, type Entry, type SearchResult } from "~/lib/entries";
 import { stripTrailingTagLines } from "~/lib/tags";
 import styles from "./EntryListItemPreview.module.css";
-import TextButton from "./TextButton";
 import ExternalLink from "lucide-solid/icons/external-link";
 
 type EntryListItemPreviewProps = {
@@ -15,15 +15,7 @@ type EntryListItemPreviewProps = {
   loading?: boolean;
 };
 
-const searchTerms = (query: string): string[] => query.toLowerCase().match(/[\p{L}\p{N}_]+/gu) ?? [];
-
-const highlightText = (value: string, query: string) => {
-  const terms = searchTerms(query).sort((left, right) => right.length - left.length);
-  if (!terms.length) return [value];
-
-  const pattern = terms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-  return value.split(new RegExp(`(${pattern})`, "gi"));
-};
+const searchTerms = (query: string): string[] => query.toLowerCase().match(/[\p{L}\p{N}_-]+/gu) ?? [];
 
 const previewText = (entry: Entry | SearchResult) => {
   const body = stripTrailingTagLines(entry.body);
@@ -35,22 +27,17 @@ const previewText = (entry: Entry | SearchResult) => {
 };
 
 export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
+  const searchCtx = useSearchContext();
   const entry = () => props.entry;
   let touchStart: { x: number; y: number } | undefined;
   const title = () => entry().title || entry().domain || "Untitled";
   const readingTime = () => Math.max(1, Math.ceil(entry().readerTextLength / 1_000));
-  const hasVisibleMatch = () => searchTerms(props.searchQuery ?? "").every((term) => [
+  const query = () => props.searchQuery ?? searchCtx.query();
+  const hasVisibleMatch = () => searchTerms(query()).every((term) => [
     title(),
     previewText(entry()),
     ...entry().tags,
   ].some((value) => value.toLowerCase().includes(term)));
-  const highlighted = (value: string) => (
-    <For each={highlightText(value, props.searchQuery ?? "")}>
-      {(part) => searchTerms(props.searchQuery ?? "").includes(part.toLowerCase())
-        ? <mark class={styles.searchHighlight}>{part}</mark>
-        : part}
-    </For>
-  );
   const resetTouch = () => {
     touchStart = undefined;
   };
@@ -98,7 +85,7 @@ export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
             <Show when={!entry().firstOpenedAt}>
               <span class={styles.unopenedMarker} title="Not opened yet" aria-label="Not opened yet">•</span>
             </Show>
-            {highlighted(title())}
+            <Search.Highlight>{title()}</Search.Highlight>
           </A>
           <Show when={entry().canonicalUrl}>
             {" "}
@@ -146,7 +133,7 @@ export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
         </div>
 
         <Show when={previewText(entry())}>
-          <p class={styles.preview}>{highlighted(previewText(entry()))}</p>
+          <p class={styles.preview}><Search.Highlight>{previewText(entry())}</Search.Highlight></p>
         </Show>
 
         <Show when={entry().tags.length > 0}>
@@ -154,7 +141,7 @@ export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
             <For each={entry().tags}>
               {(tag) => (
                 <A href={`/?q=${encodeURIComponent(`#${tag}`)}`} class={styles.tag}>
-                  #{highlighted(tag)}
+                  #<Search.Highlight>{tag}</Search.Highlight>
                 </A>
               )}
             </For>
@@ -162,7 +149,7 @@ export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
         </Show>
 
         <Show when={props.matchText && !hasVisibleMatch()}>
-          <p class={styles.preview}>{highlighted(props.matchText!)}</p>
+          <p class={styles.preview}><Search.Highlight>{props.matchText!}</Search.Highlight></p>
         </Show>
       </Show>
     </article>

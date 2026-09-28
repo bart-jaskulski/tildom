@@ -38,6 +38,7 @@ import {
 } from "./lib/store";
 import type { Chat, MemoryFile, Message, SearchResult, Settings, Surface } from "./lib/types";
 import { pwaInstall } from "./lib/pwaInstall";
+import { Search } from "@tildom/ui";
 import AppHeader from "./components/AppHeader";
 import ChatWorkspace from "./components/ChatWorkspace";
 import MemoryWorkspace from "./components/MemoryWorkspace";
@@ -59,17 +60,6 @@ function SuiteCallback() {
   return <main><p>Connecting hey to suite sync…</p><Show when={error()}><p role="alert">{error()}</p></Show></main>;
 }
 
-const searchTerms = (query: string): string[] => query.toLowerCase().match(/[\p{L}\p{N}_/-]+/gu) ?? [];
-
-const Highlight = (props: { text: string; query: string }) => {
-  const terms = searchTerms(props.query).sort((left, right) => right.length - left.length);
-  if (!terms.length) return props.text;
-  const pattern = terms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-  return <For each={props.text.split(new RegExp(`(${pattern})`, "gi"))}>{(part) =>
-    terms.includes(part.toLowerCase()) ? <mark>{part}</mark> : part
-  }</For>;
-};
-
 export default function App() {
   if (location.pathname.startsWith("/suite/")) return <SuiteCallback />;
   const [surface, setSurface] = createSignal<Surface>("chats");
@@ -82,7 +72,6 @@ export default function App() {
   const [memoryDraft, setMemoryDraft] = createSignal("");
   const [draft, setDraft] = createSignal("");
   const [search, setSearch] = createSignal("");
-  const [mobileSearchOpen, setMobileSearchOpen] = createSignal(false);
   const [mobileChatOpen, setMobileChatOpen] = createSignal(false);
   const [mobileMemoryOpen, setMobileMemoryOpen] = createSignal(false);
   const [chatMenuOpen, setChatMenuOpen] = createSignal(false);
@@ -154,7 +143,6 @@ export default function App() {
     requestAnimationFrame(() => scrollToBottom());
     setMobileChatOpen(true);
     setSearch("");
-    setMobileSearchOpen(false);
   };
 
   const openMemory = async (path: string) => {
@@ -165,7 +153,6 @@ export default function App() {
     setMemoryDraft(file.content);
     setMobileMemoryOpen(true);
     setSearch("");
-    setMobileSearchOpen(false);
   };
 
   onMount(async () => {
@@ -387,36 +374,37 @@ export default function App() {
   };
 
   return (
-    <div class="app-shell">
-      <AppHeader {...{ surface, setSurface, search, setSearch, mobileSearchOpen, setMobileSearchOpen }} />
+    <Search query={search} onSearch={setSearch}>
+      <div class="app-shell">
+        <AppHeader surface={surface} setSurface={setSurface} />
 
-      <main>
-        <Show when={!loading()} fallback={<div class="state">opening hey.sqlite3…</div>}>
-          <Show when={!error()} fallback={
-            <section class="state error-state">
-              <h1>Hey couldn’t open its local database.</h1>
-              <p>{error()}</p>
-              <button class="button" onClick={() => location.reload()}>retry</button>
-            </section>
-          }>
-            <Show when={search().trim()}>
-              <section class="search-results" aria-label="Search results">
-                <p class="feed-note">Search results for <b>{search()}</b>. <button onClick={() => setSearch("")}>clear</button></p>
-                <Show when={results().length} fallback={<p class="feed-note">No local matches.</p>}>
-                  <ol class="result-list">
-                    <For each={results()}>{(result) =>
-                      <li>
-                        <button class="result-row" onClick={() => selectResult(result)}>
-                          <span class="result-title"><Highlight text={result.title} query={search()} /></span>
-                          <span class="result-kind">[ {result.kind} ]</span>
-                          <Show when={result.detail}><span class="result-detail"><Highlight text={result.detail} query={search()} /></span></Show>
-                        </button>
-                      </li>
-                    }</For>
-                  </ol>
-                </Show>
+        <main>
+          <Show when={!loading()} fallback={<div class="state">opening hey.sqlite3…</div>}>
+            <Show when={!error()} fallback={
+              <section class="state error-state">
+                <h1>Hey couldn’t open its local database.</h1>
+                <p>{error()}</p>
+                <button class="button" onClick={() => location.reload()}>retry</button>
               </section>
-            </Show>
+            }>
+              <Show when={search().trim()}>
+                <section class="search-results" aria-label="Search results">
+                  <p class="feed-note">Search results for <b>{search()}</b>. <button onClick={() => setSearch("")}>clear</button></p>
+                  <Show when={results().length} fallback={<p class="feed-note">No local matches.</p>}>
+                    <ol class="result-list">
+                      <For each={results()}>{(result) =>
+                        <li>
+                          <button class="result-row" onClick={() => selectResult(result)}>
+                            <span class="result-title"><Search.Highlight>{result.title}</Search.Highlight></span>
+                            <span class="result-kind">[ {result.kind} ]</span>
+                            <Show when={result.detail}><span class="result-detail"><Search.Highlight>{result.detail}</Search.Highlight></span></Show>
+                          </button>
+                        </li>
+                      }</For>
+                    </ol>
+                  </Show>
+                </section>
+              </Show>
 
             <Show when={!search().trim() && surface() === "chats"}>
               <ChatWorkspace
@@ -605,5 +593,6 @@ export default function App() {
 
       <Show when={toast()}><div class="toast" role="status">{toast()}</div></Show>
     </div>
+  </Search>
   );
 }

@@ -1,4 +1,8 @@
-export const DO_DB_SCHEMA = `
+import type { DbMigration } from "@tildom/browser-db";
+
+export const DO_DB_MIGRATIONS: DbMigration[] = [{
+  version: 1,
+  sql: `
 CREATE TABLE IF NOT EXISTS tasks (
   id TEXT NOT NULL PRIMARY KEY DEFAULT '',
   parent_id TEXT,
@@ -25,4 +29,5 @@ VALUES ('default', 'Default', strftime('%s','now')*1000, strftime('%s','now')*10
 
 UPDATE tasks SET updated_at = created_at WHERE updated_at IS NULL;
 UPDATE tasks SET workspace_id = 'default' WHERE workspace_id IS NULL OR workspace_id = '';
-`;
+`,
+}];

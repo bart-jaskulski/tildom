@@ -15,6 +15,11 @@ const Pair = lazy(() => import("~/routes/pair"));
 const Settings = lazy(() => import("~/routes/settings"));
 const ShareTarget = lazy(() => import("~/routes/share-target"));
 const SuiteCallback = lazy(() => import("~/routes/suite"));
+const ShowcasePage = lazy(() =>
+  import("@tildom/ui").then((m) => ({
+    default: () => <m.Showcase currentApp="mark" returnHref="/" />,
+  }))
+);
 
 export default function App() {
   onMount(async () => {
@@ -42,6 +47,7 @@ export default function App() {
       <Route path="/item/:id/read" component={ItemReaderPage} />
       <Route path="/pair" component={Pair} />
       <Route path="/settings" component={Settings} />
+      <Route path="/showcase" component={ShowcasePage} />
       <Route path="/share-target" component={ShareTarget} />
       <Route path="/suite/:operation" component={SuiteCallback} />
       <Route path="*404" component={NotFound} />

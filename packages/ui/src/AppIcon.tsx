@@ -5,13 +5,14 @@ export type AppIconName = "home" | "mark" | "do" | "kin" | "hey";
 type AppIconProps = {
   app: AppIconName;
   class?: string;
+  style?: import("solid-js").JSX.CSSProperties;
 };
 
 export function AppIcon(props: AppIconProps) {
   return (
-    <svg class={props.class} viewBox="0 0 64 64" aria-hidden="true">
+    <svg class={props.class} style={props.style} viewBox="0 0 64 64" aria-hidden="true">
       <rect width="64" height="64" fill="#24292e" />
-      <rect x="8" y="8" width="48" height="48" fill="#d73a49" />
+      <rect x="4" y="4" width="56" height="56" fill="#d73a49" />
       <Switch>
         <Match when={props.app === "home"}>
           <path fill="#fff" d="M18 18h11v11H18zm17 0h11v11H35zM18 35h11v11H18zm17 0h11v11H35z" />
@@ -34,3 +35,5 @@ export function AppIcon(props: AppIconProps) {
     </svg>
   );
 }
+
+export default AppIcon;

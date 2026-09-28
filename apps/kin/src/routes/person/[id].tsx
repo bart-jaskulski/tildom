@@ -8,6 +8,7 @@ import {
 } from "@tildom/markdownish";
 import { useVimKeymaps } from "@tildom/ui";
 import AppNav from "~/components/AppNav";
+import { birthdayParts, birthdayValue, daysInBirthdayMonth, formatBirthday } from "~/lib/birthday";
 import PersonLoading from "./PersonLoading";
 import {
   contacts,
@@ -45,6 +46,8 @@ const dateInputTimestamp = (value: string, time = Date.now()) => {
   date.setHours(clock.getHours(), clock.getMinutes(), clock.getSeconds(), clock.getMilliseconds());
   return date.getTime();
 };
+
+const months = Array.from({ length: 12 }, (_, index) => new Intl.DateTimeFormat(undefined, { month: "long" }).format(new Date(2000, index)));
 
 export default function PersonDetail() {
   const params = useParams();
@@ -135,6 +138,12 @@ export default function PersonDetail() {
       await openPerson(contactId(), true);
     } catch { window.alert("Failed to update person."); }
     finally { setIsSaving(false); }
+  };
+
+  const updateBirthday = (part: "day" | "month" | "year", value: string) => {
+    const next = { ...birthdayParts(editBirthday()), [part]: value };
+    if (Number(next.day) > daysInBirthdayMonth(next.month, next.year)) next.day = "";
+    setEditBirthday(birthdayValue(next));
   };
 
   const addNote = async (event: SubmitEvent) => {
@@ -260,7 +269,7 @@ export default function PersonDetail() {
                   <Show when={person()!.location}><div><dt>Location</dt><dd>{person()!.location}</dd></div></Show>
                   <Show when={person()!.email}><div><dt>Email</dt><dd><a href={`mailto:${person()!.email}`}>{person()!.email}</a></dd></div></Show>
                   <Show when={person()!.phone}><div><dt>Phone</dt><dd><a href={`tel:${person()!.phone}`}>{person()!.phone}</a></dd></div></Show>
-                  <Show when={person()!.birthday}><div><dt>Birthday</dt><dd>{person()!.birthday}</dd></div></Show>
+                  <Show when={person()!.birthday}><div><dt>Birthday</dt><dd>{formatBirthday(person()!.birthday)}</dd></div></Show>
                 </dl>
               </Show>
 
@@ -272,7 +281,20 @@ export default function PersonDetail() {
                   <label><span>Location</span><input class="kin-input" value={editLocation()} onInput={(event) => setEditLocation(event.currentTarget.value)} /></label>
                   <label><span>Email</span><input class="kin-input" type="email" value={editEmail()} onInput={(event) => setEditEmail(event.currentTarget.value)} /></label>
                   <label><span>Phone</span><input class="kin-input" type="tel" value={editPhone()} onInput={(event) => setEditPhone(event.currentTarget.value)} /></label>
-                  <label><span>Birthday</span><input class="kin-input" value={editBirthday()} placeholder="YYYY-MM-DD" onInput={(event) => setEditBirthday(event.currentTarget.value)} /></label>
+                  <label>
+                    <span>Birthday</span>
+                    <div class={styles.birthdayPicker}>
+                      <select class="kin-select" aria-label="Birthday day" value={birthdayParts(editBirthday()).day} onChange={(event) => updateBirthday("day", event.currentTarget.value)}>
+                        <option value="">day</option>
+                        <For each={Array.from({ length: daysInBirthdayMonth(birthdayParts(editBirthday()).month, birthdayParts(editBirthday()).year) }, (_, index) => String(index + 1))}>{(day) => <option value={day}>{day}</option>}</For>
+                      </select>
+                      <select class="kin-select" aria-label="Birthday month" value={birthdayParts(editBirthday()).month} onChange={(event) => updateBirthday("month", event.currentTarget.value)}>
+                        <option value="">month</option>
+                        <For each={months}>{(month, index) => <option value={String(index() + 1)}>{month}</option>}</For>
+                      </select>
+                      <input class="kin-input" aria-label="Birthday year" inputMode="numeric" maxLength="4" pattern="[0-9]{4}" value={birthdayParts(editBirthday()).year} placeholder="year" onInput={(event) => updateBirthday("year", event.currentTarget.value.replace(/\D/g, "").slice(0, 4))} />
+                    </div>
+                  </label>
                   <div class={styles.formActions}>
                     <button type="submit" class="kin-primary-button" disabled={isSaving()}>{isSaving() ? "saving…" : "save"}</button>
                     <button type="button" class="kin-button" onClick={() => setIsEditing(false)}>cancel</button>

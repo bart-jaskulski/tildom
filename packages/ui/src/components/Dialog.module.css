@@ -1,0 +1,80 @@
+.dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--fg-default, #24292e);
+  background: var(--bg-surface, #ffffff);
+  color: var(--fg-default, #24292e);
+  box-shadow: 4px 4px 0 var(--syntax-bg-active, #dbedff);
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  width: min(60ch, calc(100vw - 2rem));
+  max-width: 100%;
+  max-height: calc(100vh - 4rem);
+  max-height: calc(100dvh - 4rem);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.dialog:not([open]) {
+  display: none;
+}
+
+.dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1.25ch;
+  border-bottom: 1px solid var(--border-color, #e1e4e8);
+  background: var(--bg-canvas, #fafafa);
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+.title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--fg-default, #24292e);
+}
+
+.closeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  margin: -0.5rem -1.25ch -0.5rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg-muted, #6a737d);
+  font-family: inherit;
+  font-size: 16px;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.1s ease-out;
+
+  &:hover {
+    color: var(--syntax-keyword, #d73a49);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--fg-default, #24292e);
+    outline-offset: -2px;
+  }
+}
+
+.body {
+  padding: 1.25rem 1.5ch;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.5;
+}

@@ -111,15 +111,7 @@
   }
 }
 
-.searchHighlight {
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-decoration: underline;
-  text-decoration-color: var(--syntax-keyword);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 2px;
-}
+
 
 .loadingTitle,
 .loadingMeta,

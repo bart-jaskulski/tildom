@@ -1,0 +1,24 @@
+.popover {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 0.75rem 1.25ch;
+  border: 1px solid var(--fg-default, #24292e);
+  background: var(--bg-surface, #ffffff);
+  color: var(--fg-default, #24292e);
+  box-shadow: 3px 3px 0 var(--syntax-bg-active, #dbedff);
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  box-sizing: border-box;
+  max-width: min(40ch, calc(100vw - 2rem));
+  z-index: auto; /* top layer handles elevation */
+}
+
+/* Reset default browser user agent popover styling */
+.popover:popover-open {
+  display: block;
+}
+
+.popover::backdrop {
+  background: transparent;
+}

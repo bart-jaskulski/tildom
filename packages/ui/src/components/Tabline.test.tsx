@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from "@solidjs/testing-library";
-import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@solidjs/testing-library";
+import { describe, expect, it } from "vitest";
 import Tabline, { TabItem } from "./Tabline";
 
 describe("TUI Tabline Component", () => {
@@ -8,42 +8,58 @@ describe("TUI Tabline Component", () => {
     { label: "settings.json", href: "/settings", active: false },
   ];
 
-  it("renders the brand with app name and standard suffix", () => {
+  it("renders the brand with title and app icon", () => {
     render(() => <Tabline appName="do" tabs={tabs} />);
-    expect(screen.getByText("~")).toBeInTheDocument();
-    expect(screen.getByText("do.tildom")).toBeInTheDocument();
+    expect(screen.getByText("tildom")).toBeInTheDocument();
   });
 
-  it("renders all tabs correctly", () => {
+  it("renders all tabs correctly in legacy fallback", () => {
     render(() => <Tabline appName="do" tabs={tabs} />);
     expect(screen.getByText("[ tasks.db ]")).toBeInTheDocument();
     expect(screen.getByText("[ settings.json ]")).toBeInTheDocument();
   });
 
-  it("handles search inputs and clear calls", () => {
-    const handleInput = vi.fn();
-    const handleClear = vi.fn();
-
+  it("renders with decomposed compound syntax", () => {
     render(() => (
-      <Tabline
-        appName="do"
-        tabs={tabs}
-        search={{
-          value: "test-query",
-          onInput: handleInput,
-          onClear: handleClear,
-        }}
-      />
+      <Tabline>
+        <Tabline.Brand app="mark" title="tildom" />
+        <Tabline.Nav>
+          <Tabline.Tab href="/" active={true}>bookmarks.db</Tabline.Tab>
+          <Tabline.Tab href="/settings">settings.json</Tabline.Tab>
+        </Tabline.Nav>
+        <span data-testid="right-slot">action</span>
+      </Tabline>
     ));
 
-    const input = screen.getByRole("searchbox");
-    expect(input).toHaveValue("test-query");
+    expect(screen.getByText("tildom")).toBeInTheDocument();
+    expect(screen.getByText("[ bookmarks.db ]")).toBeInTheDocument();
+    expect(screen.getByText("[ settings.json ]")).toBeInTheDocument();
+    expect(screen.getByTestId("right-slot")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "[ bookmarks.db ]" })).toHaveAttribute("aria-current", "page");
+  });
 
-    fireEvent.input(input, { target: { value: "hello" } });
-    expect(handleInput).toHaveBeenCalled();
+  it("renders button tabs and brands with onClick handlers", () => {
+    let brandClicked = false;
+    let tabClicked = false;
 
-    const clearButton = screen.getByRole("button", { name: "Clear search" });
-    fireEvent.click(clearButton);
-    expect(handleClear).toHaveBeenCalled();
+    render(() => (
+      <Tabline>
+        <Tabline.Brand app="hey" onClick={() => { brandClicked = true; }} />
+        <Tabline.Nav>
+          <Tabline.Tab active={true} onClick={() => { tabClicked = true; }}>chats.db</Tabline.Tab>
+        </Tabline.Nav>
+      </Tabline>
+    ));
+
+    const brandBtn = screen.getByRole("button", { name: "hey home" });
+    const tabBtn = screen.getByRole("button", { name: "[ chats.db ]" });
+    expect(brandBtn).toBeInTheDocument();
+    expect(tabBtn).toBeInTheDocument();
+    expect(tabBtn).toHaveAttribute("aria-current", "page");
+
+    brandBtn.click();
+    tabBtn.click();
+    expect(brandClicked).toBe(true);
+    expect(tabClicked).toBe(true);
   });
 });

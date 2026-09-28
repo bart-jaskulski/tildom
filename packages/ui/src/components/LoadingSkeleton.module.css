@@ -1,0 +1,42 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 1rem 0;
+}
+
+.pulseLine {
+  display: block;
+  height: 14px;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--border-color, #e1e4e8) 25%,
+    var(--syntax-bg-active, #dbedff) 50%,
+    var(--border-color, #e1e4e8) 75%
+  );
+  background-size: 200% 100%;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.firstLine {
+  width: 60%;
+  height: 18px;
+}
+
+@keyframes pulse {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulseLine {
+    animation: none;
+    background: var(--border-color, #e1e4e8);
+  }
+}

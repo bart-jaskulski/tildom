@@ -1,6 +1,6 @@
 import { For, Show, createEffect, createMemo, createResource, createSignal } from "solid-js";
 import { useNavigate, useSearchParams } from "@solidjs/router";
-import { useVimKeymaps } from "@tildom/ui";
+import { Search, useVimKeymaps } from "@tildom/ui";
 import AddPerson, { type AddPersonHandle } from "~/components/AddPerson";
 import AppNav from "~/components/AppNav";
 import PeopleLoading from "~/components/PeopleLoading";
@@ -15,17 +15,6 @@ import {
   type ContactSearchResult,
 } from "~/stores/contactStore";
 import styles from "./index.module.css";
-
-const searchTerms = (query: string): string[] => query.toLowerCase().match(/[\p{L}\p{N}_-]+/gu) ?? [];
-
-const Highlight = (props: { text: string; query: string }) => {
-  const terms = searchTerms(props.query).sort((left, right) => right.length - left.length);
-  if (!terms.length) return props.text;
-  const pattern = terms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-  return <For each={props.text.split(new RegExp(`(${pattern})`, "gi"))}>{(part) =>
-    terms.includes(part.toLowerCase()) ? <mark class={styles.highlight}>{part}</mark> : part
-  }</For>;
-};
 
 export default function Home() {
   const [params] = useSearchParams();
@@ -87,11 +76,11 @@ export default function Home() {
                     data-active={index() === activeIndex() ? "" : undefined}
                   >
                     <button type="button" class={styles.personLink} onClick={() => void openPerson(person.id)}>
-                      <span class={styles.personName}><Highlight text={person.name} query={query()} /></span>
+                      <span class={styles.personName}><Search.Highlight>{person.name}</Search.Highlight></span>
                       <span class={styles.personMeta}>
                         {person.relationship && `[ ${person.relationship} ]`}
                         {person.relationship && person.location && " · "}
-                        {person.location && <Highlight text={person.location} query={query()} />}
+                        {person.location && <Search.Highlight>{person.location}</Search.Highlight>}
                       </span>
                     </button>
                     <Show when={"matches" in person && person.matches.length > 0}>
@@ -101,7 +90,7 @@ export default function Home() {
                             <span class={styles.matchMeta}>
                               [ {match.kind} ]{match.createdAt ? ` ${new Date(match.createdAt).toLocaleString()}` : ""}
                             </span>
-                            <span><Highlight text={match.text} query={query()} /></span>
+                            <span><Search.Highlight>{match.text}</Search.Highlight></span>
                           </button>
                         )}</For>
                       </div>

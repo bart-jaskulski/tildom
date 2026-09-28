@@ -4,7 +4,7 @@ import { createEffect, createResource, createSignal, onCleanup, onMount, Show } 
 import { isServer } from "solid-js/web";
 import { renderMarkdownishToHtml } from "@tildom/markdownish";
 import ItemLoading from "~/components/ItemLoading";
-import TextButton from "~/components/TextButton";
+import { TextButton } from "@tildom/ui";
 import { captureEntry, fetchEntryDetail, isEntryStoreReady, recordEntryOpen } from "~/stores/entryStore";
 import styles from "./read.module.css";
 

@@ -1,0 +1,19 @@
+.banner {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1.5ch;
+  border-left: 2px solid var(--fg-muted, #6a737d);
+  background: var(--bg-canvas, #fafafa);
+  color: var(--fg-default, #24292e);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.status {
+  border-left-color: var(--fg-muted, #6a737d);
+}
+
+.error {
+  border-left-color: var(--syntax-error, #d73a49);
+  color: var(--syntax-error, #d73a49);
+  font-weight: bold;
+}

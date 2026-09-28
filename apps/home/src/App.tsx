@@ -1,8 +1,11 @@
-import { AppIcon } from "@tildom/ui";
+import { AppIcon, Showcase } from "@tildom/ui";
 import SuitePage from "./SuitePage";
 
 export default function App() {
   if (window.location.pathname.startsWith("/sync")) return <SuitePage />;
+  if (window.location.pathname.startsWith("/showcase")) {
+    return <Showcase currentApp="home" returnHref="/" showReturnBar={true} />;
+  }
   return (
     <div class="shell">
       <header class="topline">
@@ -11,6 +14,9 @@ export default function App() {
           <span>tildom</span>
         </a>
         <span class="tab" aria-current="page">[ home.txt ]</span>
+        {import.meta.env.DEV && (
+          <a class="tab" href="/showcase" style={{ color: "var(--fg-muted)", "text-decoration": "none" }}>[ showcase.dev ]</a>
+        )}
         <a class="github" href="https://github.com/bart-jaskulski/tildom">github ↗</a>
       </header>
 

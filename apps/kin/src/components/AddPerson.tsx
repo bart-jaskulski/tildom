@@ -11,8 +11,6 @@ type Props = {
 
 export default function AddPerson(props: Props) {
   const [name, setName] = createSignal("");
-  const [relationship, setRelationship] = createSignal("");
-  const [location, setLocation] = createSignal("");
   let addDialog: HTMLDialogElement | undefined;
   let nameInput: HTMLInputElement | undefined;
 
@@ -22,12 +20,12 @@ export default function AddPerson(props: Props) {
   };
 
   const reset = () => {
-    setName(""); setRelationship(""); setLocation("");
+    setName("");
   };
 
   const add = async (event: SubmitEvent) => {
     event.preventDefault();
-    const id = await createContact(name(), relationship(), location());
+    const id = await createContact(name());
     reset();
     addDialog?.close();
     props.onCreated(id);
@@ -42,10 +40,8 @@ export default function AddPerson(props: Props) {
       </div>
       <dialog ref={addDialog} class={styles.addDialog} onClose={reset}>
         <form method="dialog" class={styles.dialogForm} onSubmit={add}>
-          <h2>Add record to people.db</h2>
-          <label>Full name<input ref={nameInput} class="kin-input" value={name()} placeholder="e.g. John Doe" onInput={(event) => setName(event.currentTarget.value)} required /></label>
-          <label>Relationship type<input class="kin-input" value={relationship()} placeholder="e.g. colleague / friend / family" onInput={(event) => setRelationship(event.currentTarget.value)} /></label>
-          <label>Location<input class="kin-input" value={location()} placeholder="e.g. Berlin, DE" onInput={(event) => setLocation(event.currentTarget.value)} /></label>
+          <h2>Add person</h2>
+          <label>Name you use<input ref={nameInput} class="kin-input" value={name()} placeholder="e.g. Mum / Alex from climbing" onInput={(event) => setName(event.currentTarget.value)} required /></label>
           <div class={styles.dialogActions}>
             <button type="button" class="kin-button" onClick={() => addDialog?.close()}>cancel</button>
             <button type="submit" class="kin-primary-button">add record</button>

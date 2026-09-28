@@ -1,8 +1,8 @@
 import { BrowserDbClient } from "@tildom/browser-db";
-import { DO_DB_SCHEMA } from "./schema";
+import { DO_DB_MIGRATIONS } from "./schema";
 
 const client = new BrowserDbClient("microstep.sqlite3", {
-  schema: DO_DB_SCHEMA
+  migrations: DO_DB_MIGRATIONS
 });
 
 export const initDb = client.init;

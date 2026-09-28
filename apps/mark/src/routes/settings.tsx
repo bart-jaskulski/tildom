@@ -1,11 +1,8 @@
 import { Title } from "@solidjs/meta";
 import { Show, createMemo, createSignal, onMount } from "solid-js";
-import { createPreferences, showVimHelp } from "@tildom/ui";
+import { Button, Checkbox, TextButton, createPreferences, showVimHelp } from "@tildom/ui";
 import { buildPairingUrl, clearPairingHash, parsePairingSecret } from "@tildom/sync-client";
-import Button from "~/components/Button";
-import buttonStyles from "~/components/Button.module.css";
 import QRDisplay from "~/components/DevicePairing/QRDisplay";
-import TextButton from "~/components/TextButton";
 import { client } from "~/lib/db";
 import { pwaInstall } from "~/lib/pwaInstall";
 import { createSyncVault, disconnectSync, joinSyncVault, refreshSyncState, syncNow, syncSignals } from "~/lib/syncClient";
@@ -130,10 +127,11 @@ export default function Settings() {
 
         <section class={styles.section}>
           <h2 class={styles.sectionTitle}>Keyboard</h2>
-          <label class={styles.checkbox}>
-            <input type="checkbox" checked={prefs().vimKeys} onChange={() => setPrefs(prev => ({ ...prev, vimKeys: !prev.vimKeys }))} />
-            <span class={styles.optionLabel}>{prefs().vimKeys ? "[x]" : "[ ]"} enable Vim keys</span>
-          </label>
+          <Checkbox
+            checked={prefs().vimKeys}
+            onChange={(checked) => setPrefs(prev => ({ ...prev, vimKeys: checked }))}
+            label="enable Vim keys"
+          />
           <p class={styles.optionDescription}>Wide screens with a hardware keyboard. <TextButton type="button" inline class={styles.optionDescriptionButton} onClick={() => showVimHelp()}>view keybinds <kbd>?</kbd></TextButton></p>
         </section>
 
@@ -175,7 +173,7 @@ export default function Settings() {
           <h2 class={styles.sectionTitle}>Database</h2>
           <div class={styles.actions}>
             <Button type="button" onClick={handleExport} disabled={!isEntryStoreReady() || isExporting() || isImporting() || isDestroying()}>{isExporting() ? "exporting..." : "export"}</Button>
-            <label class={`${buttonStyles.button} ${styles.fileButton}`}><input ref={fileInput} type="file" accept=".sqlite,.sqlite3,.db,application/vnd.sqlite3,application/x-sqlite3" disabled={!isEntryStoreReady() || isExporting() || isImporting() || isDestroying()} onChange={handleImport} />{isImporting() ? "importing..." : "import"}</label>
+            <Button as="label" class={styles.fileButton}><input ref={fileInput} type="file" accept=".sqlite,.sqlite3,.db,application/vnd.sqlite3,application/x-sqlite3" disabled={!isEntryStoreReady() || isExporting() || isImporting() || isDestroying()} onChange={handleImport} />{isImporting() ? "importing..." : "import"}</Button>
           </div>
           <Button type="button" danger disabled={!isEntryStoreReady() || isDestroying()} onClick={() => void destroyLocalDatabase()}>{isDestroying() ? "destroying..." : "destroy local database"}</Button>
         </section>

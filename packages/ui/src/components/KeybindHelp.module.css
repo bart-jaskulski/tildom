@@ -2,13 +2,13 @@
   position: fixed;
   right: 1rem;
   bottom: 1rem;
-  z-index: 20;
+  z-index: 50;
   width: min(35ch, calc(100vw - 2rem));
   padding: 1rem 1.25ch;
-  border: 1px solid var(--fg-default);
-  background: var(--bg-surface);
-  color: var(--fg-default);
-  box-shadow: 4px 4px 0 var(--syntax-bg-active);
+  border: 1px solid var(--fg-default, #24292e);
+  background: var(--bg-surface, #ffffff);
+  color: var(--fg-default, #24292e);
+  box-shadow: 4px 4px 0 var(--syntax-bg-active, #dbedff);
   opacity: 0;
   pointer-events: none;
   transform: translateY(0.5rem);
@@ -16,6 +16,7 @@
 
   & dl {
     margin: 0;
+    padding: 0;
 
     & div {
       display: grid;
@@ -26,13 +27,13 @@
   }
 
   & dt {
-    color: var(--syntax-string);
+    color: var(--syntax-string, #032f62);
     font-weight: bold;
   }
 
   & dd {
     margin: 0;
-    color: var(--fg-muted);
+    color: var(--fg-muted, #6a737d);
   }
 }
 
@@ -54,5 +55,12 @@
     color: inherit;
     cursor: pointer;
     font: inherit;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0.2rem 0.5ch;
+
+    &:hover {
+      background: var(--syntax-bg-active, #dbedff);
+    }
   }
 }

@@ -1,0 +1,10 @@
+import Search from "./Search";
+export { Search, SearchRoot } from "./Search";
+export default Search;
+export type { SearchProps } from "./Search";
+export { default as SearchInput } from "./SearchInput";
+export type { SearchInputProps } from "./SearchInput";
+export { default as SearchHighlight } from "./SearchHighlight";
+export type { SearchHighlightProps } from "./SearchHighlight";
+export { useSearchContext } from "./SearchContext";
+export type { SearchContextValue } from "./SearchContext";

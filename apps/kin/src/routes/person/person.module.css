@@ -193,6 +193,19 @@
     border-color: var(--syntax-keyword);
     font-size: 12px;
   }
+
+  & :global(.kin-select) {
+    min-height: 26px;
+    padding: 0.15rem 0.5ch;
+    border-color: var(--syntax-keyword);
+    font-size: 12px;
+  }
+}
+
+.birthdayPicker {
+  display: grid;
+  grid-template-columns: 5ch minmax(10ch, 1fr) 6ch;
+  gap: 0.5ch;
 }
 
 .formActions {

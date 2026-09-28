@@ -1,7 +1,7 @@
-import { Router, Route, useLocation, useNavigate } from "@solidjs/router";
+import { Router, Route, useLocation, useNavigate, useSearchParams } from "@solidjs/router";
 import { MetaProvider, Meta, Title } from "@solidjs/meta";
 import { lazy, onMount, Show, Suspense, type ParentProps } from "solid-js";
-import { VimNavigationProvider, type VimKeymap } from "@tildom/ui";
+import { KeybindHelp, Search, VimNavigationProvider, type VimKeymap } from "@tildom/ui";
 import AppNav from "./components/AppNav";
 import Home from "./routes/index";
 import PersonLoading from "./routes/person/PersonLoading";
@@ -14,6 +14,11 @@ const PersonDetail = lazy(() => import("./routes/person/[id]"));
 const Settings = lazy(() => import("./routes/settings"));
 const Pair = lazy(() => import("./routes/pair"));
 const SuiteCallback = lazy(() => import("./routes/suite"));
+const ShowcasePage = lazy(() =>
+  import("@tildom/ui").then((m) => ({
+    default: () => <m.Showcase currentApp="kin" returnHref="/" />,
+  }))
+);
 
 function KinVimNavigation(props: ParentProps) {
   const location = useLocation();
@@ -63,21 +68,58 @@ export default function App() {
 
   return (
     <Router
-      root={(props) => (
-        <MetaProvider>
-          <Title>kin.tildom</Title>
-          <Meta name="theme-color" content="#d73a49" />
-          <KinVimNavigation>
-            <Suspense fallback={<RouteLoading />}>
-              {props.children}
-            </Suspense>
-          </KinVimNavigation>
-        </MetaProvider>
-      )}
+      root={(props) => {
+        const location = useLocation();
+        const navigate = useNavigate();
+        const [params, setParams] = useSearchParams();
+
+        const searchQuery = () => String(params.q ?? "");
+        const handleSearch = (rawQuery: string) => {
+          const nextQuery = rawQuery.trim();
+          if (location.pathname === "/") {
+            setParams({ q: nextQuery || undefined }, { replace: true });
+          } else {
+            navigate(nextQuery ? `/?q=${encodeURIComponent(nextQuery)}` : "/");
+          }
+        };
+
+        const activeNav = () => {
+          if (location.pathname === "/settings") return "settings";
+          if (location.pathname === "/showcase") return "showcase";
+          return "people";
+        };
+        const isShowcase = () => location.pathname === "/showcase";
+
+        return (
+          <MetaProvider>
+            <Title>{isShowcase() ? "showcase | kin.tildom" : "kin.tildom"}</Title>
+            <Meta name="theme-color" content="#d73a49" />
+            <Search query={searchQuery} onSearch={handleSearch}>
+              <KinVimNavigation>
+                <Show
+                  when={!isShowcase()}
+                  fallback={
+                    <div class="kin-page">
+                      <AppNav active={activeNav()} />
+                      {props.children}
+                    </div>
+                  }
+                >
+                  <Suspense fallback={<RouteLoading />}>
+                    {props.children}
+                  </Suspense>
+                </Show>
+                <KeybindHelp />
+              </KinVimNavigation>
+            </Search>
+          </MetaProvider>
+        );
+      }}
     >
       <Route path="/" component={Home} />
       <Route path="/person/:slug" component={PersonDetail} />
       <Route path="/settings" component={Settings} />
+      <Route path="/showcase" component={ShowcasePage} />
       <Route path="/pair" component={Pair} />
       <Route path="/suite/:operation" component={SuiteCallback} />
     </Router>

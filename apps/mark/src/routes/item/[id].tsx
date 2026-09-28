@@ -7,14 +7,12 @@ import {
   renderMarkdownishToHtml,
   toggleMarkdownTask,
 } from "@tildom/markdownish";
-import { useVimKeymaps } from "@tildom/ui";
-import Button from "~/components/Button";
+import { Button, TextButton, useVimKeymaps } from "@tildom/ui";
 import ItemLoading from "~/components/ItemLoading";
 import MemoEditor from "~/components/MemoEditor";
 import { formatRelativeTimestamp, splitNoteIntoTitleAndBody } from "~/lib/entries";
 import { parseHashTags } from "~/lib/tags";
 import { addCommentToEntry, deleteComment, deleteEntry, fetchEntryDetail, isEntryStoreReady, recordEntryOpen, updateComment, updateEntry } from "~/stores/entryStore";
-import TextButton from "~/components/TextButton";
 import styles from "./[id].module.css";
 
 const bodyWithMissingTags = (entry: { body: string; tags: string[] }) => {

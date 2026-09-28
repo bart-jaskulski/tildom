@@ -1,0 +1,67 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  background: transparent;
+  color: var(--fg-muted, #6a737d);
+  border: none;
+  padding: 0;
+  text-decoration: none;
+  vertical-align: baseline;
+  box-sizing: border-box;
+}
+
+/* Bracket variant: [ label ] */
+.bracket {
+  color: var(--fg-muted, #6a737d);
+  font-weight: normal;
+}
+
+/* Tag variant: #label */
+.tag {
+  color: var(--syntax-string, #032f62);
+  font-weight: normal;
+}
+
+/* Subtle filled chip */
+.subtle {
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color, #e1e4e8);
+  padding: 1px 6px;
+  color: var(--fg-default, #24292e);
+}
+
+/* Active block-cursor chip */
+.active {
+  background: var(--syntax-bg-active, #dbedff);
+  color: var(--syntax-string, #032f62);
+  padding: 1px 6px;
+  font-weight: 700;
+}
+
+/* Keyword/accent chip */
+.keyword {
+  color: var(--syntax-keyword, #d73a49);
+  font-weight: bold;
+}
+
+/* Interactive hover */
+.interactive {
+  min-height: 44px;
+  padding-inline: 6px;
+  cursor: pointer;
+  transition: opacity 0.1s ease;
+}
+
+.interactive:hover {
+  text-decoration: underline;
+  color: var(--syntax-keyword, #d73a49);
+}
+
+.interactive:focus-visible {
+  outline: 2px solid var(--border-focus, #24292e);
+  outline-offset: 2px;
+}

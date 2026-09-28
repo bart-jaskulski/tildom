@@ -1,0 +1,6 @@
+.highlight {
+  border-bottom: 1px solid var(--syntax-keyword, #d73a49);
+  background: var(--syntax-bg-active, #dbedff);
+  color: var(--fg-default, #24292e);
+  font-weight: bold;
+}

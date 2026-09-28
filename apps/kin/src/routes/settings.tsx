@@ -1,5 +1,5 @@
 import { Show, createSignal } from "solid-js";
-import { createPreferences } from "@tildom/ui";
+import { Button, Checkbox, createPreferences } from "@tildom/ui";
 import AppNav from "~/components/AppNav";
 import SyncSettings from "~/components/SyncSettings";
 import { exportDatabase, importDatabase } from "~/lib/db";
@@ -58,7 +58,7 @@ export default function Settings() {
           <section class={styles.section}>
             <h1>Install</h1>
             <Show when={pwaInstall.available()}>
-              <button type="button" class="kin-button" onClick={() => void pwaInstall.prompt()}>install kin</button>
+              <Button type="button" onClick={() => void pwaInstall.prompt()}>install kin</Button>
             </Show>
             <Show when={!pwaInstall.available() && pwaInstall.needsSafariInstructions()}>
               <p>In Safari, use Share → Add to Home Screen.</p>
@@ -67,14 +67,11 @@ export default function Settings() {
         </Show>
         <section class={styles.section}>
           <h1>Keyboard</h1>
-          <label class={styles.checkbox}>
-            <input
-              type="checkbox"
-              checked={preferences().vimKeys}
-              onChange={() => setPreferences((current) => ({ ...current, vimKeys: !current.vimKeys }))}
-            />
-            <span>{preferences().vimKeys ? "[x]" : "[ ]"} enable Vim keys</span>
-          </label>
+          <Checkbox
+            checked={preferences().vimKeys}
+            onChange={(checked) => setPreferences((current) => ({ ...current, vimKeys: checked }))}
+            label="enable Vim keys"
+          />
           <p>Wide screens with a hardware keyboard. Use <kbd>j</kbd>/<kbd>k</kbd> to move, <kbd>e</kbd> to open, <kbd>/</kbd> to search, <kbd>i</kbd> to write, and <kbd>Esc</kbd> to return.</p>
         </section>
 
@@ -84,9 +81,9 @@ export default function Settings() {
           <h2>Database</h2>
           <p>Kin stays local in this browser. Export the complete SQLite database as a backup, or replace it with a previous export.</p>
           <div class={styles.actions}>
-            <button type="button" class="kin-button" disabled={busy() !== null} onClick={exportBackup}>
+            <Button type="button" disabled={busy() !== null} onClick={exportBackup}>
               {busy() === "export" ? "exporting…" : "export"}
-            </button>
+            </Button>
             <label class={`kin-button ${styles.fileButton}`}>
               <input
                 ref={fileInput}

@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 import ClipboardPaste from "lucide-solid/icons/clipboard-paste";
-import Button from "./Button";
+import { Button } from "@tildom/ui";
 import Textarea from "./Textarea";
 import styles from "./EntryComposer.module.css";
 
