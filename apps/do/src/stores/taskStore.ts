@@ -1,8 +1,8 @@
-import { createEffect, createMemo, createRoot } from "solid-js";
+import { createMemo, createRoot } from "solid-js";
 import { createStore } from "solid-js/store";
 import { isServer } from "solid-js/web";
 import { LexoRank } from "lexorank";
-import { initDb, exec, query, dbVersion } from "~/lib/db";
+import { db } from "~/lib/db";
 import { normalizeDueDateValue } from "~/lib/dates";
 import { fetchMainViewTasks } from "~/lib/query";
 
@@ -121,9 +121,9 @@ const computeInitialRank = async (
 ) => {
   let rows: any[];
   if (parentId) {
-    rows = await query("SELECT * FROM tasks WHERE parent_id = ?", [parentId]);
+    rows = await db.sql`SELECT * FROM tasks WHERE parent_id = ${parentId}`;
   } else {
-    rows = await query("SELECT * FROM tasks WHERE parent_id IS NULL AND workspace_id = ?", [workspaceId]);
+    rows = await db.sql`SELECT * FROM tasks WHERE parent_id IS NULL AND workspace_id = ${workspaceId}`;
   }
 
   if (!rows || !Array.isArray(rows) || rows.length === 0) {
@@ -170,7 +170,7 @@ const taskStore = createRoot(() => {
   };
 
   const refreshWorkspaces = async () => {
-    const rows = await query("SELECT * FROM workspaces ORDER BY created_at ASC");
+    const rows = await db.sql`SELECT * FROM workspaces ORDER BY created_at ASC`;
     const nextWorkspaces = Array.isArray(rows) ? rows.map(dbRowToWorkspace) : [];
     setState("workspaces", nextWorkspaces);
     return nextWorkspaces;
@@ -208,18 +208,15 @@ const taskStore = createRoot(() => {
   };
 
   // Auto-refresh when db changes via worker broadcast
-  createEffect(() => {
-    const version = dbVersion();
-    if (version > 0) {
-      void refreshWorkspaceState(state.selectedWorkspaceId ?? readSelectedWorkspacePreference());
-    }
+  db.subscribe(() => {
+    void refreshWorkspaceState(state.selectedWorkspaceId ?? readSelectedWorkspacePreference());
   });
 
   const initializeTaskStore = async () => {
     if (isServer) return;
 
     try {
-      await initDb();
+      await db.init();
       await refreshWorkspaceState(readSelectedWorkspacePreference());
       setState("isSynced", true);
     } catch (err) {
@@ -298,7 +295,7 @@ type NewTaskPayload = {
 export const addTask = async (data: NewTaskPayload, parentId: string | null = null) => {
   const id = nanoid();
   const workspaceId = parentId
-    ? (await query<{ workspace_id: string }>("SELECT workspace_id FROM tasks WHERE id = ?", [parentId]))[0]?.workspace_id
+    ? (await db.sql<{ workspace_id: string }>`SELECT workspace_id FROM tasks WHERE id = ${parentId}`)[0]?.workspace_id
     : state.selectedWorkspaceId;
 
   if (!workspaceId) {
@@ -310,10 +307,10 @@ export const addTask = async (data: NewTaskPayload, parentId: string | null = nu
   const rank = await computeInitialRank(parentId, dueAt, workspaceId);
 
   const now = Date.now();
-  await exec(
-    "INSERT INTO tasks (id, parent_id, text, completed, created_at, updated_at, due_at, rank, workspace_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    [id, parentId, data.content, 0, now, now, dueAt, rank, workspaceId]
-  );
+  await db.sql`
+    INSERT INTO tasks (id, parent_id, text, completed, created_at, updated_at, due_at, rank, workspace_id)
+    VALUES (${id}, ${parentId}, ${data.content}, 0, ${now}, ${now}, ${dueAt}, ${rank}, ${workspaceId})
+  `;
 
   const newTask: Task = {
     id,
@@ -349,10 +346,10 @@ export const createWorkspace = async (name: string) => {
   const id = nanoid();
   const now = Date.now();
 
-  await exec(
-    "INSERT INTO workspaces (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
-    [id, trimmedName, now, now]
-  );
+  await db.sql`
+    INSERT INTO workspaces (id, name, created_at, updated_at)
+    VALUES (${id}, ${trimmedName}, ${now}, ${now})
+  `;
 
   setSelectedWorkspace(id);
   setState("tasks", {});
@@ -365,47 +362,30 @@ export const renameWorkspace = async (id: string, name: string) => {
     return;
   }
 
-  await exec(
-    "UPDATE workspaces SET name = ?, updated_at = ? WHERE id = ?",
-    [trimmedName, Date.now(), id]
-  );
+  await db.sql`
+    UPDATE workspaces SET name = ${trimmedName}, updated_at = ${Date.now()}
+    WHERE id = ${id}
+  `;
 };
 
 export const updateTask = async (id: string, fields: Partial<Task>) => {
-  const rows = await query("SELECT * FROM tasks WHERE id = ?", [id]);
+  const rows = await db.sql`SELECT * FROM tasks WHERE id = ${id}`;
   
   if (!rows || !Array.isArray(rows) || rows.length === 0) return;
 
-  const updates: string[] = [];
-  const values: any[] = [];
+  const current = rows[0];
+  const parentId = fields.parentId !== undefined ? fields.parentId : current.parent_id;
+  const text = fields.text !== undefined ? fields.text : current.text;
+  const completed = fields.completed !== undefined ? (fields.completed ? 1 : 0) : current.completed;
+  const dueAt = fields.dueAt !== undefined ? fields.dueAt : current.due_at;
+  const rank = fields.rank !== undefined ? fields.rank : current.rank;
+  const now = Date.now();
 
-  if (fields.parentId !== undefined) {
-    updates.push("parent_id = ?");
-    values.push(fields.parentId);
-  }
-  if (fields.text !== undefined) {
-    updates.push("text = ?");
-    values.push(fields.text);
-  }
-  if (fields.completed !== undefined) {
-    updates.push("completed = ?");
-    values.push(fields.completed ? 1 : 0);
-  }
-  if (fields.dueAt !== undefined) {
-    updates.push("due_at = ?");
-    values.push(fields.dueAt);
-  }
-  if (fields.rank !== undefined) {
-    updates.push("rank = ?");
-    values.push(fields.rank);
-  }
-
-  if (updates.length) {
-    updates.push("updated_at = ?");
-    values.push(Date.now());
-    values.push(id);
-    await exec(`UPDATE tasks SET ${updates.join(", ")} WHERE id = ?`, values);
-  }
+  await db.sql`
+    UPDATE tasks
+    SET parent_id = ${parentId}, text = ${text}, completed = ${completed}, due_at = ${dueAt}, rank = ${rank}, updated_at = ${now}
+    WHERE id = ${id}
+  `;
 };
 
 export const moveTask = async (
@@ -414,7 +394,7 @@ export const moveTask = async (
   prevSiblingRank?: string, 
   nextSiblingRank?: string
 ) => {
-  const rows = await query("SELECT * FROM tasks WHERE id = ?", [taskId]);
+  const rows = await db.sql`SELECT * FROM tasks WHERE id = ${taskId}`;
   
   if (!rows || !Array.isArray(rows) || rows.length === 0) return;
 
@@ -429,10 +409,9 @@ export const moveTask = async (
     newRank = LexoRank.parse(prevSiblingRank!).between(LexoRank.parse(nextSiblingRank!)).toString();
   }
 
-  await exec(
-    "UPDATE tasks SET parent_id = ?, rank = ?, updated_at = ? WHERE id = ?",
-    [newParentId, newRank, Date.now(), taskId]
-  );
+  await db.sql`
+    UPDATE tasks SET parent_id = ${newParentId}, rank = ${newRank}, updated_at = ${Date.now()} WHERE id = ${taskId}
+  `;
 };
 
 export const deleteTask = async (id: string) => {
@@ -441,7 +420,7 @@ export const deleteTask = async (id: string) => {
 
   while (found) {
     found = false;
-    const rows = await query("SELECT * FROM tasks");
+    const rows = await db.sql`SELECT * FROM tasks`;
     if (Array.isArray(rows)) {
       rows.forEach((row: any) => {
         if (toRemove.includes(row.parent_id) && !toRemove.includes(row.id)) {
@@ -454,6 +433,6 @@ export const deleteTask = async (id: string) => {
 
   for (const taskId of toRemove) {
     setTaskExpanded(taskId, false);
-    await exec("DELETE FROM tasks WHERE id = ?", [taskId]);
+    await db.sql`DELETE FROM tasks WHERE id = ${taskId}`;
   }
 };

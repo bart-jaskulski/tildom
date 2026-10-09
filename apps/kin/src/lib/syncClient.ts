@@ -1,5 +1,5 @@
 import { createSyncClient } from "@tildom/sync-client";
-import { exportDatabase, importDatabase } from "./db";
+import { db } from "./db";
 import { syncState } from "./syncState";
 import { refreshContacts } from "~/stores/contactStore";
 
@@ -10,8 +10,8 @@ const client = createSyncClient({
   appId: "kin",
   baseUrl,
   state: syncState,
-  exportDatabase,
-  importDatabase,
+  exportDatabase: db.exportDatabase,
+  importDatabase: db.importDatabase,
   afterImport: refreshContacts,
 });
 

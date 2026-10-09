@@ -1,5 +1,5 @@
 import { createEffect, createSignal, onCleanup } from "solid-js";
-import { exec, query } from "./db";
+import { db } from "./db";
 
 export const MAIN_VIEW_QUERY = `
 SELECT *,
@@ -19,7 +19,7 @@ ORDER BY
 `;
 
 export const fetchMainViewTasks = <T = any>(workspaceId: string): Promise<T[]> =>
-  query<T>(MAIN_VIEW_QUERY, [workspaceId]);
+  db.query<T>(MAIN_VIEW_QUERY, [workspaceId]);
 
 type QueryCallback = () => any;
 
@@ -72,7 +72,7 @@ export const createLiveQuery = <T = any>(sql: string, params: any[] = []) => {
 
   const executeQuery = async () => {
     try {
-      const result = await query<T>(sql, params);
+      const result = await db.query<T>(sql, params);
       setData(result);
     } catch (err) {
       console.error("Live query error:", err);

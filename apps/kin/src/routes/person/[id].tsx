@@ -25,10 +25,9 @@ import {
   togglePinNote,
   updateContact,
   updateNote,
-  type Contact,
-  type ContactNote,
   type SymmetricalRelationship,
 } from "~/stores/contactStore";
+import type { Contact, Note } from "~/lib/db";
 import styles from "./person.module.css";
 
 const formatDate = (timestamp: number) => new Intl.DateTimeFormat(undefined, {
@@ -55,7 +54,7 @@ export default function PersonDetail() {
   const routeSlug = () => params.slug ?? "";
   const contactId = () => person()?.id ?? "";
   const [person, setPerson] = createSignal<Contact | null>(null);
-  const [notes, setNotes] = createSignal<ContactNote[]>([]);
+  const [notes, setNotes] = createSignal<Note[]>([]);
   const [relationships, setRelationships] = createSignal<SymmetricalRelationship[]>([]);
   const [selectedTag, setSelectedTag] = createSignal<string | null>(null);
   const [detailsOpen, setDetailsOpen] = createSignal(false);
@@ -158,12 +157,12 @@ export default function PersonDetail() {
     } catch { window.alert("Failed to save note."); }
   };
 
-  const beginNoteEdit = (note: ContactNote) => {
+  const beginNoteEdit = (note: Note) => {
     setEditingNoteId(note.id);
     setEditingNoteBody(note.body);
   };
 
-  const saveNote = async (event: SubmitEvent, note: ContactNote) => {
+  const saveNote = async (event: SubmitEvent, note: Note) => {
     event.preventDefault();
     const body = editingNoteBody().trim();
     if (!body) return;
@@ -176,7 +175,7 @@ export default function PersonDetail() {
     }
   };
 
-  const saveNoteDate = async (note: ContactNote, value: string) => {
+  const saveNoteDate = async (note: Note, value: string) => {
     const createdAt = dateInputTimestamp(value, note.created_at);
     try {
       await updateNote(note.id, note.body, note.is_pinned === 1, createdAt);
@@ -207,18 +206,18 @@ export default function PersonDetail() {
     await refetch();
   };
 
-  const pinNote = async (note: ContactNote) => {
+  const pinNote = async (note: Note) => {
     await togglePinNote(note.id, note.is_pinned);
     await refetch();
   };
 
-  const removeNote = async (note: ContactNote) => {
+  const removeNote = async (note: Note) => {
     if (!window.confirm("Delete this timeline entry?")) return;
     await deleteNote(note.id);
     await refetch();
   };
 
-  const handleNoteClick = async (event: MouseEvent, note: ContactNote) => {
+  const handleNoteClick = async (event: MouseEvent, note: Note) => {
     const taskIndex = findMarkdownTaskIndex(event.target);
     if (taskIndex !== null) {
       const body = toggleMarkdownTask(note.body, taskIndex);

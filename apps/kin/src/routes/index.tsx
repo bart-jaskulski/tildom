@@ -1,17 +1,16 @@
-import { For, Show, createEffect, createMemo, createResource, createSignal } from "solid-js";
+import { For, Show, createEffect, createMemo, createResource, createSignal, onCleanup, onMount } from "solid-js";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { Search, useVimKeymaps } from "@tildom/ui";
 import AddPerson, { type AddPersonHandle } from "~/components/AddPerson";
 import AppNav from "~/components/AppNav";
 import PeopleLoading from "~/components/PeopleLoading";
-import { dbVersion } from "~/lib/db";
+import { db, type Contact } from "~/lib/db";
 import {
   contacts,
   deleteContact,
   fetchContactPath,
   isContactStoreReady,
   searchContacts,
-  type Contact,
   type ContactSearchResult,
 } from "~/stores/contactStore";
 import styles from "./index.module.css";
@@ -20,10 +19,12 @@ export default function Home() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const query = createMemo(() => String(params.q ?? "").trim());
-  const [results] = createResource(
-    () => isContactStoreReady() && query() ? [query(), dbVersion()] as const : null,
-    ([value]) => searchContacts(value),
+  const [results, { refetch }] = createResource(
+    () => isContactStoreReady() && query() ? query() : null,
+    (value) => searchContacts(value),
   );
+
+  onMount(() => onCleanup(db.subscribe(() => void refetch())));
   const [activeIndex, setActiveIndex] = createSignal(0);
   let addPerson: AddPersonHandle | undefined;
 

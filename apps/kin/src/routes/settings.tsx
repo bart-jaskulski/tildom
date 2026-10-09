@@ -2,7 +2,7 @@ import { Show, createSignal } from "solid-js";
 import { Button, Checkbox, createPreferences } from "@tildom/ui";
 import AppNav from "~/components/AppNav";
 import SyncSettings from "~/components/SyncSettings";
-import { exportDatabase, importDatabase } from "~/lib/db";
+import { db } from "~/lib/db";
 import styles from "./settings.module.css";
 import { markSyncDirty } from "~/lib/syncState";
 import { pwaInstall } from "~/lib/pwaInstall";
@@ -17,7 +17,7 @@ export default function Settings() {
   const exportBackup = async () => {
     setStatus(null); setError(null); setBusy("export");
     try {
-      const bytes = await exportDatabase();
+      const bytes = await db.exportDatabase();
       const url = URL.createObjectURL(new Blob([new Uint8Array(bytes).buffer], { type: "application/vnd.sqlite3" }));
       Object.assign(document.createElement("a"), {
         href: url,
@@ -39,7 +39,7 @@ export default function Settings() {
     }
     setStatus(null); setError(null); setBusy("import");
     try {
-      await importDatabase(new Uint8Array(await file.arrayBuffer()));
+      await db.importDatabase(new Uint8Array(await file.arrayBuffer()));
       await markSyncDirty();
       setStatus("Database imported.");
     } catch (nextError) {

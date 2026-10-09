@@ -322,18 +322,12 @@ importers:
         specifier: 3.53.0-build1
         version: 3.53.0-build1
     devDependencies:
-      '@solidjs/testing-library':
-        specifier: ^0.8.10
-        version: 0.8.10(@solidjs/router@0.15.4(solid-js@1.9.13))(solid-js@1.9.13)
       '@tildom/config':
         specifier: workspace:*
         version: link:../config
       jsdom:
         specifier: ^27.4.0
         version: 27.4.0
-      solid-js:
-        specifier: ^1.9.13
-        version: 1.9.13
       typescript:
         specifier: ^6.0.3
         version: 6.0.3

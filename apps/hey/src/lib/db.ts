@@ -39,22 +39,11 @@ const migrations: DbMigration[] = [{
 `,
 }];
 
-const client = new BrowserDbClient("hey.sqlite3", { migrations });
+export const db = new BrowserDbClient("hey.sqlite3", { migrations });
 
-export const initDb = async () => {
-  await client.init();
-  const columns = await client.query<{ name: string }>("PRAGMA table_info(memory_files)");
-  if (columns.some((column) => column.name === "revision")) {
-    await client.exec("ALTER TABLE memory_files DROP COLUMN revision");
+// Automatically mark sync dirty on local writes
+db.subscribe(({ source }) => {
+  if (source === "local") {
+    void markSyncDirty();
   }
-};
-
-export const exec = async (sql: string, params?: unknown[]) => {
-  const rows = await client.exec(sql, params);
-  await markSyncDirty();
-  return rows;
-};
-export const query = client.query;
-export const exportDatabase = client.exportDatabase;
-export const importDatabase = client.importDatabase;
-export const dbVersion = () => client.dbVersion;
+});

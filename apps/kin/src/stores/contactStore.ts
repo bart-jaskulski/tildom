@@ -1,18 +1,6 @@
-import { createEffect, createRoot } from "solid-js";
+import { createRoot } from "solid-js";
 import { createStore } from "solid-js/store";
-import { dbVersion, exec, initDb, query } from "~/lib/db";
-
-export type Contact = {
-  id: string;
-  name: string;
-  relationship: string;
-  location: string;
-  birthday: string;
-  phone: string;
-  email: string;
-  created_at: number;
-  updated_at: number;
-};
+import { db, type Contact, type Note } from "~/lib/db";
 
 export type ContactSearchMatch = {
   kind: "profile" | "timeline";
@@ -22,16 +10,6 @@ export type ContactSearchMatch = {
 
 export type ContactSearchResult = Contact & {
   matches: ContactSearchMatch[];
-};
-
-export type ContactNote = {
-  id: string;
-  contact_id: string;
-  body: string;
-  tags: string;
-  is_pinned: number;
-  created_at: number;
-  updated_at: number;
 };
 
 export type SymmetricalRelationship = {
@@ -67,7 +45,7 @@ export const contactSlugs = (allContacts: Contact[]): Map<string, string> => {
 };
 
 const fetchContactRoutes = async (): Promise<{ contacts: Contact[]; slugs: Map<string, string> }> => {
-  const allContacts = await query<Contact>("SELECT * FROM contacts ORDER BY created_at ASC, id ASC");
+  const allContacts = await db.sql<Contact>`SELECT * FROM contacts ORDER BY created_at ASC, id ASC`;
   return { contacts: allContacts, slugs: contactSlugs(allContacts) };
 };
 
@@ -124,10 +102,10 @@ const appStore = createRoot(() => {
     searchQuery: "",
   });
 
-  const refreshContacts = async () => setState("contacts", await query<Contact>("SELECT * FROM contacts ORDER BY name ASC"));
+  const refreshContacts = async () => setState("contacts", await db.sql<Contact>`SELECT * FROM contacts ORDER BY name ASC`);
 
-  createEffect(() => {
-    if (dbVersion() > 0) void refreshContacts();
+  db.subscribe(() => {
+    void refreshContacts();
   });
 
   return {
@@ -141,7 +119,7 @@ const appStore = createRoot(() => {
 export const initializeContactStore = async () => {
   console.debug("Initializing contact store...");
   try {
-    await initDb();
+    await db.init();
     await appStore.refreshContacts();
     appStore.setReady(true);
   } catch (error) {
@@ -162,19 +140,26 @@ export const searchContacts = async (rawQuery: string): Promise<ContactSearchRes
   if (!search) return contacts().map((contact) => ({ ...contact, matches: [] }));
 
   const pattern = `%${search}%`;
-  const profileRows = search.startsWith("#") ? [] : await query<Contact>(
-    `SELECT * FROM contacts
-     WHERE name LIKE ? OR relationship LIKE ? OR location LIKE ? OR email LIKE ? OR phone LIKE ? OR birthday LIKE ?
-     ORDER BY name ASC`,
-    Array(6).fill(pattern),
-  );
-  const noteRows = await query<Contact & { note_body: string; note_created_at: number }>(
-    `SELECT c.*, n.body AS note_body, n.created_at AS note_created_at
-     FROM notes n JOIN contacts c ON c.id = n.contact_id
-     WHERE ${search.startsWith("#") ? "n.tags LIKE ?" : "n.body LIKE ?"}
-     ORDER BY c.name ASC, n.created_at DESC`,
-    [search.startsWith("#") ? `% ${search.slice(1).toLowerCase()} %` : pattern],
-  );
+  const isTag = search.startsWith("#");
+  const profileRows = isTag ? [] : await db.sql<Contact>`
+    SELECT * FROM contacts
+    WHERE name LIKE ${pattern} OR relationship LIKE ${pattern} OR location LIKE ${pattern} OR email LIKE ${pattern} OR phone LIKE ${pattern} OR birthday LIKE ${pattern}
+    ORDER BY name ASC
+  `;
+  const notePattern = isTag ? `% ${search.slice(1).toLowerCase()} %` : pattern;
+  const noteRows = isTag
+    ? await db.sql<Contact & { note_body: string; note_created_at: number }>`
+        SELECT c.*, n.body AS note_body, n.created_at AS note_created_at
+        FROM notes n JOIN contacts c ON c.id = n.contact_id
+        WHERE n.tags LIKE ${notePattern}
+        ORDER BY c.name ASC, n.created_at DESC
+      `
+    : await db.sql<Contact & { note_body: string; note_created_at: number }>`
+        SELECT c.*, n.body AS note_body, n.created_at AS note_created_at
+        FROM notes n JOIN contacts c ON c.id = n.contact_id
+        WHERE n.body LIKE ${notePattern}
+        ORDER BY c.name ASC, n.created_at DESC
+      `;
   const results = new Map<string, ContactSearchResult>();
   const ensure = (contact: Contact) => {
     if (!results.has(contact.id)) results.set(contact.id, { ...contact, matches: [] });
@@ -198,13 +183,10 @@ export const searchContacts = async (rawQuery: string): Promise<ContactSearchRes
 export const createContact = async (name: string, relationship = "", location = ""): Promise<string> => {
   const id = crypto.randomUUID();
   const now = Date.now();
-  await exec(
-    `
-      INSERT INTO contacts (id, name, relationship, location, birthday, phone, email, created_at, updated_at)
-      VALUES (?, ?, ?, ?, '', '', '', ?, ?)
-    `,
-    [id, name.trim(), relationship.trim(), location.trim(), now, now]
-  );
+  await db.sql`
+    INSERT INTO contacts (id, name, relationship, location, birthday, phone, email, created_at, updated_at)
+    VALUES (${id}, ${name.trim()}, ${relationship.trim()}, ${location.trim()}, '', '', '', ${now}, ${now})
+  `;
   return id;
 };
 
@@ -213,88 +195,73 @@ export const updateContact = async (
   data: { name: string; relationship: string; location: string; birthday: string; phone: string; email: string }
 ): Promise<void> => {
   const now = Date.now();
-  await exec(
-    `
-      UPDATE contacts
-      SET name = ?, relationship = ?, location = ?, birthday = ?, phone = ?, email = ?, updated_at = ?
-      WHERE id = ?
-    `,
-    [data.name.trim(), data.relationship.trim(), data.location.trim(), data.birthday.trim(), data.phone.trim(), data.email.trim(), now, id]
-  );
+  await db.sql`
+    UPDATE contacts
+    SET name = ${data.name.trim()}, relationship = ${data.relationship.trim()}, location = ${data.location.trim()}, birthday = ${data.birthday.trim()}, phone = ${data.phone.trim()}, email = ${data.email.trim()}, updated_at = ${now}
+    WHERE id = ${id}
+  `;
 };
 
 export const deleteContact = async (id: string): Promise<void> => {
   // Cascading deletes are configured via foreign keys for notes and relationships in db.worker
-  await exec("DELETE FROM contacts WHERE id = ?", [id]);
+  await db.sql`DELETE FROM contacts WHERE id = ${id}`;
 };
 
 export const fetchContact = async (id: string): Promise<Contact | null> => {
-  const rows = await query<Contact>("SELECT * FROM contacts WHERE id = ? LIMIT 1", [id]);
+  const rows = await db.sql<Contact>`SELECT * FROM contacts WHERE id = ${id} LIMIT 1`;
   return rows[0] ?? null;
 };
 
 // CRUD: Notes
-export const fetchNotes = async (contactId: string): Promise<ContactNote[]> => {
-  return query<ContactNote>(
-    `
-      SELECT * FROM notes
-      WHERE contact_id = ?
-      ORDER BY is_pinned DESC, created_at DESC
-    `,
-    [contactId]
-  );
+export const fetchNotes = async (contactId: string): Promise<Note[]> => {
+  return db.sql<Note>`
+    SELECT * FROM notes
+    WHERE contact_id = ${contactId}
+    ORDER BY is_pinned DESC, created_at DESC
+  `;
 };
 
 export const createNote = async (contactId: string, body: string, isPinned: boolean, createdAt = Date.now()): Promise<string> => {
   const id = crypto.randomUUID();
   const now = Date.now();
   const tags = parseTags(body);
-  await exec(
-    `
-      INSERT INTO notes (id, contact_id, body, tags, is_pinned, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `,
-    [id, contactId, body.trim(), tags, isPinned ? 1 : 0, createdAt, now]
-  );
+  await db.sql`
+    INSERT INTO notes (id, contact_id, body, tags, is_pinned, created_at, updated_at)
+    VALUES (${id}, ${contactId}, ${body.trim()}, ${tags}, ${isPinned ? 1 : 0}, ${createdAt}, ${now})
+  `;
   return id;
 };
 
 export const updateNote = async (noteId: string, body: string, isPinned: boolean, createdAt?: number): Promise<void> => {
   const now = Date.now();
   const tags = parseTags(body);
-  await exec(
-    `
-      UPDATE notes
-      SET body = ?, tags = ?, is_pinned = ?, created_at = COALESCE(?, created_at), updated_at = ?
-      WHERE id = ?
-    `,
-    [body.trim(), tags, isPinned ? 1 : 0, createdAt ?? null, now, noteId]
-  );
+  await db.sql`
+    UPDATE notes
+    SET body = ${body.trim()}, tags = ${tags}, is_pinned = ${isPinned ? 1 : 0}, created_at = COALESCE(${createdAt ?? null}, created_at), updated_at = ${now}
+    WHERE id = ${noteId}
+  `;
 };
 
 export const deleteNote = async (noteId: string): Promise<void> => {
-  await exec("DELETE FROM notes WHERE id = ?", [noteId]);
+  await db.sql`DELETE FROM notes WHERE id = ${noteId}`;
 };
 
 // CRUD: Relationships & Symmetrical Resolver
 export const fetchRelationships = async (contactId: string): Promise<SymmetricalRelationship[]> => {
-  const rows = await query<{
+  const rows = await db.sql<{
     contact_id_a: string;
     contact_id_b: string;
     role: string;
     name_a: string;
     name_b: string;
-  }>(
-    `
-      SELECT r.contact_id_a, r.contact_id_b, r.role,
-             c_a.name as name_a, c_b.name as name_b
-      FROM relationships r
-      JOIN contacts c_a ON r.contact_id_a = c_a.id
-      JOIN contacts c_b ON r.contact_id_b = c_b.id
-      WHERE r.contact_id_a = ? OR r.contact_id_b = ?
-    `,
-    [contactId, contactId]
-  );
+  }>`
+    SELECT r.contact_id_a, r.contact_id_b, r.role,
+           c_a.name as name_a, c_b.name as name_b
+    FROM relationships r
+    JOIN contacts c_a ON r.contact_id_a = c_a.id
+    JOIN contacts c_b ON r.contact_id_b = c_b.id
+    WHERE r.contact_id_a = ${contactId} OR r.contact_id_b = ${contactId}
+  `;
 
   return rows.map((row) => {
     const isA = row.contact_id_a === contactId;
@@ -329,48 +296,36 @@ export const createRelationship = async (
 
   // To prevent inverse duplicates at database constraint levels (e.g. spouse of Bob is Alice, and spouse of Alice is Bob),
   // we check if a connection already exists in any direction.
-  const existing = await query(
-    `
-      SELECT * FROM relationships
-      WHERE (contact_id_a = ? AND contact_id_b = ?)
-         OR (contact_id_a = ? AND contact_id_b = ?)
-    `,
-    [contactIdA, contactIdB, contactIdB, contactIdA]
-  );
+  const existing = await db.sql`
+    SELECT * FROM relationships
+    WHERE (contact_id_a = ${contactIdA} AND contact_id_b = ${contactIdB})
+       OR (contact_id_a = ${contactIdB} AND contact_id_b = ${contactIdA})
+  `;
 
   if (existing.length > 0) {
     throw new Error("A relationship already exists between these two contacts.");
   }
 
-  await exec(
-    `
-      INSERT INTO relationships (contact_id_a, contact_id_b, role)
-      VALUES (?, ?, ?)
-    `,
-    [contactIdA, contactIdB, role.trim().toLowerCase()]
-  );
+  await db.sql`
+    INSERT INTO relationships (contact_id_a, contact_id_b, role)
+    VALUES (${contactIdA}, ${contactIdB}, ${role.trim().toLowerCase()})
+  `;
 };
 
 export const deleteRelationship = async (contactIdA: string, contactIdB: string): Promise<void> => {
-  await exec(
-    `
-      DELETE FROM relationships
-      WHERE (contact_id_a = ? AND contact_id_b = ?)
-         OR (contact_id_a = ? AND contact_id_b = ?)
-    `,
-    [contactIdA, contactIdB, contactIdB, contactIdA]
-  );
+  await db.sql`
+    DELETE FROM relationships
+    WHERE (contact_id_a = ${contactIdA} AND contact_id_b = ${contactIdB})
+       OR (contact_id_a = ${contactIdB} AND contact_id_b = ${contactIdA})
+  `;
 };
 
 export const togglePinNote = async (noteId: string, currentIsPinned: number): Promise<void> => {
   const next = currentIsPinned === 1 ? 0 : 1;
   const now = Date.now();
-  await exec(
-    `
-      UPDATE notes
-      SET is_pinned = ?, updated_at = ?
-      WHERE id = ?
-    `,
-    [next, now, noteId]
-  );
+  await db.sql`
+    UPDATE notes
+    SET is_pinned = ${next}, updated_at = ${now}
+    WHERE id = ${noteId}
+  `;
 };

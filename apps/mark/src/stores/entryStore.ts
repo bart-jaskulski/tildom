@@ -17,7 +17,6 @@ import {
 } from "~/lib/entries";
 import { fetchLinkMetadata, type ExtractedCapture } from "~/lib/linkMetadata";
 import { markStartup, measureStartup } from "~/lib/startupPerformance";
-import { markSyncDirty } from "~/lib/syncState";
 import { fetchSuggestedTags } from "~/lib/tagSuggestions";
 import { MAX_TAGS_PER_ENTRY, MAX_USED_TAGS, normalizeTagList, parseHashTags, parseTagInput } from "~/lib/tags";
 
@@ -165,11 +164,8 @@ const entryStore = createRoot(() => {
     setState("entries", rows.map(entryRowToEntry));
   };
 
-  createEffect(() => {
-    const version = client.dbVersion;
-    if (version > 0) {
-      void refreshEntries();
-    }
+  client.subscribe(() => {
+    void refreshEntries();
   });
 
   return {
@@ -279,20 +275,20 @@ const fetchExistingTags = async (tagNames: string[]) => {
 };
 
 const pruneOrphanTags = async () => {
-  await client.exec(`
+  await client.sql`
     DELETE FROM tags
     WHERE NOT EXISTS (
       SELECT 1 FROM entry_tags
       WHERE entry_tags.tag_id = tags.id
     )
-  `);
+  `;
 };
 
 const setEntryTags = async (entryId: string, tagNames: string[]) => {
   const now = Date.now();
   const existingTags = await fetchExistingTags(tagNames);
 
-  await client.exec("DELETE FROM entry_tags WHERE entry_id = ?", [entryId]);
+  await client.sql`DELETE FROM entry_tags WHERE entry_id = ${entryId}`;
 
   for (const tagName of tagNames) {
     let tagId = existingTags.get(tagName);
@@ -300,16 +296,14 @@ const setEntryTags = async (entryId: string, tagNames: string[]) => {
     if (!tagId) {
       tagId = createRecordId();
       existingTags.set(tagName, tagId);
-      await client.exec(
-        "INSERT INTO tags (id, name, created_at) VALUES (?, ?, ?)",
-        [tagId, tagName, now],
-      );
+      await client.sql`
+        INSERT INTO tags (id, name, created_at) VALUES (${tagId}, ${tagName}, ${now})
+      `;
     }
 
-    await client.exec(
-      "INSERT INTO entry_tags (entry_id, tag_id, created_at) VALUES (?, ?, ?)",
-      [entryId, tagId, now],
-    );
+    await client.sql`
+      INSERT INTO entry_tags (entry_id, tag_id, created_at) VALUES (${entryId}, ${tagId}, ${now})
+    `;
   }
 
   await pruneOrphanTags();
@@ -332,7 +326,6 @@ const validateManualTags = async (entryId: string, input: string) => {
 
 export const replaceEntryTags = async (entryId: string, input: string) => {
   await setEntryTags(entryId, await validateManualTags(entryId, input));
-  await markSyncDirty();
 };
 
 const applySuggestedTags = async (entryId: string, rawTags: string[]) => {
@@ -362,7 +355,6 @@ const applySuggestedTags = async (entryId: string, rawTags: string[]) => {
 
   if (acceptedTags.length > 0) {
     await setEntryTags(entryId, acceptedTags);
-    await markSyncDirty();
   }
 };
 
@@ -387,25 +379,17 @@ const enrichUrlEntryInBackground = (
     const metadata = await fetchLinkMetadata(input.url);
 
     if (metadata.title || metadata.excerpt) {
-      await client.exec(
-        `
-          UPDATE entries
-          SET
-            title = CASE WHEN title = ? THEN COALESCE(?, title) ELSE title END,
-            excerpt = ?,
-            excerpt_status = ?,
-            updated_at = ?
-          WHERE id = ?
-        `,
-        [
-          input.title,
-          metadata.title,
-          metadata.excerpt,
-          metadata.excerpt ? "ready" : "idle",
-          Date.now(),
-          entryId,
-        ],
-      );
+      const excerptStatus = metadata.excerpt ? "ready" : "idle";
+      const updatedAt = Date.now();
+      await client.sql`
+        UPDATE entries
+        SET
+          title = CASE WHEN title = ${input.title} THEN COALESCE(${metadata.title}, title) ELSE title END,
+          excerpt = ${metadata.excerpt},
+          excerpt_status = ${excerptStatus},
+          updated_at = ${updatedAt}
+        WHERE id = ${entryId}
+      `;
     }
 
     if (metadata.capture) {
@@ -428,38 +412,35 @@ const saveReaderCapture = async (
   capture?: ExtractedCapture,
   error: string | null = null,
 ) => {
-  await client.exec(
-    `
-      INSERT INTO reader_captures (
-        entry_id, status, markdown, text_content, byline, site_name,
-        published_at, language, captured_at, source_url, error
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(entry_id) DO UPDATE SET
-        status = excluded.status,
-        markdown = excluded.markdown,
-        text_content = excluded.text_content,
-        byline = excluded.byline,
-        site_name = excluded.site_name,
-        published_at = excluded.published_at,
-        language = excluded.language,
-        captured_at = excluded.captured_at,
-        source_url = excluded.source_url,
-        error = excluded.error
-    `,
-    [
-      entryId,
-      status,
-      capture?.markdown ?? "",
-      capture?.textContent ?? "",
-      capture?.byline ?? null,
-      capture?.siteName ?? null,
-      capture?.publishedAt ?? null,
-      capture?.language ?? null,
-      capture ? Date.now() : null,
-      capture?.sourceUrl ?? null,
-      error,
-    ],
-  );
+  const markdown = capture?.markdown ?? "";
+  const textContent = capture?.textContent ?? "";
+  const byline = capture?.byline ?? null;
+  const siteName = capture?.siteName ?? null;
+  const publishedAt = capture?.publishedAt ?? null;
+  const language = capture?.language ?? null;
+  const capturedAt = capture ? Date.now() : null;
+  const sourceUrl = capture?.sourceUrl ?? null;
+
+  await client.sql`
+    INSERT INTO reader_captures (
+      entry_id, status, markdown, text_content, byline, site_name,
+      published_at, language, captured_at, source_url, error
+    ) VALUES (
+      ${entryId}, ${status}, ${markdown}, ${textContent}, ${byline}, ${siteName},
+      ${publishedAt}, ${language}, ${capturedAt}, ${sourceUrl}, ${error}
+    )
+    ON CONFLICT(entry_id) DO UPDATE SET
+      status = excluded.status,
+      markdown = excluded.markdown,
+      text_content = excluded.text_content,
+      byline = excluded.byline,
+      site_name = excluded.site_name,
+      published_at = excluded.published_at,
+      language = excluded.language,
+      captured_at = excluded.captured_at,
+      source_url = excluded.source_url,
+      error = excluded.error
+  `;
 };
 
 export const initializeEntryStore = async () => {
@@ -530,28 +511,22 @@ export const captureEntry = async (entryId: string, url: string) => {
 
   if (!metadata.capture) {
     await saveReaderCapture(entryId, "unavailable", undefined, "Reader view is unavailable for this page");
-    await markSyncDirty();
     return null;
   }
 
   await saveReaderCapture(entryId, "ready", metadata.capture);
-  await markSyncDirty();
   return metadata.capture;
 };
 
 export const recordEntryOpen = async (entryId: string) => {
   const openedAt = Date.now();
-  await client.exec(
-    `
-      UPDATE entries
-      SET
-        first_opened_at = COALESCE(first_opened_at, ?),
-        last_opened_at = ?
-      WHERE id = ?
-    `,
-    [openedAt, openedAt, entryId],
-  );
-  await markSyncDirty();
+  await client.sql`
+    UPDATE entries
+    SET
+      first_opened_at = COALESCE(first_opened_at, ${openedAt}),
+      last_opened_at = ${openedAt}
+    WHERE id = ${entryId}
+  `;
   return { firstOpenedAt: openedAt, lastOpenedAt: openedAt };
 };
 
@@ -567,35 +542,36 @@ const insertUrlEntry = async (urlInput: string) => {
   const title = buildUrlFallbackTitle(normalizedUrl);
 
   try {
-    await client.exec(
-      `
-        INSERT INTO entries (
-          id,
-          source_url,
-          canonical_url,
-          domain,
-          title,
-          body,
-          excerpt,
-          excerpt_status,
-          created_at,
-          updated_at,
-          last_commented_at
-        ) VALUES (?, ?, ?, ?, ?, '', ?, ?, ?, ?, ?)
-      `,
-      [
-        entryId,
-        normalizedUrl.sourceUrl,
-        normalizedUrl.canonicalUrl,
-        normalizedUrl.domain,
+    const sourceUrl = normalizedUrl.sourceUrl;
+    const canonicalUrl = normalizedUrl.canonicalUrl;
+    const domain = normalizedUrl.domain;
+    await client.sql`
+      INSERT INTO entries (
+        id,
+        source_url,
+        canonical_url,
+        domain,
         title,
-        null,
-        "idle",
-        now,
-        now,
-        now,
-      ],
-    );
+        body,
+        excerpt,
+        excerpt_status,
+        created_at,
+        updated_at,
+        last_commented_at
+      ) VALUES (
+        ${entryId},
+        ${sourceUrl},
+        ${canonicalUrl},
+        ${domain},
+        ${title},
+        '',
+        ${null},
+        ${"idle"},
+        ${now},
+        ${now},
+        ${now}
+      )
+    `;
   } catch (error) {
     if (isDuplicateUrlError(error)) {
       const duplicateEntryId = await findEntryIdByCanonicalUrl(normalizedUrl.canonicalUrl);
@@ -624,20 +600,17 @@ const insertNoteEntry = async (bodyInput: string) => {
   const now = Date.now();
   const entryId = createRecordId();
 
-  await client.exec(
-    `
-      INSERT INTO entries (
-        id,
-        title,
-        body,
-        excerpt_status,
-        created_at,
-        updated_at,
-        last_commented_at
-      ) VALUES (?, ?, ?, 'idle', ?, ?, ?)
-    `,
-    [entryId, note.title, note.body, now, now, now],
-  );
+  await client.sql`
+    INSERT INTO entries (
+      id,
+      title,
+      body,
+      excerpt_status,
+      created_at,
+      updated_at,
+      last_commented_at
+    ) VALUES (${entryId}, ${note.title}, ${note.body}, ${"idle"}, ${now}, ${now}, ${now})
+  `;
 
   return entryId;
 };
@@ -653,7 +626,6 @@ export const createEntry = async (bodyInput: string) => {
   if (tags.length > 0) {
     await setEntryTags(entryId, tags);
   }
-  await markSyncDirty();
   return entryId;
 };
 
@@ -677,28 +649,20 @@ export const updateEntry = async (
   const updatedAt = Date.now();
 
   try {
-    await client.exec(
-      `
-        UPDATE entries
-        SET
-          source_url = ?,
-          canonical_url = ?,
-          domain = ?,
-          title = ?,
-          body = ?,
-          updated_at = ?
-        WHERE id = ?
-      `,
-      [
-        normalizedUrl?.sourceUrl ?? null,
-        normalizedUrl?.canonicalUrl ?? null,
-        normalizedUrl?.domain ?? null,
-        title,
-        body,
-        updatedAt,
-        entryId,
-      ],
-    );
+    const sourceUrl = normalizedUrl?.sourceUrl ?? null;
+    const canonicalUrl = normalizedUrl?.canonicalUrl ?? null;
+    const domain = normalizedUrl?.domain ?? null;
+    await client.sql`
+      UPDATE entries
+      SET
+        source_url = ${sourceUrl},
+        canonical_url = ${canonicalUrl},
+        domain = ${domain},
+        title = ${title},
+        body = ${body},
+        updated_at = ${updatedAt}
+      WHERE id = ${entryId}
+    `;
   } catch (error) {
     if (isDuplicateUrlError(error)) {
       throw new Error("This link is already saved");
@@ -711,7 +675,6 @@ export const updateEntry = async (
     await setEntryTags(entryId, nextTags);
   }
 
-  await markSyncDirty();
   return {
     sourceUrl: normalizedUrl?.sourceUrl ?? null,
     canonicalUrl: normalizedUrl?.canonicalUrl ?? null,
@@ -724,11 +687,10 @@ export const updateEntry = async (
 };
 
 export const deleteEntry = async (entryId: string) => {
-  await client.exec("DELETE FROM comments WHERE entry_id = ?", [entryId]);
-  await client.exec("DELETE FROM entry_tags WHERE entry_id = ?", [entryId]);
-  await client.exec("DELETE FROM entries WHERE id = ?", [entryId]);
+  await client.sql`DELETE FROM comments WHERE entry_id = ${entryId}`;
+  await client.sql`DELETE FROM entry_tags WHERE entry_id = ${entryId}`;
+  await client.sql`DELETE FROM entries WHERE id = ${entryId}`;
   await pruneOrphanTags();
-  await markSyncDirty();
 };
 
 export const addCommentToEntry = async (entryId: string, bodyInput: string) => {
@@ -740,24 +702,17 @@ export const addCommentToEntry = async (entryId: string, bodyInput: string) => {
   const now = Date.now();
   const commentId = createRecordId();
 
-  await client.exec(
-    `
-      INSERT INTO comments (id, entry_id, body, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?)
-    `,
-    [commentId, entryId, body, now, now],
-  );
+  await client.sql`
+    INSERT INTO comments (id, entry_id, body, created_at, updated_at)
+    VALUES (${commentId}, ${entryId}, ${body}, ${now}, ${now})
+  `;
 
-  await client.exec(
-    `
-      UPDATE entries
-      SET updated_at = ?, last_commented_at = ?
-      WHERE id = ?
-    `,
-    [now, now, entryId],
-  );
+  await client.sql`
+    UPDATE entries
+    SET updated_at = ${now}, last_commented_at = ${now}
+    WHERE id = ${entryId}
+  `;
 
-  await markSyncDirty();
   return {
     id: commentId,
     entryId,
@@ -775,19 +730,14 @@ export const updateComment = async (commentId: string, bodyInput: string) => {
 
   const updatedAt = Date.now();
 
-  await client.exec(
-    `
-      UPDATE comments
-      SET body = ?, updated_at = ?
-      WHERE id = ?
-    `,
-    [body, updatedAt, commentId],
-  );
-  await markSyncDirty();
+  await client.sql`
+    UPDATE comments
+    SET body = ${body}, updated_at = ${updatedAt}
+    WHERE id = ${commentId}
+  `;
   return { body, updatedAt };
 };
 
 export const deleteComment = async (commentId: string) => {
-  await client.exec("DELETE FROM comments WHERE id = ?", [commentId]);
-  await markSyncDirty();
+  await client.sql`DELETE FROM comments WHERE id = ${commentId}`;
 };

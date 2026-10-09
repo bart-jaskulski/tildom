@@ -1,22 +1,30 @@
-import { createSignal, createComputed, Signal } from "solid-js";
-import type { DbMigration, DbRequest, DbRequestBody, DbResponse } from "./types";
+import type { DbChangeEvent, DbChangeSource, DbMigration, DbRequest, DbRequestBody, DbResponse } from "./types";
 import DbWorker from "./db.worker?worker";
 
 export interface BrowserDbClientOptions {
   migrations: DbMigration[];
-  requiredTables?: string[];
   workerConstructor?: new () => Worker;
 }
 
+export type DbChangeListener = (event: DbChangeEvent) => void;
+
 export type QueryInput = string | { sql: string; params?: any[] };
 
-export type TaggedExecutor = (strings: TemplateStringsArray, ...values: any[]) => Promise<any[]>;
+export type TaggedExecutor = <T = any>(strings: TemplateStringsArray, ...values: any[]) => Promise<T[]>;
 
 export class TransactionProxy {
   constructor(private executeFn: (sql: string, params?: any[]) => Promise<any[]>) {}
 
-  sql: TaggedExecutor = (strings, ...values) => {
-    return this.executeFn(strings.join("?"), values);
+  query = <T = any>(sql: string, params?: any[]): Promise<T[]> => {
+    return this.executeFn(sql, params) as Promise<T[]>;
+  };
+
+  exec = <T = any>(sql: string, params?: any[]): Promise<T[]> => {
+    return this.query<T>(sql, params);
+  };
+
+  sql: TaggedExecutor = <T = any>(strings: TemplateStringsArray, ...values: any[]): Promise<T[]> => {
+    return this.query<T>(strings.join("?"), values);
   };
 }
 
@@ -27,16 +35,16 @@ export class BrowserDbClient {
   private isReady = false;
   private pending = new Map<number, { resolve: (data: any) => void; reject: (err: Error) => void }>();
   private queue: Array<{ msg: DbRequest; resolve: (data: any) => void; reject: (err: Error) => void }> = [];
-  
-  private dbVersionSignal: Signal<number>;
+  private changeListeners = new Set<DbChangeListener>();
 
-  constructor(private dbName: string, private options: BrowserDbClientOptions) {
-    this.dbVersionSignal = createSignal(0);
-  }
+  constructor(private dbName: string, private options: BrowserDbClientOptions) {}
 
-  get dbVersion() {
-    return this.dbVersionSignal[0]();
-  }
+  subscribe = (listener: DbChangeListener): (() => void) => {
+    this.changeListeners.add(listener);
+    return () => {
+      this.changeListeners.delete(listener);
+    };
+  };
 
   init = async (): Promise<void> => {
     if (typeof window === "undefined") {
@@ -55,7 +63,6 @@ export class BrowserDbClient {
         type: "init",
         dbName: this.dbName,
         migrations: this.options.migrations,
-        requiredTables: this.options?.requiredTables,
       });
       this.flushQueue();
     } catch (error) {
@@ -71,8 +78,14 @@ export class BrowserDbClient {
     const msg = event.data;
 
     if (msg.type === "change") {
-      const setVersion = this.dbVersionSignal[1];
-      setVersion(v => v + 1);
+      const changeEvent: DbChangeEvent = { source: msg.source };
+      for (const listener of this.changeListeners) {
+        try {
+          listener(changeEvent);
+        } catch (err) {
+          console.error("Error in db change listener:", err);
+        }
+      }
       return;
     }
 
@@ -111,17 +124,21 @@ export class BrowserDbClient {
     }
   };
 
-  exec = <T = any>(input: QueryInput, rawParams?: any[]): Promise<T[]> => {
+  query = <T = any>(input: QueryInput, rawParams?: any[]): Promise<T[]> => {
     const resolved = typeof input === "string" ? { sql: input, params: rawParams } : input;
     return this.postAndWait<{ rows: T[] }>({
       type: "exec",
       sql: resolved.sql,
-      params: resolved.params
-    } as any).then(data => data?.rows ?? []);
+      params: resolved.params,
+    } as any).then((data) => data?.rows ?? []);
   };
 
-  sql: TaggedExecutor = (strings, ...values) => {
-    return this.exec(strings.join("?"), values);
+  exec = <T = any>(input: QueryInput, rawParams?: any[]): Promise<T[]> => {
+    return this.query<T>(input, rawParams);
+  };
+
+  sql: TaggedExecutor = <T = any>(strings: TemplateStringsArray, ...values: any[]): Promise<T[]> => {
+    return this.query<T>(strings.join("?"), values);
   };
 
   transaction = async <T>(callback: (tx: TransactionProxy) => Promise<T>): Promise<T> => {
@@ -159,11 +176,12 @@ export class BrowserDbClient {
     );
   };
 
-  overwriteDatabaseFile = (bytes: Uint8Array): Promise<void> => {
+  overwriteDatabaseFile = (bytes: Uint8Array, source: DbChangeSource = "import"): Promise<void> => {
     return this.postAndWait({ 
       type: "import", 
       bytes,
-      dbName: this.dbName
+      dbName: this.dbName,
+      source,
     } as any);
   };
 
@@ -174,16 +192,12 @@ export class BrowserDbClient {
   };
 
   // Backwards compatibility aliases
-  query = <T = any>(input: QueryInput, rawParams?: any[]): Promise<T[]> => {
-    return this.exec<T>(input, rawParams);
-  };
-
   exportDatabase = (): Promise<Uint8Array> => {
     return this.getDatabaseFile();
   };
 
-  importDatabase = (bytes: Uint8Array): Promise<void> => {
-    return this.overwriteDatabaseFile(bytes);
+  importDatabase = (bytes: Uint8Array, source: DbChangeSource = "import"): Promise<void> => {
+    return this.overwriteDatabaseFile(bytes, source);
   };
 
   close = (): Promise<void> => {
@@ -197,31 +211,4 @@ export class BrowserDbClient {
     this.worker = null;
     this.isReady = false;
   };
-}
-
-export function createDbQuery<T = any>(
-  client: BrowserDbClient,
-  queryInput: QueryInput,
-  rawParams?: any[]
-) {
-  const [data, setData] = createSignal<T[]>([]);
-
-  const query = typeof queryInput === "string" 
-    ? { sql: queryInput, params: rawParams } 
-    : queryInput;
-
-  createComputed(() => {
-    // Reactive subscription to database changes signal
-    const version = client.dbVersion; 
-
-    client.exec(query.sql, query.params)
-      .then(rows => {
-        setData(rows);
-      })
-      .catch(err => {
-        console.error("Live query subscription failed:", err);
-      });
-  });
-
-  return data;
 }

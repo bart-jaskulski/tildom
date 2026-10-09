@@ -41,10 +41,12 @@ describe("initializeSync", () => {
     }));
 
     vi.doMock("~/lib/db", () => ({
-      exec: vi.fn(),
-      query: vi.fn(),
-      exportDb: vi.fn(),
-      importDb: vi.fn(),
+      db: {
+        init: vi.fn(),
+        sql: vi.fn(),
+        query: vi.fn(),
+        subscribe: vi.fn(),
+      },
     }));
 
     vi.doMock("~/lib/crypto", () => ({

@@ -1,6 +1,6 @@
 import { Title } from "@solidjs/meta";
 import { useNavigate, useSearchParams } from "@solidjs/router";
-import { For, Show, createEffect, createMemo, createResource, createSignal } from "solid-js";
+import { For, Show, createEffect, createMemo, createResource, createSignal, onMount, onCleanup } from "solid-js";
 import { isServer } from "solid-js/web";
 import { Button, useVimKeymaps } from "@tildom/ui";
 import ClipboardPaste from "lucide-solid/icons/clipboard-paste";
@@ -69,10 +69,17 @@ export default function Home() {
   const [isSaving, setIsSaving] = createSignal(false);
   const searchQuery = createMemo(() => String(params.q ?? "").trim());
   const domainFilter = createMemo(() => String(params.domain ?? "").trim().toLowerCase());
-  const [results] = createResource(
-    () => (!isServer && isEntryStoreReady() && searchQuery() ? [searchQuery(), domainFilter(), client.dbVersion] as const : null),
+  const [results, { refetch }] = createResource(
+    () => (!isServer && isEntryStoreReady() && searchQuery() ? [searchQuery(), domainFilter()] as const : null),
     ([query, domain]) => searchLocalEntries(query, domain),
   );
+
+  onMount(() => {
+    const unsubscribe = client.subscribe(() => {
+      if (searchQuery()) void refetch();
+    });
+    onCleanup(unsubscribe);
+  });
   const visibleEntries = createMemo(() => searchQuery() ? results() ?? [] : entries());
   const isEmpty = createMemo(() => isEntryStoreReady() && !results.loading && visibleEntries().length === 0);
   const requestedPage = createMemo(() => parsePage(params.page));

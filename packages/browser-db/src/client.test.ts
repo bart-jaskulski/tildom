@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { BrowserDbClient, createDbQuery } from "./client";
+import { BrowserDbClient } from "./client";
 import { DbRequest, DbResponse } from "./types";
-import { createRoot } from "solid-js";
 
 // Full-fidelity mock database state to avoid race conditions or timing differences
 let mockDatabase: any[] = [];
+let activeTx: any[] | null = null;
 
 class MockWorker implements Worker {
   public postMessage = vi.fn();
@@ -13,7 +13,7 @@ class MockWorker implements Worker {
   public onmessage: ((this: Worker, ev: MessageEvent) => any) | null = null;
   public onmessageerror = null;
   public onerror = null;
-  
+
   addEventListener = vi.fn();
   removeEventListener = vi.fn();
   dispatchEvent = vi.fn();
@@ -25,63 +25,84 @@ class MockWorker implements Worker {
 
         if (msg.type === "init") {
           mockDatabase = []; // Reset on init
+          activeTx = null;
           this.onmessage({
-            data: { id: msg.id, type: "success" }
+            data: { id: msg.id, type: "success" },
           } as MessageEvent<DbResponse>);
         } else if (msg.type === "tx:start") {
+          activeTx = [...mockDatabase];
           this.onmessage({
-            data: { id: msg.id, type: "success" }
+            data: { id: msg.id, type: "success" },
           } as MessageEvent<DbResponse>);
         } else if (msg.type === "exec") {
+          const target = activeTx ?? mockDatabase;
           if (msg.sql.includes("INSERT")) {
             const name = msg.params?.[0] || "rice";
             const newRow = { id: 42, name };
-            mockDatabase.push(newRow);
-            
+            target.push(newRow);
+
             this.onmessage({
-              data: { id: msg.id, type: "success", data: { rows: [newRow] } }
+              data: { id: msg.id, type: "success", data: { rows: [newRow] } },
             } as MessageEvent<DbResponse>);
-            
-            // Send change trigger for writes
-            this.onmessage({
-              data: { type: "change" }
-            } as MessageEvent<DbResponse>);
+
+            // Only notify immediately if NOT in an active transaction
+            if (activeTx === null) {
+              this.onmessage({
+                data: { type: "change", source: "local" },
+              } as MessageEvent<DbResponse>);
+            }
           } else if (msg.sql.includes("SELECT")) {
             this.onmessage({
-              data: { id: msg.id, type: "success", data: { rows: [...mockDatabase] } }
+              data: { id: msg.id, type: "success", data: { rows: [...target] } },
             } as MessageEvent<DbResponse>);
           } else {
             this.onmessage({
-              data: { id: msg.id, type: "success", data: { rows: [] } }
+              data: { id: msg.id, type: "success", data: { rows: [] } },
             } as MessageEvent<DbResponse>);
           }
         } else if (msg.type === "tx:commit") {
+          if (activeTx !== null) {
+            mockDatabase = activeTx;
+            activeTx = null;
+          }
           this.onmessage({
-            data: { id: msg.id, type: "success" }
+            data: { id: msg.id, type: "success" },
           } as MessageEvent<DbResponse>);
           this.onmessage({
-            data: { type: "change" }
+            data: { type: "change", source: "local" },
           } as MessageEvent<DbResponse>);
         } else if (msg.type === "tx:rollback") {
+          activeTx = null; // discard staged changes
           this.onmessage({
-            data: { id: msg.id, type: "success" }
+            data: { id: msg.id, type: "success" },
           } as MessageEvent<DbResponse>);
-        } else if (msg.type === "import" || msg.type === "close" || msg.type === "delete") {
+        } else if (msg.type === "export") {
           this.onmessage({
-            data: { id: msg.id, type: "success" }
+            data: { id: msg.id, type: "success", data: { bytes: new Uint8Array([1, 2, 3]) } },
+          } as MessageEvent<DbResponse>);
+        } else if (msg.type === "import") {
+          this.onmessage({
+            data: { id: msg.id, type: "success" },
+          } as MessageEvent<DbResponse>);
+          this.onmessage({
+            data: { type: "change", source: msg.source ?? "import" },
+          } as MessageEvent<DbResponse>);
+        } else if (msg.type === "close" || msg.type === "delete") {
+          this.onmessage({
+            data: { id: msg.id, type: "success" },
           } as MessageEvent<DbResponse>);
         }
-      }, 10);
+      }, 5);
     });
   }
 }
 
-describe("BrowserDbClient Encapsulated Transaction Suite", () => {
+describe("BrowserDbClient Suite", () => {
   let client: BrowserDbClient;
   let mockWorkerConstructor: any;
 
   beforeEach(() => {
-    mockWorkerConstructor = vi.fn(function(this: any) {
+    mockWorkerConstructor = vi.fn(function (this: any) {
       return new MockWorker();
     });
     client = new BrowserDbClient("groceries.sqlite3", {
@@ -92,58 +113,84 @@ describe("BrowserDbClient Encapsulated Transaction Suite", () => {
 
   it("executes top-level template queries correctly", async () => {
     await client.init();
-    
-    // Perform write first
+
     await client.exec("INSERT INTO groceries (name) VALUES (?)", ["rice"]);
-    
-    // Run query
+
     const rows = await client.sql`SELECT * FROM groceries WHERE name = ${"rice"}`;
     expect(rows).toEqual([{ id: 42, name: "rice" }]);
   });
 
-  it("handles complex transacted callables with nested scopes and return parameters", async () => {
+  it("notifies subscribers with change source when changes occur and unsubscribes properly", async () => {
     await client.init();
 
-    const productName = "rice";
-    const productPrice = 2.99;
+    const listener = vi.fn();
+    const unsubscribe = client.subscribe(listener);
 
-    const newProductId = await client.transaction(async (tx) => {
-      const [product] = await tx.sql`
-        INSERT INTO groceries (name) VALUES (${productName}) RETURNING *
-      `;
-      expect(product.name).toBe("rice");
+    await client.exec("INSERT INTO groceries (name) VALUES (?)", ["apples"]);
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenCalledWith({ source: "local" });
 
-      await tx.sql`
-        INSERT INTO prices (groceryId, price) VALUES (${product.id}, ${productPrice})
-      `;
-
-      return product.id;
-    });
-
-    expect(newProductId).toBe(42);
+    unsubscribe();
+    await client.exec("INSERT INTO groceries (name) VALUES (?)", ["oranges"]);
+    expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  it("re-triggers SolidJS reactive live query observables", async () => {
+  it("executes atomic transactions with commit and rollback, supporting tx.query, tx.exec and tx.sql", async () => {
     await client.init();
 
-    let groceries: any;
+    const listener = vi.fn();
+    client.subscribe(listener);
 
-    // Run the synchronous SolidJS reactive root context
-    createRoot(() => {
-      groceries = createDbQuery(client, "SELECT * FROM groceries");
+    const txResult = await client.transaction(async (tx) => {
+      await tx.query("INSERT INTO groceries (name) VALUES (?)", ["bread"]);
+      await tx.exec("INSERT INTO groceries (name) VALUES (?)", ["milk"]);
+      const items = await tx.sql<{ id: number; name: string }>`SELECT * FROM groceries`;
+      return items;
     });
 
-    // Verify initial empty dataset
-    expect(groceries()).toEqual([]);
+    expect(txResult).toHaveLength(2);
+    // Notification should fire on commit
+    expect(listener).toHaveBeenCalledTimes(1);
 
-    // Perform write to increment version changes signal
-    await client.exec("INSERT INTO groceries VALUES (42, 'rice')");
+    const committed = await client.sql<{ id: number; name: string }>`SELECT * FROM groceries`;
+    expect(committed.map((r) => r.name)).toEqual(["bread", "milk"]);
 
-    // Await a tick to let the reactive effect database query run
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // Rollback test: failure should abort staged writes and NOT emit change
+    await expect(
+      client.transaction(async (tx) => {
+        await tx.exec("INSERT INTO groceries (name) VALUES (?)", ["will-fail"]);
+        throw new Error("Simulated tx failure");
+      })
+    ).rejects.toThrow("Simulated tx failure");
 
-    // Observable should automatically update!
-    expect(groceries()).toEqual([{ id: 42, name: "rice" }]);
+    // Notification count must NOT have increased
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    // Staged change must NOT be in the database
+    const afterRollback = await client.sql<{ id: number; name: string }>`SELECT * FROM groceries`;
+    expect(afterRollback.map((r) => r.name)).toEqual(["bread", "milk"]);
+  });
+
+  it("queues commands called before init() finishes", async () => {
+    const promise = client.exec("INSERT INTO groceries (name) VALUES (?)", ["queued"]);
+    await client.init();
+
+    const rows = await promise;
+    expect(rows).toEqual([{ id: 42, name: "queued" }]);
+  });
+
+  it("exports and imports database bytes, notifying subscribers with import source", async () => {
+    await client.init();
+
+    const listener = vi.fn();
+    client.subscribe(listener);
+
+    const bytes = await client.exportDatabase();
+    expect(bytes).toEqual(new Uint8Array([1, 2, 3]));
+    expect(listener).not.toHaveBeenCalled();
+
+    await expect(client.importDatabase(new Uint8Array([4, 5, 6]))).resolves.not.toThrow();
+    expect(listener).toHaveBeenCalledWith({ source: "import" });
   });
 
   it("closes without deleting the database", async () => {
@@ -170,11 +217,10 @@ describe("BrowserDbClient Encapsulated Transaction Suite", () => {
     expect(worker.terminate).toHaveBeenCalledOnce();
   });
 
-  it("passes migrations and import requirements to the worker", async () => {
+  it("passes migrations to the worker", async () => {
     client = new BrowserDbClient("groceries.sqlite3", {
       workerConstructor: mockWorkerConstructor,
       migrations: [{ version: 1, sql: "CREATE TABLE groceries (id INTEGER PRIMARY KEY);" }],
-      requiredTables: ["groceries"],
     });
 
     await client.init();
@@ -183,7 +229,6 @@ describe("BrowserDbClient Encapsulated Transaction Suite", () => {
     expect(worker.postMessage).toHaveBeenCalledWith(expect.objectContaining({
       type: "init",
       migrations: [{ version: 1, sql: "CREATE TABLE groceries (id INTEGER PRIMARY KEY);" }],
-      requiredTables: ["groceries"],
     }));
   });
 });

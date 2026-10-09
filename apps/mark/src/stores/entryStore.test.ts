@@ -1,12 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const execMock = vi.hoisted(() => vi.fn());
+const sqlMock = vi.hoisted(() => vi.fn((strings: TemplateStringsArray, ...values: unknown[]) => Promise.resolve([])));
 const queryMock = vi.hoisted(() => vi.fn());
+
+const sqlCalls = () =>
+  sqlMock.mock.calls.map(([strings, ...values]) => ({
+    sql: (strings as unknown as string[]).join("?"),
+    values,
+  }));
 
 vi.mock("~/lib/db", () => ({
   client: {
-    dbVersion: 0,
-    exec: execMock,
+    subscribe: vi.fn(),
+    sql: sqlMock,
     init: vi.fn(),
     query: queryMock,
   },
@@ -20,7 +26,7 @@ import { addCommentToEntry, createEntry, deleteComment, deleteEntry, fetchEntryD
 
 describe("entryStore mutations", () => {
   beforeEach(() => {
-    execMock.mockReset().mockResolvedValue(undefined);
+    sqlMock.mockReset().mockResolvedValue([]);
     queryMock.mockReset().mockResolvedValue([]);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
 
@@ -30,41 +36,39 @@ describe("entryStore mutations", () => {
   it("creates note entries locally", async () => {
     await createEntry("A useful note");
 
-    expect(execMock).toHaveBeenCalledWith(expect.stringContaining("INSERT INTO entries"), expect.arrayContaining(["00000000-0000-4000-8000-000000000001", "A useful note"]));
+    const call = sqlCalls()[0];
+    expect(call.sql).toContain("INSERT INTO entries");
+    expect(call.values).toEqual(expect.arrayContaining(["00000000-0000-4000-8000-000000000001", "A useful note"]));
   });
 
   it("indexes hashtags written in a note", async () => {
     await createEntry("Garden plans\nPlant #herbs with #local-first notes");
 
-    expect(execMock).toHaveBeenCalledWith(
-      expect.stringContaining("INSERT INTO entry_tags"),
-      expect.arrayContaining(["00000000-0000-4000-8000-000000000001"]),
-    );
+    const tagCall = sqlCalls().find((call) => call.sql.includes("INSERT INTO entry_tags"));
+    expect(tagCall?.values).toEqual(expect.arrayContaining(["00000000-0000-4000-8000-000000000001"]));
   });
 
   it("uses first line as title and keeps the rest as note body", async () => {
     await createEntry("Trip notes\n- day 1\n- day 2");
 
-    expect(execMock).toHaveBeenCalledWith(
-      expect.stringContaining("INSERT INTO entries"),
-      expect.arrayContaining(["00000000-0000-4000-8000-000000000001", "Trip notes", "- day 1\n- day 2"]),
-    );
+    const call = sqlCalls()[0];
+    expect(call.sql).toContain("INSERT INTO entries");
+    expect(call.values).toEqual(expect.arrayContaining(["00000000-0000-4000-8000-000000000001", "Trip notes", "- day 1\n- day 2"]));
   });
 
   it("creates URL entries with normalized local URL fields", async () => {
     await createEntry("example.com/path#fragment");
 
-    expect(execMock).toHaveBeenCalledWith(
-      expect.stringContaining("INSERT INTO entries"),
-      expect.arrayContaining(["00000000-0000-4000-8000-000000000001", "https://example.com/path", "https://example.com/path", "example.com"]),
-    );
+    const call = sqlCalls()[0];
+    expect(call.sql).toContain("INSERT INTO entries");
+    expect(call.values).toEqual(expect.arrayContaining(["00000000-0000-4000-8000-000000000001", "https://example.com/path", "https://example.com/path", "example.com"]));
   });
 
   it("reuses an existing entry for a duplicate URL", async () => {
     queryMock.mockResolvedValue([{ id: "entry-1" }]);
 
     await expect(createEntry("https://example.com/article")).resolves.toBe("entry-1");
-    expect(execMock).not.toHaveBeenCalled();
+    expect(sqlMock).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -81,17 +85,19 @@ describe("entryStore mutations", () => {
         body: JSON.stringify({ url: "https://example.com/article" }),
       }),
     );
-    expect(execMock).toHaveBeenCalledWith(
-      expect.stringContaining("INSERT INTO entries"),
-      expect.arrayContaining(["example.com", null, "idle"]),
-    );
+    const call = sqlCalls()[0];
+    expect(call.sql).toContain("INSERT INTO entries");
+    expect(call.values).toEqual(expect.arrayContaining(["example.com", null, "idle"]));
   });
 
   it("adds comments and touches the parent entry", async () => {
     await addCommentToEntry("entry-1", "follow-up");
 
-    expect(execMock).toHaveBeenNthCalledWith(1, expect.stringContaining("INSERT INTO comments"), expect.arrayContaining(["00000000-0000-4000-8000-000000000001", "entry-1", "follow-up"]));
-    expect(execMock).toHaveBeenNthCalledWith(2, expect.stringContaining("UPDATE entries"), expect.arrayContaining(["entry-1"]));
+    const calls = sqlCalls();
+    expect(calls[0].sql).toContain("INSERT INTO comments");
+    expect(calls[0].values).toEqual(expect.arrayContaining(["00000000-0000-4000-8000-000000000001", "entry-1", "follow-up"]));
+    expect(calls[1].sql).toContain("UPDATE entries");
+    expect(calls[1].values).toEqual(expect.arrayContaining(["entry-1"]));
   });
 
   it("updates entries", async () => {
@@ -100,8 +106,9 @@ describe("entryStore mutations", () => {
       content: "example.com/updated#fragment",
     });
 
-    expect(execMock).toHaveBeenCalledWith(
-      expect.stringContaining("UPDATE entries"),
+    const call = sqlCalls()[0];
+    expect(call.sql).toContain("UPDATE entries");
+    expect(call.values).toEqual(
       expect.arrayContaining([
         "https://example.com/updated",
         "https://example.com/updated",
@@ -114,7 +121,7 @@ describe("entryStore mutations", () => {
   });
 
   it("reports duplicate links when updating an entry", async () => {
-    execMock.mockRejectedValue(new Error("UNIQUE constraint failed: entries.canonical_url"));
+    sqlMock.mockRejectedValue(new Error("UNIQUE constraint failed: entries.canonical_url"));
 
     await expect(updateEntry("entry-1", {
       title: "Updated title",
@@ -128,8 +135,9 @@ describe("entryStore mutations", () => {
       content: "updated note body",
     });
 
-    expect(execMock).toHaveBeenCalledWith(
-      expect.stringContaining("UPDATE entries"),
+    const call = sqlCalls()[0];
+    expect(call.sql).toContain("UPDATE entries");
+    expect(call.values).toEqual(
       expect.arrayContaining([
         null,
         null,
@@ -147,33 +155,37 @@ describe("entryStore mutations", () => {
       content: "example.com/article\n\n#read #research",
     });
 
-    expect(execMock).toHaveBeenCalledWith(
-      expect.stringContaining("UPDATE entries"),
-      expect.arrayContaining(["https://example.com/article", "#read #research", "entry-1"]),
-    );
+    const call = sqlCalls()[0];
+    expect(call.sql).toContain("UPDATE entries");
+    expect(call.values).toEqual(expect.arrayContaining(["https://example.com/article", "#read #research", "entry-1"]));
   });
 
   it("deletes entries with their comments", async () => {
     await deleteEntry("entry-1");
 
-    expect(execMock).toHaveBeenNthCalledWith(1, "DELETE FROM comments WHERE entry_id = ?", ["entry-1"]);
-    expect(execMock).toHaveBeenNthCalledWith(2, "DELETE FROM entry_tags WHERE entry_id = ?", ["entry-1"]);
-    expect(execMock).toHaveBeenNthCalledWith(3, "DELETE FROM entries WHERE id = ?", ["entry-1"]);
+    const calls = sqlCalls();
+    expect(calls[0].sql).toContain("DELETE FROM comments WHERE entry_id = ?");
+    expect(calls[0].values).toEqual(["entry-1"]);
+    expect(calls[1].sql).toContain("DELETE FROM entry_tags WHERE entry_id = ?");
+    expect(calls[1].values).toEqual(["entry-1"]);
+    expect(calls[2].sql).toContain("DELETE FROM entries WHERE id = ?");
+    expect(calls[2].values).toEqual(["entry-1"]);
   });
 
   it("updates comments", async () => {
     await updateComment("comment-1", "updated comment");
 
-    expect(execMock).toHaveBeenCalledWith(
-      expect.stringContaining("UPDATE comments"),
-      expect.arrayContaining(["updated comment", "comment-1"]),
-    );
+    const call = sqlCalls()[0];
+    expect(call.sql).toContain("UPDATE comments");
+    expect(call.values).toEqual(expect.arrayContaining(["updated comment", "comment-1"]));
   });
 
   it("deletes comments", async () => {
     await deleteComment("comment-1");
 
-    expect(execMock).toHaveBeenCalledWith("DELETE FROM comments WHERE id = ?", ["comment-1"]);
+    const call = sqlCalls()[0];
+    expect(call.sql).toContain("DELETE FROM comments WHERE id = ?");
+    expect(call.values).toEqual(["comment-1"]);
   });
 
   it("maps entry detail queries into entry and comment objects", async () => {
@@ -239,9 +251,8 @@ describe("entryStore mutations", () => {
   it("records when an entry is opened without changing its content", async () => {
     await recordEntryOpen("entry-1");
 
-    expect(execMock).toHaveBeenCalledWith(
-      expect.stringContaining("first_opened_at = COALESCE(first_opened_at, ?),"),
-      expect.arrayContaining(["entry-1"]),
-    );
+    const call = sqlCalls()[0];
+    expect(call.sql).toContain("first_opened_at = COALESCE(first_opened_at, ?)");
+    expect(call.values).toEqual(expect.arrayContaining(["entry-1"]));
   });
 });

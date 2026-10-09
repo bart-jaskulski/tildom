@@ -8,7 +8,6 @@ let activeTxId: number | null = null;
 let totalChangesBeforeTx = 0;
 let databaseName = "tildom.sqlite3";
 let databaseMigrations: DbMigration[] = [];
-let requiredTableNames: string[] = [];
 
 const getTotalChanges = (): number => {
   if (!db || !sqlite3Api) return 0;
@@ -113,19 +112,6 @@ const validateImportedDb = async (bytes: Uint8Array) => {
       if (integrity[0]?.[0] !== "ok") {
         throw new Error("Imported database failed integrity check");
       }
-
-      if (requiredTableNames.length) {
-        const placeholders = requiredTableNames.map(() => "?").join(", ");
-        const tables = importedDb.exec({
-          sql: `SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (${placeholders})`,
-          bind: requiredTableNames,
-          rowMode: "array",
-          returnValue: "resultRows",
-        });
-        if (tables.length !== requiredTableNames.length) {
-          throw new Error("Imported database is missing required application tables");
-        }
-      }
     } finally {
       importedDb.close();
     }
@@ -186,7 +172,6 @@ const deleteDb = async (dbName: string) => {
 const initDb = async (
   dbName: string,
   migrations: DbMigration[],
-  requiredTables?: string[],
 ) => {
   try {
     if (db) {
@@ -195,9 +180,7 @@ const initDb = async (
 
     databaseName = dbName;
     databaseMigrations = migrations;
-    requiredTableNames = requiredTables ?? [];
     sqlite3Api ??= await sqlite3InitModule();
-    console.debug("SQLite WASM module initialized", sqlite3Api.version.libVersion);
 
     assertOpfsAvailable(sqlite3Api);
 
@@ -205,7 +188,6 @@ const initDb = async (
     db = new sqlite3Api.oo1.OpfsDb(dbName, "c");
     execSql("PRAGMA foreign_keys = ON");
     ensureSchema();
-    console.debug("Database schema ensured");
   } catch (err) {
     db?.close();
     db = null;
@@ -215,14 +197,13 @@ const initDb = async (
 };
 
 self.onmessage = async (event: MessageEvent<DbRequest>) => {
-  console.debug("Received message in DB worker:", event.data);
   const msg = event.data;
 
   try {
     switch (msg.type) {
       case "init": {
         const dbName = msg.dbName || "tildom.sqlite3";
-        await initDb(dbName, msg.migrations, msg.requiredTables);
+        await initDb(dbName, msg.migrations);
         self.postMessage({ id: msg.id, type: "success" } as DbResponse);
         break;
       }
@@ -235,14 +216,9 @@ self.onmessage = async (event: MessageEvent<DbRequest>) => {
         if (activeTxId === null) {
           const currentTotalChanges = getTotalChanges();
           if (currentTotalChanges !== previousTotalChanges) {
-            self.postMessage({ type: "change" } as DbResponse);
+            self.postMessage({ type: "change", source: "local" } as DbResponse);
           }
         }
-        break;
-      }
-      case "query": {
-        const rows = querySql(msg.sql, msg.params);
-        self.postMessage({ id: msg.id, type: "success", data: { rows } } as DbResponse);
         break;
       }
       case "tx:start": {
@@ -266,7 +242,7 @@ self.onmessage = async (event: MessageEvent<DbRequest>) => {
         // Check if database was mutated during the transaction block
         const currentTotalChanges = getTotalChanges();
         if (currentTotalChanges !== totalChangesBeforeTx) {
-          self.postMessage({ type: "change" } as DbResponse);
+          self.postMessage({ type: "change", source: "local" } as DbResponse);
         }
         break;
       }
@@ -287,7 +263,7 @@ self.onmessage = async (event: MessageEvent<DbRequest>) => {
         const dbName = msg.dbName || "tildom.sqlite3";
         await importDb(dbName, msg.bytes);
         self.postMessage({ id: msg.id, type: "success" } as DbResponse);
-        self.postMessage({ type: "change" } as DbResponse);
+        self.postMessage({ type: "change", source: msg.source ?? "import" } as DbResponse);
         break;
       }
       case "close": {

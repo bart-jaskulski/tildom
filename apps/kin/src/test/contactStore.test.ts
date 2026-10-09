@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { contactSlugs, parseTags, slugifyContactName, INVERSE_ROLES, ROLE_LABELS, type Contact } from "../stores/contactStore";
+import type { Contact } from "../lib/db";
+import { contactSlugs, parseTags, slugifyContactName, INVERSE_ROLES, ROLE_LABELS } from "../stores/contactStore";
 
 const contact = (id: string, name: string, created_at: number): Contact => ({
   id, name, relationship: "", created_at, updated_at: created_at, location: "", birthday: "", phone: "", email: "",

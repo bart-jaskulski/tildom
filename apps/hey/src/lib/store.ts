@@ -1,4 +1,4 @@
-import { exec, query } from "./db";
+import { db } from "./db";
 import type { Chat, MemoryFile, Message, Settings } from "./types";
 
 type ChatRow = { id: string; title: string; created_at: number; updated_at: number };
@@ -6,7 +6,7 @@ type MessageRow = { id: string; chat_id: string; role: Message["role"]; body: st
 type MemoryRow = { path: string; content: string; updated_at: number };
 
 export const listChats = async (): Promise<Chat[]> =>
-  (await query<ChatRow>("SELECT * FROM chats ORDER BY updated_at DESC")).map((row) => ({
+  (await db.sql<ChatRow>`SELECT * FROM chats ORDER BY updated_at DESC`).map((row) => ({
     id: row.id,
     title: row.title,
     createdAt: row.created_at,
@@ -14,10 +14,7 @@ export const listChats = async (): Promise<Chat[]> =>
   }));
 
 export const listMessages = async (chatId: string): Promise<Message[]> =>
-  (await query<MessageRow>(
-    "SELECT * FROM messages WHERE chat_id = ? ORDER BY created_at",
-    [chatId],
-  )).map((row) => ({
+  (await db.sql<MessageRow>`SELECT * FROM messages WHERE chat_id = ${chatId} ORDER BY created_at`).map((row) => ({
     id: row.id,
     chatId: row.chat_id,
     role: row.role,
@@ -28,20 +25,17 @@ export const listMessages = async (chatId: string): Promise<Message[]> =>
 export const createChat = async () => {
   const id = crypto.randomUUID();
   const now = Date.now();
-  await exec(
-    "INSERT INTO chats (id, title, created_at, updated_at) VALUES (?, 'New conversation', ?, ?)",
-    [id, now, now],
-  );
+  await db.sql`INSERT INTO chats (id, title, created_at, updated_at) VALUES (${id}, 'New conversation', ${now}, ${now})`;
   return id;
 };
 
 export const renameChat = (id: string, title: string) =>
-  exec("UPDATE chats SET title = ?, updated_at = ? WHERE id = ?", [title, Date.now(), id]);
+  db.sql`UPDATE chats SET title = ${title}, updated_at = ${Date.now()} WHERE id = ${id}`;
 
 export const titleChat = (id: string, title: string) =>
-  exec("UPDATE chats SET title = ? WHERE id = ? AND title = 'New conversation'", [title, id]);
+  db.sql`UPDATE chats SET title = ${title} WHERE id = ${id} AND title = 'New conversation'`;
 
-export const deleteChat = (id: string) => exec("DELETE FROM chats WHERE id = ?", [id]);
+export const deleteChat = (id: string) => db.sql`DELETE FROM chats WHERE id = ${id}`;
 
 export const addMessage = async (chatId: string, role: Message["role"], body: string) => {
   const message: Message = {
@@ -51,45 +45,40 @@ export const addMessage = async (chatId: string, role: Message["role"], body: st
     body,
     createdAt: Date.now(),
   };
-  await exec(
-    "INSERT INTO messages (id, chat_id, role, body, created_at) VALUES (?, ?, ?, ?, ?)",
-    [message.id, chatId, role, body, message.createdAt],
-  );
-  await exec("UPDATE chats SET updated_at = ? WHERE id = ?", [message.createdAt, chatId]);
+  await db.sql`INSERT INTO messages (id, chat_id, role, body, created_at) VALUES (${message.id}, ${chatId}, ${role}, ${body}, ${message.createdAt})`;
+  await db.sql`UPDATE chats SET updated_at = ${message.createdAt} WHERE id = ${chatId}`;
   return message;
 };
 
 export const updateMessage = async (message: Message, body: string) => {
-  await exec("UPDATE messages SET body = ? WHERE id = ?", [body, message.id]);
-  await exec("UPDATE chats SET updated_at = ? WHERE id = ?", [Date.now(), message.chatId]);
+  await db.sql`UPDATE messages SET body = ${body} WHERE id = ${message.id}`;
+  await db.sql`UPDATE chats SET updated_at = ${Date.now()} WHERE id = ${message.chatId}`;
   return { ...message, body };
 };
 
 export const readChatDraft = async (chatId: string) => {
-  const rows = await query<{ body: string }>("SELECT body FROM chat_drafts WHERE chat_id = ?", [chatId]);
+  const rows = await db.sql<{ body: string }>`SELECT body FROM chat_drafts WHERE chat_id = ${chatId}`;
   return rows[0]?.body ?? "";
 };
 
 export const writeChatDraft = (chatId: string, body: string) =>
-  exec(
-    `INSERT INTO chat_drafts (chat_id, body, updated_at) VALUES (?, ?, ?)
-     ON CONFLICT(chat_id) DO UPDATE SET body = excluded.body, updated_at = excluded.updated_at`,
-    [chatId, body, Date.now()],
-  );
+  db.sql`
+    INSERT INTO chat_drafts (chat_id, body, updated_at) VALUES (${chatId}, ${body}, ${Date.now()})
+    ON CONFLICT(chat_id) DO UPDATE SET body = excluded.body, updated_at = excluded.updated_at
+  `;
 
 export const listMemoryFiles = async (): Promise<MemoryFile[]> =>
-  (await query<MemoryRow>("SELECT * FROM memory_files ORDER BY path")).map((row) => ({
+  (await db.sql<MemoryRow>`SELECT * FROM memory_files ORDER BY path`).map((row) => ({
     path: row.path,
     content: row.content,
     updatedAt: row.updated_at,
   }));
 
 export const writeMemoryFile = async (file: Pick<MemoryFile, "path">, content: string) => {
-  await exec(
-    `INSERT INTO memory_files (path, content, updated_at) VALUES (?, ?, ?)
-     ON CONFLICT(path) DO UPDATE SET content = excluded.content, updated_at = excluded.updated_at`,
-    [file.path, content, Date.now()],
-  );
+  await db.sql`
+    INSERT INTO memory_files (path, content, updated_at) VALUES (${file.path}, ${content}, ${Date.now()})
+    ON CONFLICT(path) DO UPDATE SET content = excluded.content, updated_at = excluded.updated_at
+  `;
 };
 
 const defaultSettings: Settings = {
@@ -101,13 +90,13 @@ const defaultSettings: Settings = {
 };
 
 export const readSettings = async (): Promise<Settings> => {
-  const rows = await query<{ value: string }>("SELECT value FROM settings WHERE key = 'preferences'");
+  const rows = await db.sql<{ value: string }>`SELECT value FROM settings WHERE key = 'preferences'`;
   if (!rows[0]) return defaultSettings;
   return { ...defaultSettings, ...JSON.parse(rows[0].value) };
 };
 
 export const writeSettings = (settings: Settings) =>
-  exec(
-    "INSERT INTO settings (key, value) VALUES ('preferences', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-    [JSON.stringify(settings)],
-  );
+  db.sql`
+    INSERT INTO settings (key, value) VALUES ('preferences', ${JSON.stringify(settings)})
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `;

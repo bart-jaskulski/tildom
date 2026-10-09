@@ -6,7 +6,7 @@ import {
   createSignal,
   onMount,
 } from "solid-js";
-import { initDb } from "./lib/db";
+import { db } from "./lib/db";
 import { generateChatTitle, streamChat } from "./lib/chat";
 import { buildPairingUrl, clearPairingHash, parsePairingSecret } from "@tildom/sync-client";
 import { connectAppToSuite, registerAppWithSuite } from "@tildom/sync-client";
@@ -52,7 +52,7 @@ function SuiteCallback() {
   const [error, setError] = createSignal("");
   onMount(async () => {
     try {
-      await initDb();
+      await db.init();
       if (location.pathname.endsWith("/register")) await registerAppWithSuite("hey", brokerOrigin, getSyncConfig);
       else await connectAppToSuite("hey", brokerOrigin, getSyncConfig, joinSyncVault);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Suite connection failed"); }
@@ -158,7 +158,7 @@ export default function App() {
   onMount(async () => {
     pwaInstall.initialize();
     try {
-      await initDb();
+      await db.init();
       const [files, preferences] = await Promise.all([listMemoryFiles(), readSettings()]);
       setMemoryFiles(files);
       setSettings(preferences);
