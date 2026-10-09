@@ -7,12 +7,6 @@
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--border-color);
 
-  & :global(.kin-button) {
-    min-height: 32px;
-    padding: 0 1ch;
-    border-width: 1px;
-    text-transform: none;
-  }
 }
 
 .feedNote {
@@ -115,20 +109,11 @@
 
 .addDialog {
   width: min(50ch, calc(100vw - 2rem));
-  padding: 0;
-  border: 1px solid var(--fg-default);
-  background: var(--bg-surface);
-  color: var(--fg-default);
-
-  &::backdrop {
-    background: rgb(0 0 0 / 38%);
-  }
 }
 
 .dialogForm {
   display: grid;
   gap: 0.85rem;
-  padding: 1.5rem 3ch;
 
   & h2 {
     margin: 0 0 0.25rem;

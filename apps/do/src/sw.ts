@@ -1,5 +1,7 @@
 /// <reference lib="webworker" />
 
+import { createSyncWorker } from "@tildom/sync-client/service-worker";
+import { syncState } from "~/lib/syncState";
 import { cleanupOutdatedCaches, precacheAndRoute } from "workbox-precaching";
 import {
   OFFLINE_DOCUMENT_PATHS,
@@ -82,3 +84,13 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith(handleNavigation(request));
 });
+
+const { prefetchLatestSnapshot, runBackgroundSync } = createSyncWorker(syncState);
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "DO_SYNC_PREFETCH") event.waitUntil(prefetchLatestSnapshot());
+});
+
+self.addEventListener("sync", ((event: ExtendableEvent & { tag: string }) => {
+  if (event.tag === syncState.backgroundTag) event.waitUntil(runBackgroundSync());
+}) as EventListener);

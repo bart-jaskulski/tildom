@@ -6,7 +6,7 @@
   line-height: 1.4;
   letter-spacing: 0.02em;
   background: transparent;
-  color: var(--fg-muted, #6a737d);
+  color: var(--fg-muted);
   border: none;
   padding: 0;
   text-decoration: none;
@@ -16,35 +16,35 @@
 
 /* Bracket variant: [ label ] */
 .bracket {
-  color: var(--fg-muted, #6a737d);
+  color: var(--fg-muted);
   font-weight: normal;
 }
 
 /* Tag variant: #label */
 .tag {
-  color: var(--syntax-string, #032f62);
+  color: var(--syntax-string);
   font-weight: normal;
 }
 
 /* Subtle filled chip */
 .subtle {
-  background: var(--bg-surface, #ffffff);
-  border: 1px solid var(--border-color, #e1e4e8);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
   padding: 1px 6px;
-  color: var(--fg-default, #24292e);
+  color: var(--fg-default);
 }
 
 /* Active block-cursor chip */
 .active {
-  background: var(--syntax-bg-active, #dbedff);
-  color: var(--syntax-string, #032f62);
+  background: var(--syntax-bg-active);
+  color: var(--syntax-string);
   padding: 1px 6px;
   font-weight: 700;
 }
 
 /* Keyword/accent chip */
 .keyword {
-  color: var(--syntax-keyword, #d73a49);
+  color: var(--syntax-keyword);
   font-weight: bold;
 }
 
@@ -58,10 +58,10 @@
 
 .interactive:hover {
   text-decoration: underline;
-  color: var(--syntax-keyword, #d73a49);
+  color: var(--syntax-keyword);
 }
 
 .interactive:focus-visible {
-  outline: 2px solid var(--border-focus, #24292e);
+  outline: 2px solid var(--border-focus);
   outline-offset: 2px;
 }

@@ -3,11 +3,11 @@
   inset: auto;
   margin: 0;
   padding: 0.75rem 1.25ch;
-  border: 1px solid var(--fg-default, #24292e);
-  background: var(--bg-surface, #ffffff);
-  color: var(--fg-default, #24292e);
-  box-shadow: 3px 3px 0 var(--syntax-bg-active, #dbedff);
-  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  border: 1px solid var(--fg-default);
+  background: var(--bg-surface);
+  color: var(--fg-default);
+  box-shadow: 3px 3px 0 var(--syntax-bg-active);
+  font-family: inherit;
   font-size: 13px;
   box-sizing: border-box;
   max-width: min(40ch, calc(100vw - 2rem));

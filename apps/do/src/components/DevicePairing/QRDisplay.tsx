@@ -17,7 +17,7 @@ export const QRDisplay: Component<QRDisplayProps> = (props) => {
       width: 300,
       margin: 2,
       color: {
-        dark: "#292524",
+        dark: "#000000",
         light: "#ffffff",
       },
     })
@@ -30,16 +30,16 @@ export const QRDisplay: Component<QRDisplayProps> = (props) => {
   return (
     <div class="flex w-full flex-col items-center gap-4">
       <Show when={error()}>
-        <p class="text-sm text-red-600">{error()}</p>
+        <p class="text-sm text-[var(--syntax-error)]">{error()}</p>
       </Show>
       <Show when={!error() && qrDataUrl()}>
         <img
           src={qrDataUrl()}
           alt="Vault pairing QR code"
-          class="w-full max-w-[300px] rounded-2xl border border-stone-200"
+          class="w-full max-w-[300px]"
         />
       </Show>
-      <p class="text-center text-xs text-stone-500">
+      <p class="text-center text-xs text-[var(--fg-muted)]">
         This QR contains the full join link for this vault.
       </p>
     </div>

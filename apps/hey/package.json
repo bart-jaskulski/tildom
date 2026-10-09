@@ -9,19 +9,20 @@
     "test": "node --test src/lib/*.test.ts"
   },
   "dependencies": {
-    "@sqlite.org/sqlite-wasm": "3.53.0-build1",
+    "@solidjs/router": "^1.0.0",
+    "@sqlite.org/sqlite-wasm": "3.53.4-build2",
     "@tildom/browser-db": "workspace:*",
     "@tildom/markdownish": "workspace:*",
     "@tildom/sync-client": "workspace:*",
     "@tildom/ui": "workspace:*",
-    "solid-js": "^1.9.13",
-    "vite": "^8.0.14"
+    "solid-js": "^1.9.17",
+    "vite": "^8.3.3"
   },
   "devDependencies": {
     "@tildom/config": "workspace:*",
-    "@types/node": "^22.19.19",
-    "typescript": "^6.0.3",
-    "vite-plugin-solid": "^2.11.12",
-    "vitest": "^4.1.7"
+    "@types/node": "^26.6.4",
+    "typescript": "~6.0.3",
+    "vite-plugin-solid": "^2.11.14",
+    "vitest": "^5.0.3"
   }
 }

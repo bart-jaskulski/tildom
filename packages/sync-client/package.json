@@ -9,15 +9,16 @@
     "./service-worker": "./src/service-worker.ts"
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "idb-keyval": "^6.2.2",
-    "solid-js": "^1.9.13"
+    "idb-keyval": "^6.3.0",
+    "solid-js": "^1.9.17"
   },
   "devDependencies": {
     "@tildom/config": "workspace:*",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.7"
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.3"
   }
 }

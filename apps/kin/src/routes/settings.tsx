@@ -84,7 +84,7 @@ export default function Settings() {
             <Button type="button" disabled={busy() !== null} onClick={exportBackup}>
               {busy() === "export" ? "exporting…" : "export"}
             </Button>
-            <label class={`kin-button ${styles.fileButton}`}>
+            <Button as="label" class={styles.fileButton}>
               <input
                 ref={fileInput}
                 type="file"
@@ -93,7 +93,7 @@ export default function Settings() {
                 onChange={importBackup}
               />
               {busy() === "import" ? "importing…" : "import"}
-            </label>
+            </Button>
           </div>
         </section>
 

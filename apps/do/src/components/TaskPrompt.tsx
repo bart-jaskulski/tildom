@@ -1,5 +1,5 @@
 import { createEffect, createMemo, createSignal, on, Show } from "solid-js";
-import Plus from "lucide-solid/icons/plus";
+import { Button, Checkbox, Dialog, Input, StatusBanner, Textarea } from "@tildom/ui";
 import { addTask, setTaskExpanded } from "~/stores/taskStore";
 import { isOnline } from "~/stores/networkStore";
 import { breakdownGranularity } from "~/stores/preferencesStore";
@@ -32,8 +32,9 @@ type TaskPromptProps = {
 
 export default function TaskPrompt(props: TaskPromptProps) {
   const [isOpen, setIsOpen] = createSignal(false);
+  const [error, setError] = createSignal("");
   const [mode, setMode] = createSignal<"default" | "clarify">("default");
-  
+
   // Custom mock for useSubmission matching standard SPA
   const [pending, setPending] = createSignal(false);
   const [result, setResult] = createSignal<BreakdownTaskResult | null>(null);
@@ -69,6 +70,7 @@ export default function TaskPrompt(props: TaskPromptProps) {
 
   const resetComposer = () => {
     setMode("default");
+    setError("");
     setClarification("");
     setIsAiEnabled(false);
     setDueDate("");
@@ -152,13 +154,9 @@ export default function TaskPrompt(props: TaskPromptProps) {
     }
   };
 
-  const autoResize = (el: HTMLTextAreaElement) => {
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  };
-
   const triggerAiBreakdown = async (taskVal: string, granularityVal: string, clarificationVal?: string) => {
     setPending(true);
+    setError("");
     setResult(null);
     try {
       const response = await fetch(`${API_BASE_URL}/v1/do/breakdown`, {
@@ -180,7 +178,7 @@ export default function TaskPrompt(props: TaskPromptProps) {
       setResult(apiResult);
     } catch (error) {
       console.error(error);
-      window.alert(error instanceof Error ? error.message : "AI breakdown failed");
+      setError(error instanceof Error ? error.message : "AI breakdown failed");
     } finally {
       setPending(false);
     }
@@ -198,7 +196,7 @@ export default function TaskPrompt(props: TaskPromptProps) {
       const form = event.currentTarget as HTMLFormElement;
       const formData = new FormData(form);
       const clarificationVal = (formData.get("clarification") as string)?.trim();
-      
+
       await triggerAiBreakdown(task, breakdownGranularity(), clarificationVal);
       return;
     }
@@ -233,64 +231,41 @@ export default function TaskPrompt(props: TaskPromptProps) {
   return (
     <>
       {/* TUI FIXED BOTTOM BAR BUTTON */}
-      <div 
+      <div
         class="fixed bottom-0 left-0 right-0 z-50 bg-[var(--bg-canvas)] border-t-2 border-[var(--border-color)] transition-transform duration-200"
         style={{ transform: props.visible && !isOpen() ? 'translateY(0)' : 'translateY(100%)' }}
       >
         <div class="max-w-xl mx-auto p-4">
-          <button 
-            onClick={handleOpen} 
-            class="w-full tui-button flex items-center justify-center gap-2 group font-mono"
+          <Button
+            onClick={handleOpen}
+            class="w-full"
           >
-            <Plus class="w-4 h-4" />
             <span>[ ADD NEW TASK ]</span>
-          </button>
+          </Button>
         </div>
       </div>
 
       <Show when={isOpen()}>
-        <div 
-          class="fixed inset-0 bg-black/30 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 font-mono"
-          onClick={handleClose}
-        >
-          <div 
-            class="bg-[var(--bg-surface)] w-full max-w-xl border-t-2 sm:border-2 border-[var(--fg-default)] p-6 flex flex-col gap-4"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="task-prompt-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div class="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
-              <h2 id="task-prompt-title" class="text-sm font-bold uppercase tracking-wider text-[var(--fg-default)]">
-                {mode() === "clarify" ? "■ CLARIFY TASK" : "■ ADD TASK"}
-              </h2>
-
-              <button
-                type="button"
-                onClick={handleClose}
-                class="font-mono text-xs text-[var(--fg-muted)] hover:text-[var(--syntax-keyword)] cursor-pointer select-none"
-                aria-label="Close task composer"
-              >
-                [ CLOSE ]
-              </button>
-            </div>
-
+        <Dialog open={isOpen()} onClose={handleClose} title={mode() === "clarify" ? "Clarify task" : "Add task"} hideCloseButton>
+          <div class="flex justify-end">
+            <Button variant="text" onClick={handleClose} aria-label="Close task composer">[ CLOSE ]</Button>
+          </div>
+            <Show when={error()}><StatusBanner type="error">{error()}</StatusBanner></Show>
             <form
               onSubmit={(event) => void handleSubmit(event)}
               class="flex flex-col gap-4"
             >
               <Show when={mode() === "default"}>
                 <div class="w-full">
-                  <textarea
+                  <Textarea
                     ref={textareaRef}
                     placeholder="What needs to be done?"
                     aria-label="Task description"
-                    class="tui-textarea min-h-[4.5rem]"
+                    autoResize
                     rows={1}
                     value={taskText()}
                     onInput={(e) => {
                       setTaskText(e.currentTarget.value);
-                      autoResize(e.currentTarget);
                     }}
                     onKeyDown={(e) => handleKeyDown(e, undefined)}
                   />
@@ -300,46 +275,30 @@ export default function TaskPrompt(props: TaskPromptProps) {
                   {/* Bracket-styled due date button */}
                   <div class="flex items-center gap-2">
                     <span class="text-xs font-mono text-[var(--fg-muted)]">DUE DATE:</span>
-                    <div class="relative inline-flex items-center">
-                      <input 
-                        type="date" 
-                        aria-label="Choose due date"
-                        class="absolute inset-0 opacity-0 cursor-pointer"
-                        value={dueDate()}
-                        onChange={(e) => setDueDate(e.currentTarget.value)} 
-                      />
-                      <button
-                        type="button"
-                        class="text-xs font-mono border border-[var(--border-color)] px-2 py-1 bg-[var(--bg-canvas)] hover:border-[var(--fg-default)] transition-colors cursor-pointer"
-                      >
-                        {dueDate() ? `[ ${dueDate()} ]` : "[ Set Date ]"}
-                      </button>
-                    </div>
+                    <Input
+                      type="date"
+                      aria-label="Choose due date"
+                      value={dueDate()}
+                      onChange={(e) => setDueDate(e.currentTarget.value)}
+                    />
                   </div>
 
                   {/* AI Breakdown checkbox */}
                   <div class="flex items-center justify-between">
-                    <label class="tui-checkbox-container cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        class="sr-only"
-                        checked={isAiEnabled()}
-                        onChange={(event) => setIsAiEnabled(event.currentTarget.checked)}
-                        aria-label="Enable AI breakdown"
-                      />
-                      <span class="tui-checkbox-box font-mono text-sm">
-                        {isAiEnabled() ? "[x]" : "[ ]"} AI Breakdown
-                      </span>
-                    </label>
+                    <Checkbox
+                      checked={isAiEnabled()}
+                      onChange={setIsAiEnabled}
+                      aria-label="Enable AI breakdown"
+                      label="AI Breakdown"
+                    />
 
-                    <button 
-                      type="submit" 
-                      class="tui-button"
+                    <Button
+                      type="submit"
                       disabled={submitDisabled()}
                       aria-label={isAiEnabled() ? "Create task with AI breakdown" : "Create task"}
                     >
                       {isSavingLocally() || submission.pending ? "[ SAVING... ]" : "[ SUBMIT ]"}
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
@@ -355,35 +314,33 @@ export default function TaskPrompt(props: TaskPromptProps) {
                   <div class="border-l-4 border-[var(--highlight-blue)] bg-[var(--bg-canvas)] p-3 text-xs font-mono text-[var(--syntax-string)]">
                     {clarification()}
                   </div>
-                  
+
                   <div>
-                    <textarea
+                    <Textarea
                       ref={clarifyTextareaRef}
                       name="clarification"
                       placeholder="Provide details..."
                       aria-label="Clarification details"
-                      class="tui-textarea"
+                      autoResize
                       rows={2}
-                      onInput={(e) => autoResize(e.currentTarget)}
                       onKeyDown={(e) => handleKeyDown(e, undefined)}
                     />
                   </div>
-                  
+
                   <div class="flex justify-end gap-2 border-t border-[var(--border-color)] pt-3">
-                    <button 
-                      type="button" 
+                    <Button
+                      type="button"
                       onClick={() => { setMode("default"); setClarification(""); }}
-                      class="text-xs font-mono text-[var(--fg-muted)] hover:text-[var(--fg-default)] cursor-pointer select-none px-2 py-1"
+                      variant="text"
                     >
                       [ CANCEL ]
-                    </button>
-                    <button 
-                      type="submit" 
-                      class="tui-button text-xs font-mono"
+                    </Button>
+                    <Button
+                      type="submit"
                       disabled={submission.pending || !isOnline()}
                     >
                       [ REPLY ]
-                    </button>
+                    </Button>
                   </div>
                   <Show when={!isOnline()}>
                     <p class="text-xs text-[var(--syntax-error)] font-bold uppercase">
@@ -394,8 +351,7 @@ export default function TaskPrompt(props: TaskPromptProps) {
               </Show>
 
             </form>
-          </div>
-        </div>
+        </Dialog>
       </Show>
     </>
   );

@@ -132,11 +132,6 @@
 
 .compactActions {
   display: flex;
-
-  & :global(.kin-link-button) {
-    min-height: 32px;
-    font-size: 11px;
-  }
 }
 
 .parameters {
@@ -186,25 +181,11 @@
     color: var(--fg-muted);
     font-size: 11px;
   }
-
-  & :global(.kin-input) {
-    min-height: 26px;
-    padding: 0.15rem 0.5ch;
-    border-color: var(--syntax-keyword);
-    font-size: 12px;
-  }
-
-  & :global(.kin-select) {
-    min-height: 26px;
-    padding: 0.15rem 0.5ch;
-    border-color: var(--syntax-keyword);
-    font-size: 12px;
-  }
 }
 
 .birthdayPicker {
   display: grid;
-  grid-template-columns: 5ch minmax(10ch, 1fr) 6ch;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
   gap: 0.5ch;
 }
 
@@ -213,12 +194,6 @@
   justify-content: flex-end;
   gap: 1ch;
   margin-top: 0.65rem;
-
-  & :global(.kin-button),
-  & :global(.kin-primary-button) {
-    min-height: 32px;
-    padding: 0 1ch;
-  }
 }
 
 .blockHeading {
@@ -230,11 +205,6 @@
     font-size: 11px;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-  }
-
-  & :global(.kin-link-button) {
-    min-height: 32px;
-    font-size: 11px;
   }
 }
 
@@ -255,11 +225,6 @@
     justify-content: space-between;
     min-height: 36px;
     border-bottom: 1px dashed var(--border-color);
-  }
-
-  & :global(.kin-link-button) {
-    min-height: 36px;
-    font-size: 11px;
   }
 }
 
@@ -292,14 +257,6 @@
   padding-top: 0.65rem;
   border-top: 1px dashed var(--border-color);
 
-  & :global(.kin-select),
-  & :global(.kin-input) {
-    min-height: 30px;
-    padding: 0.15rem 0.5ch;
-    border-color: var(--syntax-keyword);
-    font-size: 11px;
-  }
-
   & .formActions {
     grid-column: 1 / -1;
   }
@@ -311,7 +268,7 @@
   gap: 0.25rem 1ch;
 
   & button {
-    min-height: 32px;
+    min-height: 44px;
     padding: 0;
     border: 0;
     background: transparent;
@@ -342,11 +299,6 @@
   & :global(.kin-textarea) {
     min-height: 100px;
   }
-
-  & :global(.kin-primary-button) {
-    min-height: 36px;
-    padding: 0 1.5ch;
-  }
 }
 
 .composerActions {
@@ -362,22 +314,6 @@
   gap: 1ch;
   color: var(--fg-muted);
   font-size: 11px;
-
-  & input {
-    min-height: 36px;
-    padding: 0 0.75ch;
-    border: 0;
-    border-bottom: 1px solid var(--border-color);
-    outline: 0;
-    background: transparent;
-    color: var(--fg-muted);
-
-    &:hover,
-    &:focus {
-      border-bottom-color: var(--fg-default);
-      color: var(--fg-default);
-    }
-  }
 }
 
 .logEmpty {
@@ -448,15 +384,10 @@
     align-items: center;
     gap: 1ch;
   }
-
-  & :global(.kin-link-button) {
-    min-height: 28px;
-    font-size: 11px;
-  }
 }
 
 .timelineDate {
-  min-height: 28px;
+  min-height: 44px;
   padding: 0;
   border: 0;
   border-bottom: 1px dashed transparent;
@@ -473,14 +404,7 @@
 }
 
 .timelineDateInput {
-  width: 15ch;
-  min-height: 28px;
-  padding: 0 0.5ch;
-  border: 1px solid var(--fg-default);
-  outline: 0;
-  background: var(--bg-surface);
-  color: var(--fg-default);
-  font: inherit;
+  width: 18ch;
 }
 
 .noteEditForm {
@@ -498,16 +422,6 @@
   align-items: center;
   justify-content: flex-end;
   gap: 1ch;
-
-  & :global(.kin-primary-button) {
-    min-height: 32px;
-    padding: 0 1.5ch;
-  }
-
-  & :global(.kin-link-button) {
-    min-height: 32px;
-    font-size: 11px;
-  }
 }
 
 :global(.markdownish-tag) {

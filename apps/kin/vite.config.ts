@@ -1,10 +1,10 @@
 import solid from "vite-plugin-solid";
 import { defineConfig } from "vite";
-import { fileURLToPath, URL } from "node:url";
 import { tildomPwa } from "@tildom/config/pwa";
+import { tildomAppConfig } from "@tildom/config/vite";
 
 export default defineConfig(() => {
-  return {
+  return tildomAppConfig(import.meta.url, {
     plugins: [
       solid(),
       tildomPwa({
@@ -14,36 +14,11 @@ export default defineConfig(() => {
         theme_color: "#d73a49",
       }),
     ],
-    resolve: {
-      alias: {
-        "~": fileURLToPath(new URL("./src", import.meta.url)),
-      },
-    },
     server: {
       port: 5174,
-      headers: {
-        "Cross-Origin-Opener-Policy": "same-origin",
-        "Cross-Origin-Embedder-Policy": "require-corp",
-      },
-      proxy: {
-        "/sync": {
-          target: process.env.SYNC_PROXY_TARGET ?? "http://127.0.0.1:8787",
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/sync/, ""),
-        },
-      },
-    },
-    preview: {
-      headers: {
-        "Cross-Origin-Opener-Policy": "same-origin",
-        "Cross-Origin-Embedder-Policy": "require-corp",
-      },
-    },
-    optimizeDeps: {
-      exclude: ["@sqlite.org/sqlite-wasm"],
     },
     test: {
       environment: "jsdom",
     },
-  };
+  });
 });

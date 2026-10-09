@@ -23,15 +23,17 @@ apps/
   mark/
   do/
   kin/
+  hey/
 packages/
 services/
 ```
 
-`packages/` and `services/` are intentionally light for now. Shared packages should be extracted only after real reuse pressure exists.
+Shared packages cover UI, browser storage, encrypted sync, Markdown, and app configuration.
+Extract further shared code only after real reuse pressure exists.
 
 ## Requirements
 
-- Node.js 22+
+- Node.js 26+
 - pnpm 11.10+
 - Docker, optional for container deployment
 
@@ -43,7 +45,7 @@ pnpm install
 
 ## Development
 
-Run one app at a time from the repository root:
+Run apps from the repository root:
 
 ```bash
 pnpm dev:home
@@ -54,8 +56,9 @@ pnpm dev:hey
 pnpm dev:api
 ```
 
-The Vite dev server defaults to `http://localhost:5173`; the feature API defaults to
-`http://localhost:8788`. Set `GOOGLE_API_KEY` for AI-backed requests.
+Development ports: Home `5170`, Mark `5173`, Kin `5174`, Hey `5175`, Do `5176`.
+The feature API defaults to `http://localhost:8788`; sync uses `http://localhost:8787`.
+Set `GOOGLE_API_KEY` for AI-backed requests.
 
 ## Verification
 
@@ -110,19 +113,34 @@ ghcr.io/bart-jaskulski/tildom/sync
 
 Deployment compose files are intentionally kept outside this application repo. The current homelab
 deployment lives at `../homelab/tildom/compose.yaml`. Set `API_BASE_URL` or
-`MARK_SYNC_BASE_URL` as GitHub Actions repository variables when the public service URLs differ
+`MARK_SYNC_BASE_URL` / `DO_SYNC_BASE_URL` as GitHub Actions repository variables when the public service URLs differ
 from `https://api.tildom.app` and `https://sync.tildom.app`.
 
 ## Workspace Packages
 
-pnpm workspaces are configured in [pnpm-workspace.yaml](./pnpm-workspace.yaml). Future local packages should be consumed with the workspace protocol:
+| Package | Owns |
+| --- | --- |
+| `@tildom/ui` | Design tokens, base CSS, shared controls, navigation, keyboard and PWA interactions |
+| `@tildom/browser-db` | SQLite worker, OPFS, migrations, queries, transactions, import/export |
+| `@tildom/sync-client` | Encrypted snapshot sync, pairing, suite connection and background sync |
+| `@tildom/markdownish` | Sanitized Markdown, hashtags and task rendering |
+| `@tildom/config` | TypeScript defaults, common Vite setup and PWA configuration |
 
-```json
-{
-  "dependencies": {
-    "@tildom/ui": "workspace:*"
-  }
-}
-```
+Use `workspace:*` for internal dependencies. Apps own their schemas, domain stores, routes,
+and layouts. Mark is the reference for router-based composition.
 
-This keeps local package resolution explicit and prevents accidentally using a registry package when a workspace package is expected.
+For a product app, import `@tildom/ui/base.css` once in the app stylesheet. Use shared controls
+before adding local styles; keep palette values and global appearance in UI. Domain layout
+and specialized editors remain app-owned.
+
+Use `tildomAppConfig(import.meta.url, overrides)` from `@tildom/config/vite` for the source alias,
+SQLite assets, isolation headers and `/sync` development proxy. Supply app-specific plugins,
+port and build options through `overrides`; `SYNC_PROXY_TARGET` changes the local sync target.
+Use `tildomPwa` from `@tildom/config/pwa` for app manifests and install assets.
+
+Dependency versions are aligned across workspaces. TypeScript stays on 6.0 until
+`typescript-eslint` supports 7; newer versions currently break Do's lint tooling.
+
+Do now uses the same snapshot sync as Mark, Kin and Hey. Previous Do pairing links are incompatible:
+create a new vault on the device with your tasks, then pair the other devices using its new link.
+Local task databases and legacy pairing credentials are preserved.

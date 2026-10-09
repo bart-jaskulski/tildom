@@ -1,6 +1,6 @@
 import { Show, createEffect, createSignal, on, onCleanup } from "solid-js";
 import { Portal } from "solid-js/web";
-import { Checkbox } from "@tildom/ui";
+import { Button, Checkbox, Input, Textarea } from "@tildom/ui";
 import { formatDateInputValue, formatDueDateLabel, normalizeDateOnlyInput } from "~/lib/dates";
 import { deleteTask, updateTask, addTask, setTaskExpanded, isTaskExpanded } from "~/stores/taskStore";
 import type { Task, TreeNode } from "~/stores/taskStore";
@@ -27,7 +27,7 @@ export default function TaskItem(props: TaskItemProps) {
     if (editing && inputRef) {
       inputRef.style.height = 'auto';
       inputRef.style.height = inputRef.scrollHeight + 'px';
-      
+
       queueMicrotask(() => {
         inputRef?.focus();
         inputRef?.select();
@@ -112,11 +112,6 @@ export default function TaskItem(props: TaskItemProps) {
     setIsEditing(false);
   };
 
-  const autoResize = (el: HTMLTextAreaElement) => {
-    el.style.height = 'auto';
-    el.style.height = el.scrollHeight + 'px';
-  };
-
   const handleDueDateChange = (value: string) => {
     const dueAt = normalizeDateOnlyInput(value);
     updateTask(props.id, { dueAt });
@@ -138,7 +133,7 @@ export default function TaskItem(props: TaskItemProps) {
   const saveSubtask = async () => {
     const content = subtaskDraft().trim();
     if (!content) return;
-    
+
     await addTask({ content }, props.id);
     setTaskExpanded(props.id, true);
     setIsAddingSubtask(false);
@@ -152,7 +147,7 @@ export default function TaskItem(props: TaskItemProps) {
 
   return (
     <div class="relative w-full group/item flex flex-col">
-      <div 
+      <div
         class={`tui-item-row flex items-start gap-4 bg-[var(--bg-surface)] border-b border-[var(--border-color)] transition-colors hover:bg-[var(--syntax-bg-active)] ${
           isEditing() ? "bg-[var(--syntax-bg-active)] border-l-[var(--syntax-keyword)]" : ""
         }`}
@@ -160,19 +155,20 @@ export default function TaskItem(props: TaskItemProps) {
         {/* Monospace Checkbox [ ] or [x] with collapse toggle [-] / [+] */}
         <div class="pt-0.5 shrink-0 select-none flex items-center gap-1.5">
           <Checkbox
+            aria-label={props.completed ? "Mark task incomplete" : "Complete task"}
             checked={props.completed}
             onChange={(checked) => updateTask(props.id, { completed: checked })}
           />
 
           <Show when={hasChildren()}>
-            <button
+            <Button
               type="button"
               onClick={toggleExpand}
-              class="font-mono text-xs text-[var(--fg-muted)] hover:text-[var(--syntax-keyword)] cursor-pointer select-none mr-1"
+              variant="text"
               aria-label={isExpanded() ? "Collapse subtasks" : "Expand subtasks"}
             >
               {isExpanded() ? "[-]" : "[+]"}
-            </button>
+            </Button>
           </Show>
         </div>
 
@@ -180,14 +176,13 @@ export default function TaskItem(props: TaskItemProps) {
         <div class="flex-1 min-w-0 flex flex-col gap-2">
           <div class="flex items-start justify-between gap-3">
             <Show when={!isEditing()} fallback={
-              <textarea
+              <Textarea
                 ref={inputRef}
-                class="w-full bg-[var(--bg-surface)] border-2 border-[var(--fg-default)] p-2 font-mono text-sm leading-normal outline-none resize-none overflow-hidden"
+                autoResize
                 rows={1}
                 value={draft()}
                 onInput={(event) => {
                   setDraft(event.currentTarget.value);
-                  autoResize(event.currentTarget);
                 }}
                 onBlur={save}
                 onKeyDown={(event) => {
@@ -202,7 +197,7 @@ export default function TaskItem(props: TaskItemProps) {
                 }}
               />
             }>
-              <div 
+              <div
                 class={`w-full font-mono text-sm leading-normal text-[var(--fg-default)] cursor-text break-words ${
                   props.completed ? 'line-through text-[var(--fg-muted)]' : ''
                 }`}
@@ -214,36 +209,36 @@ export default function TaskItem(props: TaskItemProps) {
 
             {/* Quick Actions (Delete) */}
             <div class="flex items-start shrink-0 opacity-100 sm:opacity-0 sm:group-hover/item:opacity-100 transition-opacity">
-              <button 
+              <Button
                 onClick={(e) => { e.stopPropagation(); deleteTask(props.id); }}
-                class="text-xs font-mono text-[var(--syntax-error)] hover:bg-[var(--syntax-error)] hover:text-white border border-[var(--syntax-error)] px-2 py-1 transition-all cursor-pointer"
+                variant="text" danger
                 title="Delete"
                 aria-label="Delete task"
               >
                 [ DELETE ]
-              </button>
+              </Button>
             </div>
           </div>
 
           {/* Date Selector Badge & Action Badges */}
           <div class="flex items-center gap-2">
-            <button
+            <Button
               ref={dueDateButtonRef}
               type="button"
               onClick={() => setIsEditingDueDate(true)}
-              class="text-xs font-mono border border-[var(--border-color)] px-2 py-1 bg-[var(--bg-canvas)] hover:border-[var(--fg-default)] transition-colors cursor-pointer"
+              variant="text"
               aria-label={props.dueAt === null ? "Set due date" : "Edit due date"}
             >
               {props.dueAt === null ? "[ Set Date ]" : `[ Due: ${formatDueDateLabel(props.dueAt)} ]`}
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
               onClick={handleAddSubtaskTrigger}
-              class="text-xs font-mono border border-[var(--border-color)] px-2 py-1 bg-[var(--bg-canvas)] hover:border-[var(--fg-default)] transition-colors cursor-pointer"
+              variant="text"
             >
               [ + SUBTASK ]
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -253,10 +248,10 @@ export default function TaskItem(props: TaskItemProps) {
         <div class="pl-[4ch] pr-4 py-2 border-b border-[var(--border-color)] bg-[var(--bg-canvas)] flex flex-col gap-2 font-mono">
           <div class="flex items-center gap-2">
             <span class="text-xs text-[var(--fg-muted)]">❯ ADD STEP:</span>
-            <input
+            <Input
               ref={subtaskInputRef}
               type="text"
-              class="tui-input flex-1 py-1 px-2 text-xs"
+              class="flex-1"
               placeholder="What needs to be done?"
               value={subtaskDraft()}
               onInput={(e) => setSubtaskDraft(e.currentTarget.value)}
@@ -273,20 +268,20 @@ export default function TaskItem(props: TaskItemProps) {
             />
           </div>
           <div class="flex justify-end gap-2">
-            <button
+            <Button
               type="button"
               onClick={cancelSubtask}
-              class="text-[10px] font-mono border border-[var(--border-color)] px-2 py-0.5 hover:border-[var(--syntax-keyword)] cursor-pointer"
+              variant="text"
             >
               [ CANCEL ]
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={saveSubtask}
-              class="text-[10px] font-mono border border-[var(--fg-default)] bg-[var(--bg-surface)] hover:bg-[var(--fg-default)] hover:text-[var(--bg-surface)] px-2 py-0.5 cursor-pointer"
+
             >
               [ ADD ]
-            </button>
+            </Button>
           </div>
         </div>
       </Show>

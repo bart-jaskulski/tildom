@@ -42,36 +42,6 @@
     text-transform: uppercase;
   }
 
-  .visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  .hn-input {
-    width: 100%;
-    padding: 0.75rem 1.5ch;
-    border: 1px solid var(--border-color);
-    outline: none;
-    background: var(--bg-surface);
-    color: var(--fg-default);
-    font-family: inherit;
-    font-size: 13px;
-    line-height: 1.5;
-    transition: border-color 0.1s ease-out, padding 0.1s ease-out;
-
-    &:focus {
-      padding: calc(0.75rem - 1px) calc(1.5ch - 1px);
-      border: 2px solid var(--fg-default);
-    }
-  }
-
   /* Feedback and entry metadata */
   .hn-status,
   .hn-error {
@@ -95,12 +65,4 @@
     font-weight: bold;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    * {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      scroll-behavior: auto !important;
-      transition-duration: 0.01ms !important;
-    }
-  }
 }

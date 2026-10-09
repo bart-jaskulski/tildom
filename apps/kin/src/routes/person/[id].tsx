@@ -1,3 +1,4 @@
+import { Button, Input, Select, Textarea, useVimKeymaps } from "@tildom/ui";
 import { For, Show, createEffect, createResource, createSignal } from "solid-js";
 import { useNavigate, useParams } from "@solidjs/router";
 import {
@@ -6,7 +7,6 @@ import {
   renderMarkdownishToHtml,
   toggleMarkdownTask,
 } from "@tildom/markdownish";
-import { useVimKeymaps } from "@tildom/ui";
 import AppNav from "~/components/AppNav";
 import { birthdayParts, birthdayValue, daysInBirthdayMonth, formatBirthday } from "~/lib/birthday";
 import PersonLoading from "./PersonLoading";
@@ -244,12 +244,12 @@ export default function PersonDetail() {
       <AppNav active="people" />
       <section class={`kin-content ${styles.layout}`}>
         <Show when={person()} fallback={<PersonLoading />}>
-          <button
+          <Button variant="text"
             type="button"
             class={styles.mobileToggle}
             aria-expanded={detailsOpen()}
             onClick={() => setDetailsOpen(!detailsOpen())}
-          >[{detailsOpen() ? "−" : "+"}] {detailsOpen() ? "hide" : "show"} personal details</button>
+          >[{detailsOpen() ? "−" : "+"}] {detailsOpen() ? "hide" : "show"} personal details</Button>
 
           <aside class={styles.sidebar} classList={{ [styles.sidebarOpen]: detailsOpen() }}>
             <section class={styles.sidebarBlock}>
@@ -260,8 +260,8 @@ export default function PersonDetail() {
                     <Show when={person()!.relationship}><span>[ {person()!.relationship} ]</span></Show>
                   </div>
                   <div class={styles.compactActions}>
-                    <button type="button" class="kin-link-button" onClick={() => { setIsEditing(true); setDetailsOpen(true); }}>[ edit ]</button>
-                    <button type="button" class="kin-link-button kin-danger-link" onClick={removePerson}>[ delete ]</button>
+                    <Button variant="text" type="button" class="kin-link-button" onClick={() => { setIsEditing(true); setDetailsOpen(true); }}>[ edit ]</Button>
+                    <Button danger variant="text" type="button" class="kin-link-button kin-danger-link" onClick={removePerson}>[ delete ]</Button>
                   </div>
                 </div>
                 <dl class={styles.parameters}>
@@ -275,28 +275,28 @@ export default function PersonDetail() {
               <Show when={isEditing()}>
                 <form class={styles.editForm} onSubmit={savePerson}>
                   <h1>Edit profile</h1>
-                  <label><span>Name</span><input class="kin-input" value={editName()} onInput={(event) => setEditName(event.currentTarget.value)} required /></label>
-                  <label><span>Relationship</span><input class="kin-input" value={editRelationship()} placeholder="friend / family / colleague" onInput={(event) => setEditRelationship(event.currentTarget.value)} /></label>
-                  <label><span>Location</span><input class="kin-input" value={editLocation()} onInput={(event) => setEditLocation(event.currentTarget.value)} /></label>
-                  <label><span>Email</span><input class="kin-input" type="email" value={editEmail()} onInput={(event) => setEditEmail(event.currentTarget.value)} /></label>
-                  <label><span>Phone</span><input class="kin-input" type="tel" value={editPhone()} onInput={(event) => setEditPhone(event.currentTarget.value)} /></label>
+                  <label><span>Name</span><Input class="kin-input" value={editName()} onInput={(event) => setEditName(event.currentTarget.value)} required /></label>
+                  <label><span>Relationship</span><Input class="kin-input" value={editRelationship()} placeholder="friend / family / colleague" onInput={(event) => setEditRelationship(event.currentTarget.value)} /></label>
+                  <label><span>Location</span><Input class="kin-input" value={editLocation()} onInput={(event) => setEditLocation(event.currentTarget.value)} /></label>
+                  <label><span>Email</span><Input class="kin-input" type="email" value={editEmail()} onInput={(event) => setEditEmail(event.currentTarget.value)} /></label>
+                  <label><span>Phone</span><Input class="kin-input" type="tel" value={editPhone()} onInput={(event) => setEditPhone(event.currentTarget.value)} /></label>
                   <label>
                     <span>Birthday</span>
                     <div class={styles.birthdayPicker}>
-                      <select class="kin-select" aria-label="Birthday day" value={birthdayParts(editBirthday()).day} onChange={(event) => updateBirthday("day", event.currentTarget.value)}>
+                      <Select class="kin-select" aria-label="Birthday day" value={birthdayParts(editBirthday()).day} onChange={(event) => updateBirthday("day", event.currentTarget.value)}>
                         <option value="">day</option>
                         <For each={Array.from({ length: daysInBirthdayMonth(birthdayParts(editBirthday()).month, birthdayParts(editBirthday()).year) }, (_, index) => String(index + 1))}>{(day) => <option value={day}>{day}</option>}</For>
-                      </select>
-                      <select class="kin-select" aria-label="Birthday month" value={birthdayParts(editBirthday()).month} onChange={(event) => updateBirthday("month", event.currentTarget.value)}>
+                      </Select>
+                      <Select class="kin-select" aria-label="Birthday month" value={birthdayParts(editBirthday()).month} onChange={(event) => updateBirthday("month", event.currentTarget.value)}>
                         <option value="">month</option>
                         <For each={months}>{(month, index) => <option value={String(index() + 1)}>{month}</option>}</For>
-                      </select>
-                      <input class="kin-input" aria-label="Birthday year" inputMode="numeric" maxLength="4" pattern="[0-9]{4}" value={birthdayParts(editBirthday()).year} placeholder="year" onInput={(event) => updateBirthday("year", event.currentTarget.value.replace(/\D/g, "").slice(0, 4))} />
+                      </Select>
+                      <Input class="kin-input" aria-label="Birthday year" inputMode="numeric" maxLength="4" pattern="[0-9]{4}" value={birthdayParts(editBirthday()).year} placeholder="year" onInput={(event) => updateBirthday("year", event.currentTarget.value.replace(/\D/g, "").slice(0, 4))} />
                     </div>
                   </label>
                   <div class={styles.formActions}>
-                    <button type="submit" class="kin-primary-button" disabled={isSaving()}>{isSaving() ? "saving…" : "save"}</button>
-                    <button type="button" class="kin-button" onClick={() => setIsEditing(false)}>cancel</button>
+                    <Button type="submit" class="kin-primary-button" disabled={isSaving()}>{isSaving() ? "saving…" : "save"}</Button>
+                    <Button type="button" class="kin-button" onClick={() => setIsEditing(false)}>cancel</Button>
                   </div>
                 </form>
               </Show>
@@ -306,32 +306,32 @@ export default function PersonDetail() {
               <div class={styles.blockHeading}>
                 <h2>Relationships</h2>
                 <Show when={!isAddingRelationship() && contacts().length > 1}>
-                  <button type="button" class="kin-link-button" onClick={() => { setIsAddingRelationship(true); setDetailsOpen(true); }}>[ add ]</button>
+                  <Button variant="text" type="button" class="kin-link-button" onClick={() => { setIsAddingRelationship(true); setDetailsOpen(true); }}>[ add ]</Button>
                 </Show>
               </div>
               <Show when={relationships().length === 0}><p class={styles.blockEmpty}>No relationships mapped.</p></Show>
               <ul class={styles.relationshipList}>
                 <For each={relationships()}>{(relationship) => (
                   <li>
-                    <button type="button" class={styles.relationshipLink} onClick={() => void openPerson(relationship.contactId)}>
+                    <Button variant="text" type="button" class={styles.relationshipLink} onClick={() => void openPerson(relationship.contactId)}>
                       <span>{relationship.roleLabel}:</span> {relationship.name}
-                    </button>
-                    <button
+                    </Button>
+                    <Button danger variant="text"
                       type="button"
                       class="kin-link-button kin-danger-link"
                       aria-label={`Remove relationship with ${relationship.name}`}
                       onClick={() => void removeRelationship(relationship)}
-                    >[×]</button>
+                    >[×]</Button>
                   </li>
                 )}</For>
               </ul>
               <Show when={isAddingRelationship()}>
                 <form class={styles.relationshipForm} onSubmit={addRelationship}>
-                  <select class="kin-select" aria-label="Related person" value={relationshipTarget()} onChange={(event) => setRelationshipTarget(event.currentTarget.value)} required>
+                  <Select class="kin-select" aria-label="Related person" value={relationshipTarget()} onChange={(event) => setRelationshipTarget(event.currentTarget.value)} required>
                     <option value="">target</option>
                     <For each={contacts().filter((contact) => contact.id !== contactId())}>{(contact) => <option value={contact.id}>{contact.name}</option>}</For>
-                  </select>
-                  <input
+                  </Select>
+                  <Input
                     class="kin-input"
                     aria-label="Relationship type"
                     value={relationshipRole()}
@@ -340,8 +340,8 @@ export default function PersonDetail() {
                     required
                   />
                   <div class={styles.formActions}>
-                    <button type="button" class="kin-button" onClick={() => setIsAddingRelationship(false)}>cancel</button>
-                    <button type="submit" class="kin-primary-button">save</button>
+                    <Button type="button" class="kin-button" onClick={() => setIsAddingRelationship(false)}>cancel</Button>
+                    <Button type="submit" class="kin-primary-button">save</Button>
                   </div>
                 </form>
               </Show>
@@ -350,14 +350,14 @@ export default function PersonDetail() {
             <section class={styles.sidebarBlock}>
               <div class={styles.blockHeading}>
                 <h2>Tags index</h2>
-                <Show when={selectedTag()}><button type="button" class="kin-link-button" onClick={() => setSelectedTag(null)}>[ clear ]</button></Show>
+                <Show when={selectedTag()}><Button variant="text" type="button" class="kin-link-button" onClick={() => setSelectedTag(null)}>[ clear ]</Button></Show>
               </div>
               <Show when={tags().length === 0}><p class={styles.blockEmpty}>No tags found in timeline logs.</p></Show>
               <div class={styles.tagList}>
                 <For each={tags()}>{(tag) => (
-                  <button type="button" classList={{ [styles.activeTag]: selectedTag() === tag }} onClick={() => setSelectedTag(selectedTag() === tag ? null : tag)}>
+                  <Button variant="text" type="button" classList={{ [styles.activeTag]: selectedTag() === tag }} onClick={() => setSelectedTag(selectedTag() === tag ? null : tag)}>
                     {selectedTag() === tag ? `[ #${tag} ]` : `#${tag}`}
-                  </button>
+                  </Button>
                 )}</For>
               </div>
             </section>
@@ -366,7 +366,7 @@ export default function PersonDetail() {
           <section class={styles.log} aria-label={`${person()!.name} timeline`}>
             <form class={styles.composer} onSubmit={addNote}>
               <label class="visually-hidden" for="new-note">Add timeline note</label>
-              <textarea
+              <Textarea
                 id="new-note"
                 ref={noteInput}
                 class="kin-textarea"
@@ -379,9 +379,9 @@ export default function PersonDetail() {
               <div class={styles.composerActions}>
                 <label class={styles.dateField}>
                   <span>on</span>
-                  <input type="date" value={noteDate()} onInput={(event) => setNoteDate(event.currentTarget.value)} required />
+                  <Input type="date" value={noteDate()} onInput={(event) => setNoteDate(event.currentTarget.value)} required />
                 </label>
-                <button type="submit" class="kin-primary-button">add entry</button>
+                <Button type="submit" class="kin-primary-button">add entry</Button>
               </div>
             </form>
 
@@ -394,7 +394,7 @@ export default function PersonDetail() {
                     <div class={styles.timelineMeta}>
                       <div>
                         <Show when={editingDateNoteId() === note.id} fallback={(
-                          <button
+                          <Button variant="text"
                             type="button"
                             class={styles.timelineDate}
                             title="Edit date"
@@ -403,9 +403,9 @@ export default function PersonDetail() {
                               setEditingDateNoteId(note.id);
                               setEditingNoteDate(dateInputValue(note.created_at));
                             }}
-                          >{formatDate(note.created_at)}</button>
+                          >{formatDate(note.created_at)}</Button>
                         )}>
-                          <input
+                          <Input
                             class={styles.timelineDateInput}
                             type="date"
                             value={editingNoteDate()}
@@ -420,13 +420,13 @@ export default function PersonDetail() {
                             }}
                           />
                         </Show>
-                        <button type="button" class="kin-link-button" onClick={() => void pinNote(note)}>
+                        <Button variant="text" type="button" class="kin-link-button" onClick={() => void pinNote(note)}>
                           {note.is_pinned === 1 ? "[ unpin ]" : "[ pin ]"}
-                        </button>
+                        </Button>
                       </div>
                       <div>
-                        <button type="button" class="kin-link-button" onClick={() => beginNoteEdit(note)}>[ edit ]</button>
-                        <button type="button" class="kin-link-button kin-danger-link" onClick={() => void removeNote(note)}>[ delete ]</button>
+                        <Button variant="text" type="button" class="kin-link-button" onClick={() => beginNoteEdit(note)}>[ edit ]</Button>
+                        <Button danger variant="text" type="button" class="kin-link-button kin-danger-link" onClick={() => void removeNote(note)}>[ delete ]</Button>
                       </div>
                     </div>
                     <Show when={editingNoteId() === note.id} fallback={(
@@ -437,7 +437,7 @@ export default function PersonDetail() {
                       />
                     )}>
                       <form class={styles.noteEditForm} onSubmit={(event) => void saveNote(event, note)}>
-                        <textarea
+                        <Textarea
                           class="kin-textarea"
                           aria-label="Timeline entry"
                           value={editingNoteBody()}
@@ -447,8 +447,8 @@ export default function PersonDetail() {
                           required
                         />
                         <div class={styles.noteEditActions}>
-                          <button type="submit" class="kin-primary-button">save</button>
-                          <button type="button" class="kin-link-button" onClick={() => setEditingNoteId(null)}>[ cancel ]</button>
+                          <Button type="submit" class="kin-primary-button">save</Button>
+                          <Button variant="text" type="button" class="kin-link-button" onClick={() => setEditingNoteId(null)}>[ cancel ]</Button>
                         </div>
                       </form>
                     </Show>

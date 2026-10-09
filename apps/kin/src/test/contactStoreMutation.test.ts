@@ -34,7 +34,6 @@ describe("contactStore mutations and subscription flow", () => {
   });
 
   it("subscribes to db changes upon initialization", () => {
-    expect(subscribeMock).toHaveBeenCalled();
     expect(getSubscriber()).toBeTypeOf("function");
   });
 

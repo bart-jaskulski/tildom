@@ -1,24 +1,13 @@
 import { Title } from "@solidjs/meta";
-import { A } from "@solidjs/router";
-import { AppIcon } from "@tildom/ui";
+import { Button } from "@tildom/ui";
+import AppNav from "~/components/AppNav";
 
 export default function NotFound() {
   return (
     <div class="min-h-screen flex flex-col font-mono text-[var(--fg-default)] bg-[var(--bg-canvas)]">
       <Title>404 · do.tildom</Title>
 
-      {/* TUI Topbar */}
-      <header class="tui-topbar">
-        <A href="/" class="tui-brand">
-          <AppIcon app="do" class="tui-logo" />
-          <span class="tui-title">tildom</span>
-        </A>
-        <nav class="tui-nav">
-          <A href="/" end>[ tasks.db ]</A>
-          <A href="/settings">[ settings.json ]</A>
-          <A href="/pair">[ pair.conf ]</A>
-        </nav>
-      </header>
+      <AppNav active="tasks" />
 
       {/* 404 Content */}
       <main class="tui-container max-w-xl mx-auto flex-1 justify-center py-16">
@@ -32,12 +21,9 @@ export default function NotFound() {
           </p>
 
           <div class="mt-4">
-            <A
-              href="/"
-              class="tui-button"
-            >
+            <Button href="/">
               [ RETURN TO MAIN BUFFER ]
-            </A>
+            </Button>
           </div>
         </div>
       </main>

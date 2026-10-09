@@ -1,3 +1,4 @@
+import { Button, Input } from "@tildom/ui";
 import { createSignal, onMount, Show } from "solid-js";
 import { base64UrlEncode, createSuiteKeyringClient } from "@tildom/sync-client";
 import {
@@ -5,8 +6,8 @@ import {
   startSuiteSession, syncBaseUrl, unlockWithPasskey,
 } from "./suite";
 
-const APPS = ["mark", "kin", "hey", "list"] as const;
-const DEV_PORTS: Record<string, number> = { mark: 5173, kin: 5174, hey: 5175, list: 5176 };
+const APPS = ["mark", "kin", "hey", "do"] as const;
+const DEV_PORTS: Record<string, number> = { mark: 5173, kin: 5174, hey: 5175, do: 5176 };
 const TX_KEY = "tildom-suite-transaction";
 const appOrigin = (app: string) => import.meta.env.DEV
   ? `http://localhost:${DEV_PORTS[app]}`
@@ -85,32 +86,32 @@ export default function SuitePage() {
 
         <Show when={!recoveryKey()}>
           <div class="suite-actions">
-            <button disabled={busy()} onClick={() => void run(async () => { const key = await createSuite(); setRecoveryKey(key); setStatus("Suite recovery created. Save the recovery key now."); })}>[ create suite recovery ]</button>
-            <label>recovery key<input value={input()} onInput={(event) => setInput(event.currentTarget.value)} /></label>
-            <label>recovery key file<input type="file" accept=".txt,text/plain" onChange={(event) => {
+            <Button disabled={busy()} onClick={() => void run(async () => { const key = await createSuite(); setRecoveryKey(key); setStatus("Suite recovery created. Save the recovery key now."); })}>[ create suite recovery ]</Button>
+            <label>recovery key<Input value={input()} onInput={(event) => setInput(event.currentTarget.value)} /></label>
+            <label>recovery key file<Input type="file" accept=".txt,text/plain" onChange={(event) => {
               const file = event.currentTarget.files?.[0];
               if (file) void file.text().then(setInput).catch(() => setError("Could not read recovery key file"));
             }} /></label>
-            <button disabled={busy() || !input()} onClick={() => void run(async () => { const key = await openSuite(input()); setRecoveryKey(key); setStatus("Suite recovery unlocked."); })}>[ recover suite ]</button>
-            <Show when={protectedByPasskey()}><button disabled={busy()} onClick={() => void run(async () => { const key = await unlockWithPasskey(); startSuiteSession(key); setRecoveryKey(key); setStatus("Suite recovery unlocked with passkey."); })}>[ unlock with passkey ]</button></Show>
+            <Button disabled={busy() || !input()} onClick={() => void run(async () => { const key = await openSuite(input()); setRecoveryKey(key); setStatus("Suite recovery unlocked."); })}>[ recover suite ]</Button>
+            <Show when={protectedByPasskey()}><Button disabled={busy()} onClick={() => void run(async () => { const key = await unlockWithPasskey(); startSuiteSession(key); setRecoveryKey(key); setStatus("Suite recovery unlocked with passkey."); })}>[ unlock with passkey ]</Button></Show>
           </div>
         </Show>
 
         <Show when={recoveryKey()}>
           <section class="suite-section">
             <h2>Recovery key</h2>
-            <input class="recovery-key" readOnly value={recoveryKey()} />
+            <Input class="recovery-key" readOnly value={recoveryKey()} />
             <div class="suite-actions inline">
-              <button onClick={() => void navigator.clipboard.writeText(recoveryKey())}>[ copy ]</button>
-              <button onClick={download}>[ download ]</button>
-              <Show when={!protectedByPasskey()}><button disabled={busy()} onClick={() => void run(async () => { await protectWithPasskey(recoveryKey()); setProtectedByPasskey(true); setStatus("Suite key protected with a passkey."); })}>[ protect with passkey ]</button></Show>
-              <button onClick={() => { clearSuiteSession(); setRecoveryKey(""); setStatus("Suite recovery locked."); }}>[ lock ]</button>
+              <Button onClick={() => void navigator.clipboard.writeText(recoveryKey())}>[ copy ]</Button>
+              <Button onClick={download}>[ download ]</Button>
+              <Show when={!protectedByPasskey()}><Button disabled={busy()} onClick={() => void run(async () => { await protectWithPasskey(recoveryKey()); setProtectedByPasskey(true); setStatus("Suite key protected with a passkey."); })}>[ protect with passkey ]</Button></Show>
+              <Button onClick={() => { clearSuiteSession(); setRecoveryKey(""); setStatus("Suite recovery locked."); }}>[ lock ]</Button>
             </div>
           </section>
           <section class="suite-section">
             <h2>Applications</h2>
             <p>Register preserves an existing vault. Connect restores or creates the suite-derived vault.</p>
-            <ul class="suite-apps">{APPS.map((app) => <li><strong>{app}</strong><span><button onClick={() => register(app)}>[ register existing ]</button><button onClick={() => connect(app)}>[ connect ]</button></span></li>)}</ul>
+            <ul class="suite-apps">{APPS.map((app) => <li><strong>{app}</strong><span><Button onClick={() => register(app)}>[ register existing ]</Button><Button onClick={() => connect(app)}>[ connect ]</Button></span></li>)}</ul>
           </section>
         </Show>
         <Show when={status()}><p role="status" class="suite-status">{status()}</p></Show>

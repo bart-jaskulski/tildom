@@ -1,9 +1,8 @@
+import AppNav from "~/components/AppNav";
 import { createSignal, For, onMount, Show } from "solid-js";
-import { A } from "@solidjs/router";
 import { Title } from "@solidjs/meta";
-import { AppIcon } from "@tildom/ui";
-import { vaultState } from "~/stores/vaultStore";
-import { syncStateStore, syncNow } from "~/lib/sync";
+import { Button, Dialog, Input, RadioButton } from "@tildom/ui";
+import { syncSignals, syncNow } from "~/lib/sync";
 import { isOnline } from "~/stores/networkStore";
 import {
   breakdownGranularity,
@@ -45,31 +44,33 @@ export default function SettingsPage() {
     await refreshStorageStatus();
   });
 
-  const promptForWorkspaceName = (message: string, initialValue = "") => {
-    if (typeof window === "undefined") {
-      return null;
-    }
+  const [workspaceEditor, setWorkspaceEditor] = createSignal<{ id: string | null } | null>(null);
+  const [workspaceName, setWorkspaceName] = createSignal("");
+  const [savingWorkspace, setSavingWorkspace] = createSignal(false);
+  const [workspaceError, setWorkspaceError] = createSignal("");
 
-    const nextName = window.prompt(message, initialValue)?.trim();
-    return nextName ? nextName : null;
+  const openWorkspaceEditor = (id: string | null = null, name = "") => {
+    setWorkspaceName(name);
+    setWorkspaceError("");
+    setWorkspaceEditor({ id });
   };
 
-  const handleCreateWorkspace = async () => {
-    const name = promptForWorkspaceName("Name the new workspace");
-    if (!name) {
-      return;
+  const saveWorkspace = async (event: SubmitEvent) => {
+    event.preventDefault();
+    const editor = workspaceEditor();
+    const name = workspaceName().trim();
+    if (!editor || !name || savingWorkspace()) return;
+    setSavingWorkspace(true);
+    setWorkspaceError("");
+    try {
+      if (editor.id) await renameWorkspace(editor.id, name);
+      else await createWorkspace(name);
+      setWorkspaceEditor(null);
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Could not save workspace");
+    } finally {
+      setSavingWorkspace(false);
     }
-
-    await createWorkspace(name);
-  };
-
-  const handleRenameWorkspace = async (workspaceId: string, currentName: string) => {
-    const nextName = promptForWorkspaceName("Rename workspace", currentName);
-    if (!nextName || nextName === currentName) {
-      return;
-    }
-
-    await renameWorkspace(workspaceId, nextName);
   };
 
   const handleSyncNow = async () => {
@@ -84,16 +85,16 @@ export default function SettingsPage() {
   };
 
   const getSyncStatus = () => {
-    if (!vaultState.isPaired) return "OFFLINE";
-    if (syncStateStore.status === "syncing" || isSyncing()) return "SYNCING";
-    if (syncStateStore.lastSyncTimestamp) return "SYNCED";
+    if (!syncSignals.isPaired()) return "OFFLINE";
+    if (syncSignals.status() === "syncing" || isSyncing()) return "SYNCING";
+    if (syncSignals.status() === "error") return syncSignals.statusText();
+    if (syncSignals.lastSeenRevision()) return "SYNCED";
     return "IDLE";
   };
 
   const formatLastSync = () => {
-    if (!syncStateStore.lastSyncTimestamp) return "NEVER";
-    const date = new Date(syncStateStore.lastSyncTimestamp);
-    return date.toLocaleString().toUpperCase();
+    if (!syncSignals.lastSeenRevision()) return "NEVER";
+    return syncSignals.lastSeenRevision();
   };
 
   const handleRequestPersistentStorage = async () => {
@@ -152,27 +153,17 @@ export default function SettingsPage() {
       <Title>settings · do.tildom</Title>
 
       {/* TUI Navigation Header */}
-      <header class="tui-topbar">
-        <A href="/" class="tui-brand">
-          <AppIcon app="do" class="tui-logo" />
-          <span class="tui-title">tildom</span>
-        </A>
-        <nav class="tui-nav">
-          <A href="/" end>[ tasks.db ]</A>
-          <A href="/settings">[ settings.json ]</A>
-          <A href="/pair">[ pair.conf ]</A>
-        </nav>
-      </header>
+      <AppNav active="settings" />
 
       {/* Settings Grid Panel */}
       <div class="tui-container max-w-xl mx-auto flex-1 gap-8 pb-20">
         <Show when={pwaInstall.available() || pwaInstall.needsSafariInstructions()}>
           <section class="border-b border-[var(--border-color)] pb-6">
-            <h2 class="tui-heading">■ Install</h2>
+            <h2 class="tui-heading">Install</h2>
             <Show when={pwaInstall.available()}>
-              <button type="button" class="tui-button min-h-[44px] px-3 font-mono" onClick={() => void pwaInstall.prompt()}>
+              <Button type="button" onClick={() => void pwaInstall.prompt()}>
                 [ INSTALL DO ]
-              </button>
+              </Button>
             </Show>
             <Show when={!pwaInstall.available() && pwaInstall.needsSafariInstructions()}>
               <p class="text-[var(--fg-muted)] text-sm">In Safari, use Share → Add to Home Screen.</p>
@@ -183,14 +174,13 @@ export default function SettingsPage() {
         {/* Workspace Preferences Section */}
         <section class="border-b border-[var(--border-color)] pb-6">
           <div class="flex justify-between items-center mb-4">
-            <h2 class="tui-heading mb-0">■ Workspaces</h2>
-            <button
+            <h2 class="tui-heading mb-0">Workspaces</h2>
+            <Button
               type="button"
-              onClick={() => void handleCreateWorkspace()}
-              class="tui-button text-xs min-h-[36px] px-3 py-1 font-mono"
+              onClick={() => openWorkspaceEditor()}
             >
               [ + NEW ]
-            </button>
+            </Button>
           </div>
           
           <div class="flex flex-col gap-2">
@@ -207,25 +197,19 @@ export default function SettingsPage() {
                     </div>
 
                     <div class="flex items-center gap-2">
-                      <button
+                      <Button
                         type="button"
                         onClick={() => void selectWorkspace(workspace.id)}
                         disabled={isSelected()}
-                        class={`text-xs font-mono border px-2 py-1 transition-colors cursor-pointer ${
-                          isSelected()
-                            ? "border-[var(--fg-default)] bg-[var(--syntax-bg-active)] text-[var(--fg-default)]"
-                            : "border-[var(--border-color)] hover:border-[var(--fg-default)] text-[var(--fg-default)]"
-                        }`}
                       >
                         {isSelected() ? "[ ACTIVE ]" : "[ USE ]"}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
-                        onClick={() => void handleRenameWorkspace(workspace.id, workspace.name)}
-                        class="text-xs font-mono border border-[var(--border-color)] hover:border-[var(--fg-default)] px-2 py-1 transition-colors cursor-pointer"
+                        onClick={() => openWorkspaceEditor(workspace.id, workspace.name)}
                       >
                         [ RENAME ]
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 );
@@ -236,28 +220,28 @@ export default function SettingsPage() {
 
         {/* Sync & Encryption Section */}
         <section class="border-b border-[var(--border-color)] pb-6 flex flex-col gap-4">
-          <h2 class="tui-heading">■ Sync & Pairing</h2>
+          <h2 class="tui-heading">Sync & Pairing</h2>
 
           <div class="flex justify-between items-center border border-[var(--border-color)] bg-[var(--bg-surface)] p-3">
             <div>
               <span class="text-sm font-bold block uppercase">Device pairing</span>
               <span class="text-[var(--fg-muted)] text-xs block mt-1">
-                {vaultState.isPaired
-                  ? "DEVICE LINKED. READY TO SYNC CHANGESET ENVELOPES."
+                {syncSignals.isPaired()
+                  ? "DEVICE LINKED. ENCRYPTED SNAPSHOT SYNC ENABLED."
                   : "NOT PAIRED. ENCRYPTED SYNC INACTIVE."}
               </span>
             </div>
-            <A href="/pair" class="tui-button text-xs min-h-[36px] px-3 py-1 font-mono flex items-center justify-center">
-              {vaultState.isPaired ? "[ MANAGE ]" : "[ LINK ]"}
-            </A>
+            <Button href="/pair">
+              {syncSignals.isPaired() ? "[ MANAGE ]" : "[ LINK ]"}
+            </Button>
           </div>
 
-          <Show when={vaultState.isPaired}>
+          <Show when={syncSignals.isPaired()}>
             <div class="border border-[var(--border-color)] bg-[var(--bg-surface)] p-3 flex flex-col gap-2 font-mono text-sm">
               <div class="flex justify-between items-center">
-                <span class="text-[var(--fg-muted)] uppercase text-xs">Device id:</span>
+                <span class="text-[var(--fg-muted)] uppercase text-xs">Revision:</span>
                 <code class="text-xs bg-[var(--bg-canvas)] px-2 py-0.5 border border-[var(--border-color)] truncate max-w-[200px]">
-                  {vaultState.deviceId}
+                  {syncSignals.lastSeenRevision()}
                 </code>
               </div>
               <div class="flex justify-between items-center">
@@ -265,24 +249,23 @@ export default function SettingsPage() {
                 <span class="text-xs font-bold">{getSyncStatus()}</span>
               </div>
               <div class="flex justify-between items-center">
-                <span class="text-[var(--fg-muted)] uppercase text-xs">Last index:</span>
+                <span class="text-[var(--fg-muted)] uppercase text-xs">Last revision:</span>
                 <span class="text-xs">{formatLastSync()}</span>
               </div>
               
               <div class="flex justify-between items-center pt-2 border-t border-dashed border-[var(--border-color)] mt-2">
                 <span class="text-xs text-[var(--fg-muted)]">
                   {isOnline()
-                    ? "FORCE LOCAL MERGE TO VAULT ENVELOPE."
-                    : "OFFLINE CHANGES QUEUED IN INDEXEDDB."}
+                    ? "SYNC ENCRYPTED DATABASE SNAPSHOT."
+                    : "LOCAL CHANGES SYNC WHEN CONNECTED."}
                 </span>
-                <button
+                <Button
                   type="button"
-                  class="tui-button text-xs min-h-[36px] px-3 py-1 font-mono"
                   onClick={handleSyncNow}
                   disabled={isSyncing() || !isOnline()}
                 >
                   {isSyncing() ? "[ SYNCING... ]" : "[ SYNC NOW ]"}
-                </button>
+                </Button>
               </div>
             </div>
           </Show>
@@ -290,25 +273,21 @@ export default function SettingsPage() {
 
         {/* Task Breakdown AI Preference */}
         <section class="border-b border-[var(--border-color)] pb-6">
-          <h2 class="tui-heading">■ Task Breakdown</h2>
+          <h2 class="tui-heading">Task Breakdown</h2>
           <div class="mt-2 font-mono">
             <span class="text-sm font-bold block uppercase">Detail Granularity</span>
             <span class="text-[var(--fg-muted)] text-xs block mb-3">AI subtask generation level.</span>
 
             <div class="flex gap-4">
               <For each={BREAKDOWN_GRANULARITY_OPTIONS}>
-                {(level) => {
-                  const isSelected = () => breakdownGranularity() === level;
-                  return (
-                    <button
-                      type="button"
-                      onClick={() => setBreakdownGranularity(level)}
-                      class="font-mono text-sm hover:text-[var(--syntax-keyword)] transition-colors cursor-pointer select-none"
-                    >
-                      {isSelected() ? `(*) ${level.toUpperCase()}` : `( ) ${level.toUpperCase()}`}
-                    </button>
-                  );
-                }}
+                {(level) => (
+                  <RadioButton
+                    name="breakdown-granularity"
+                    checked={breakdownGranularity() === level}
+                    onChange={() => setBreakdownGranularity(level)}
+                    label={level}
+                  />
+                )}
               </For>
             </div>
           </div>
@@ -316,7 +295,7 @@ export default function SettingsPage() {
 
         {/* Persistent Storage Diagnostic */}
         <section class="pb-6">
-          <h2 class="tui-heading">■ Storage Durability</h2>
+          <h2 class="tui-heading">Storage Durability</h2>
           <div class="border border-[var(--border-color)] bg-[var(--bg-surface)] p-3 flex flex-col gap-3 font-mono">
             <div class="flex justify-between items-start gap-4">
               <div class="space-y-1">
@@ -331,19 +310,38 @@ export default function SettingsPage() {
             </div>
             
             <Show when={storageStatus() === "not-persisted"}>
-              <button
+              <Button
                 type="button"
                 onClick={() => void handleRequestPersistentStorage()}
                 disabled={isRequestingStorage()}
-                class="tui-button w-full"
               >
                 {isRequestingStorage() ? "[ REQUESTING... ]" : "[ ACTIVATE STORAGE PERSISTENCE ]"}
-              </button>
+              </Button>
             </Show>
           </div>
         </section>
 
       </div>
+      <Dialog
+        open={workspaceEditor() !== null}
+        title={workspaceEditor()?.id ? "Rename workspace" : "New workspace"}
+        onClose={() => { if (!savingWorkspace()) setWorkspaceEditor(null); }}
+      >
+        <form onSubmit={saveWorkspace}>
+          <label for="workspace-name">Workspace name</label>
+          <Input
+            id="workspace-name"
+            required
+            autofocus
+            value={workspaceName()}
+            onInput={(event) => setWorkspaceName(event.currentTarget.value)}
+          />
+          <Show when={workspaceError()}><p role="alert">{workspaceError()}</p></Show>
+          <Button type="submit" disabled={savingWorkspace() || !workspaceName().trim()}>
+            {savingWorkspace() ? "Saving…" : "Save workspace"}
+          </Button>
+        </form>
+      </Dialog>
     </div>
   );
 }

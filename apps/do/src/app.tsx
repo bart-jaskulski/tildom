@@ -2,11 +2,11 @@ import { Meta, MetaProvider, Title } from "@solidjs/meta";
 import { Route, Router } from "@solidjs/router";
 import { Show, Suspense, onMount } from "solid-js";
 import { isOnline } from "~/stores/networkStore";
-import { initializeVaultStore } from "~/stores/vaultStore";
 import { initializeTaskStore } from "~/stores/taskStore";
 import { initializeSync } from "~/lib/sync";
 import Home from "~/routes/index";
 import SettingsPage from "~/routes/settings";
+import SuiteCallback from "~/routes/suite";
 import PairPage from "~/routes/pair";
 import NotFound from "~/routes/[...404]";
 import { pwaInstall } from "~/lib/pwaInstall";
@@ -16,7 +16,6 @@ export default function App() {
   pwaInstall.initialize();
 
   onMount(async () => {
-    await initializeVaultStore();
     await initializeTaskStore();
 
     if (typeof window !== "undefined") {
@@ -41,6 +40,8 @@ export default function App() {
     >
       <Route path="/" component={Home} />
       <Route path="/settings" component={SettingsPage} />
+      <Route path="/suite/register" component={SuiteCallback} />
+      <Route path="/suite/connect" component={SuiteCallback} />
       <Route path="/pair" component={PairPage} />
       <Route path="*404" component={NotFound} />
     </Router>

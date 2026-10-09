@@ -1,7 +1,7 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
-import { A } from "@solidjs/router";
 import { Title } from "@solidjs/meta";
-import { AppIcon } from "@tildom/ui";
+import { RadioButton, EmptyState } from "@tildom/ui";
+import AppNav from "~/components/AppNav";
 import TaskPrompt from "~/components/TaskPrompt";
 import TasksList from "~/components/TasksList";
 import {
@@ -112,37 +112,25 @@ export default function Home() {
     <div class="min-h-screen flex flex-col font-mono text-[var(--fg-default)] bg-[var(--bg-canvas)]">
       <Title>do.tildom</Title>
 
-      {/* TUI Top Navigation Bar */}
-      <header class="tui-topbar">
-        <A href="/" class="tui-brand">
-          <AppIcon app="do" class="tui-logo" />
-          <span class="tui-title">tildom</span>
-        </A>
-        <nav class="tui-nav">
-          <A href="/" end>[ tasks.db ]</A>
-          <A href="/settings">[ settings.json ]</A>
-          <A href="/pair">[ pair.conf ]</A>
-        </nav>
-      </header>
+      <AppNav active="tasks" />
 
       {/* Main Container */}
       <div class="tui-container max-w-xl mx-auto flex-1 pb-40">
         
         {/* Workspace Switcher in TUI Style */}
         <section class="mb-6">
-          <h2 class="tui-heading">■ Workspaces</h2>
+          <h2 class="tui-heading">Workspaces</h2>
           <div class="flex flex-wrap gap-x-4 gap-y-2 mt-2">
             <For each={workspaces()}>
               {(workspace) => {
                 const isSelected = () => selectedWorkspaceId() === workspace.id;
                 return (
-                  <button
-                    type="button"
-                    onClick={() => void selectWorkspace(workspace.id)}
-                    class="font-mono text-sm hover:text-[var(--syntax-keyword)] transition-colors cursor-pointer select-none"
-                  >
-                    {isSelected() ? `(*) ${workspace.name}` : `( ) ${workspace.name}`}
-                  </button>
+                  <RadioButton
+                    name="workspace"
+                    checked={isSelected()}
+                    onChange={() => void selectWorkspace(workspace.id)}
+                    label={workspace.name}
+                  />
                 );
               }}
             </For>
@@ -151,19 +139,18 @@ export default function Home() {
 
         {/* List Filters in Bracket-TUI Style */}
         <section class="mb-6">
-          <h2 class="tui-heading">■ Filter</h2>
+          <h2 class="tui-heading">Filter</h2>
           <div class="flex flex-wrap gap-x-4 mt-2">
             <For each={LIST_FILTER_OPTIONS}>
               {(option) => {
                 const isSelected = () => listFilter() === option;
                 return (
-                  <button
-                    type="button"
-                    onClick={() => setListFilter(option)}
-                    class="font-mono text-sm hover:text-[var(--syntax-keyword)] transition-colors cursor-pointer select-none"
-                  >
-                    {isSelected() ? `[x] ${FILTER_LABELS[option]}` : `[ ] ${FILTER_LABELS[option]}`}
-                  </button>
+                  <RadioButton
+                    name="task-filter"
+                    checked={isSelected()}
+                    onChange={() => setListFilter(option)}
+                    label={FILTER_LABELS[option]}
+                  />
                 );
               }}
             </For>
@@ -188,9 +175,7 @@ export default function Home() {
           <TasksList
             tasks={visibleTasks()}
             emptyState={
-              <div class="py-12 text-center text-[var(--fg-muted)] font-mono border-t border-[var(--border-color)]">
-                {emptyStateMessage()}
-              </div>
+              <EmptyState message={emptyStateMessage()} />
             }
           />
         </main>

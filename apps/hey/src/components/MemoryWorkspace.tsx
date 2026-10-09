@@ -1,3 +1,4 @@
+import { Button } from "@tildom/ui";
 import { For, type Accessor, type Setter } from "solid-js";
 import type { MemoryFile } from "../lib/types";
 import styles from "./MemoryWorkspace.module.css";
@@ -19,7 +20,7 @@ export default function MemoryWorkspace(props: Props) {
     <section class={styles.editor}>
       <div class={styles.heading}><button class={styles.back} type="button" aria-label="Back to memory files" onClick={() => props.setMobileOpen(false)}>←</button><h1>{props.active()?.path}</h1></div>
       <textarea aria-label={`Edit ${props.active()?.path || "memory file"}`} value={props.draft()} onInput={event => props.setDraft(event.currentTarget.value)} />
-      <footer><button class="button primary" disabled={!props.active() || props.draft() === props.active()?.content} onClick={() => void props.save()}>save file</button></footer>
+      <footer><Button disabled={!props.active() || props.draft() === props.active()?.content} onClick={() => void props.save()}>save file</Button></footer>
     </section>
   </section>;
 }

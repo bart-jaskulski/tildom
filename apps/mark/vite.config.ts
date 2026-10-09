@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 import { fileURLToPath, URL } from "node:url";
 import { existsSync, readFileSync } from "node:fs";
 import { tildomPwa } from "@tildom/config/pwa";
+import { tildomAppConfig } from "@tildom/config/vite";
 
 const readLocalHttpsConfig = () => {
   const keyPath = fileURLToPath(new URL("./localhost-key.pem", import.meta.url));
@@ -21,7 +22,7 @@ const readLocalHttpsConfig = () => {
 export default defineConfig(({ mode }) => {
   const https = mode === "test" ? undefined : readLocalHttpsConfig();
 
-  return {
+  return tildomAppConfig(import.meta.url, {
     plugins: [
       solid(),
       tildomPwa({
@@ -36,43 +37,18 @@ export default defineConfig(({ mode }) => {
         },
       }),
     ],
-    resolve: {
-      alias: {
-        "~": fileURLToPath(new URL("./src", import.meta.url)),
-      },
-    },
     server: {
       port: 5173,
-      headers: {
-        "Cross-Origin-Opener-Policy": "same-origin",
-        "Cross-Origin-Embedder-Policy": "require-corp",
-      },
-      proxy: {
-        "/sync": {
-          target: process.env.SYNC_PROXY_TARGET ?? "http://127.0.0.1:8787",
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/sync/, ""),
-        },
-      },
       ...(https ? { https } : {}),
-    },
-    preview: {
-      headers: {
-        "Cross-Origin-Opener-Policy": "same-origin",
-        "Cross-Origin-Embedder-Policy": "require-corp",
-      },
     },
     build: {
       modulePreload: {
         polyfill: false,
       },
     },
-    optimizeDeps: {
-      exclude: ["@sqlite.org/sqlite-wasm"],
-    },
     test: {
       environment: "jsdom",
       setupFiles: ["./src/test/setup.ts"],
     },
-  };
+  });
 });

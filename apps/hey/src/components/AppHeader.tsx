@@ -1,27 +1,17 @@
-import type { Accessor, Setter } from "solid-js";
+import { useLocation } from "@solidjs/router";
 import { Search, Tabline } from "@tildom/ui";
-import type { Surface } from "../lib/types";
 
-type Props = {
-  surface: Accessor<Surface>;
-  setSurface: Setter<Surface>;
-};
-
-export default function AppHeader(props: Props) {
-  const selectSurface = (surface: Surface) => props.setSurface(surface);
-
+export default function AppHeader() {
+  const location = useLocation();
   return (
     <Tabline>
-      <Tabline.Brand app="hey" onClick={() => selectSurface("chats")} />
+      <Tabline.Brand app="hey" href="/" />
       <Tabline.Nav>
-        <Tabline.Tab active={props.surface() === "chats"} onClick={() => selectSurface("chats")}>chats.db</Tabline.Tab>
-        <Tabline.Tab active={props.surface() === "memory"} onClick={() => selectSurface("memory")}>memory/</Tabline.Tab>
-        <Tabline.Tab active={props.surface() === "settings"} onClick={() => selectSurface("settings")}>settings.json</Tabline.Tab>
+        <Tabline.Tab href="/" active={location.pathname === "/"}>chats.db</Tabline.Tab>
+        <Tabline.Tab href="/memory" active={location.pathname === "/memory"}>memory/</Tabline.Tab>
+        <Tabline.Tab href="/settings" active={location.pathname === "/settings"}>settings.json</Tabline.Tab>
       </Tabline.Nav>
-      <Search.Input
-        placeholder="search chats and memory"
-        label="Search chats and memory"
-      />
+      <Search.Input placeholder="search chats and memory" label="Search chats and memory" />
     </Tabline>
   );
 }

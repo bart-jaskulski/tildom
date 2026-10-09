@@ -10,18 +10,19 @@
     "./styles.css": "./src/styles.css"
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "micromark": "^4.0.2",
+    "micromark": "^4.0.3",
     "micromark-extension-gfm": "^3.0.0",
-    "remend": "^1.3.0",
-    "sanitize-html": "^2.17.4"
+    "remend": "^1.4.0",
+    "sanitize-html": "^2.18.0"
   },
   "devDependencies": {
     "@tildom/config": "workspace:*",
-    "@types/sanitize-html": "^2.16.1",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.7"
+    "@types/sanitize-html": "^2.16.2",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.3"
   }
 }

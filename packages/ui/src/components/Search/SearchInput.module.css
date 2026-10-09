@@ -12,7 +12,7 @@
   padding: 0;
   border-left: 0;
   border-bottom: 0;
-  background: var(--bg-surface, #ffffff);
+  background: var(--bg-surface);
   overflow: hidden;
   transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 
@@ -25,7 +25,7 @@
     min-width: 24ch;
     height: auto;
     margin-left: auto;
-    border-left: 1px solid var(--border-color, #e1e4e8);
+    border-left: 1px solid var(--border-color);
     overflow: visible;
 
     &:focus-within {
@@ -41,7 +41,7 @@
 
     @media (min-width: 769px) {
       display: block;
-      color: var(--syntax-keyword, #d73a49);
+      color: var(--syntax-keyword);
       content: ">";
       font-weight: bold;
       pointer-events: none;
@@ -54,7 +54,7 @@
     border: none;
     outline: none;
     background: transparent;
-    color: var(--fg-default, #24292e);
+    color: var(--fg-default);
     font-size: 13px;
     font-family: inherit;
     transition: box-shadow 0.15s ease-out;
@@ -67,11 +67,11 @@
     }
 
     &:focus {
-      box-shadow: inset 2px 0 0 var(--syntax-keyword, #d73a49);
+      box-shadow: inset 2px 0 0 var(--syntax-keyword);
     }
 
     &::placeholder {
-      color: var(--fg-muted, #6a737d);
+      color: var(--fg-muted);
       opacity: 0.8;
     }
   }
@@ -101,7 +101,7 @@
   margin-left: auto;
   border: 0;
   background: transparent;
-  color: var(--fg-default, #24292e);
+  color: var(--fg-default);
   cursor: pointer;
   place-items: center;
 
@@ -112,7 +112,7 @@
   &:hover,
   &:focus-visible {
     outline: none;
-    background: var(--syntax-bg-active, #dbedff);
+    background: var(--syntax-bg-active);
   }
 
   & svg {

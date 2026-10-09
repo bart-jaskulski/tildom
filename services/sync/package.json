@@ -9,16 +9,16 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@hono/node-server": "^2.0.11",
-    "hono": "^4.12.23"
+    "@hono/node-server": "^2.1.4",
+    "hono": "^4.13.13"
   },
   "devDependencies": {
     "@tildom/config": "workspace:*",
-    "@types/node": "^22.19.19",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.7"
+    "@types/node": "^26.6.4",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.3"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=26.0.0"
   }
 }

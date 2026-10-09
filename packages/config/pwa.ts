@@ -26,10 +26,7 @@ const fullBleedIconPreset = {
   },
 };
 
-// Workspace apps currently resolve different Vite majors, whose plugin types are nominally incompatible.
-// The plugin runtime API is compatible across both.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const tildomPwa = (manifest: TildomPwaOptions): any =>
+export const tildomPwa = (manifest: TildomPwaOptions) =>
   VitePWA({
     strategies: "injectManifest",
     srcDir: "src",

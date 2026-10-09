@@ -33,6 +33,6 @@
     "typecheck:sync": "pnpm --filter @tildom/sync typecheck"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=26.0.0"
   }
 }

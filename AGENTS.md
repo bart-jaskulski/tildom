@@ -12,7 +12,7 @@ Refer to the primary documentation files for complete specifications:
 ## 1. Technical Stack & Architecture
 
 - **Core Framework**: [SolidJS](https://www.solidjs.com/) with [Vite](https://vite.dev/) as the build tool.
-- **Runtime & Package Manager**: **Node.js 22+** and **pnpm 11.10+**.
+- **Runtime & Package Manager**: **Node.js 26+** and **pnpm 11.10+**.
 - **Data Layer (Local-First)**: Product data is stored locally in the browser using **SQLite + OPFS (Origin Private File System)**. 
   - *Offline is product behavior, not an enhancement.*
   - Local database schemas, contacts, bookmarks, and tasks are owned strictly by each respective application and are not shared directly.
@@ -124,7 +124,7 @@ When building or refactoring code, you must respect these guidelines:
 When changing Dockerfiles, Compose files, or image publishing:
 
 1. **One Deployable, One Image**: Do not build a single omnibus image. Mark and sync publish separately as `ghcr.io/bart-jaskulski/tildom/mark` and `ghcr.io/bart-jaskulski/tildom/sync`.
-2. **Small Runtime Images**: Keep Dockerfiles multi-stage. Use pnpm 11, BuildKit cache mounts, `pnpm deploy --prod --legacy`, and a nonroot distroless Node 22 runtime unless a concrete dependency requires a fuller runtime.
+2. **Small Runtime Images**: Keep Dockerfiles multi-stage. Use pnpm 11, BuildKit cache mounts, `pnpm deploy --prod --legacy`, and a nonroot distroless Node 26 runtime unless a concrete dependency requires a fuller runtime.
 3. **Workspace-Aware Builds**: Copy package manifests first for cacheable installs, then copy only the app/service and workspace packages required by that image.
 4. **Runtime Storage**: Persist server-side data only for services that own server data. Mark product data is browser-local; sync storage belongs in a Docker volume.
 5. **Deployment Separation**: Keep host-specific deployment compose files outside this application repository. This repo publishes images and local development compose only.

@@ -29,12 +29,13 @@ tildom/
     mark/      # mark.tildom.app
     do/        # do.tildom.app
     kin/       # kin.tildom.app
+    hey/       # hey.tildom.app
   services/
     sync/      # sync.tildom.app
     api/       # shared network feature API
   packages/
     ui/
-    server/
+    markdownish/
     sync-client/
     browser-db/
     config/
@@ -101,8 +102,11 @@ Each app owns its domain model, routes, local database schema, and product behav
 Apps should share:
 
 - visual tokens and app shell primitives through `packages/ui`;
-- production asset serving and common response headers through `packages/server`;
-- encrypted sync client behavior through `packages/sync-client`, once sync stabilizes.
+- development/preview isolation headers and Vite/PWA setup through `packages/config`;
+- production static serving through `docker/static-spa.conf`;
+- encrypted snapshot sync through `packages/sync-client`;
+- SQLite worker access through `packages/browser-db`;
+- sanitized Markdown through `packages/markdownish`.
 
 Apps should not share:
 
@@ -122,7 +126,8 @@ Its first version should be a small portal and trust page, not a heavy marketing
 - links to source code and docs;
 - pricing only after hosted sync exists.
 
-It may share `packages/ui`, but it should not depend on browser database or sync internals.
+Home shares `packages/ui` and suite connection helpers from `packages/sync-client`. It does not
+open product databases.
 
 ## Services
 
@@ -190,12 +195,12 @@ ghcr.io/bart-jaskulski/tildom/sync -> services/sync
 ```
 
 App images build with pnpm and serve only static assets from unprivileged nginx. Server-backed
-services use multi-stage Node 22 images with production-only deploy output and nonroot runtimes.
+services use multi-stage Node 26 images with production-only deploy output and nonroot runtimes.
 Deployment topology is an operator concern and should live outside this application repository.
 
 Required deployment properties:
 
-- Node 22+ runtime for services.
+- Node 26+ runtime for services.
 - Persistent Docker volumes for service storage.
 - COOP/COEP headers for browser SQLite/OPFS support.
 - No hosted dependency for basic local-first use.
@@ -214,31 +219,20 @@ When added, billing belongs in hosted services, not in the open-source local app
 
 This preserves the open-source/self-hosted story while allowing hosted convenience to be paid.
 
-## Package Extraction Order
+## Shared Foundation
 
-Extract packages only when useful pressure exists.
+The shared packages are `ui`, `browser-db`, `sync-client`, `markdownish`, and `config`.
+Mark is the reference for router-based app composition. Apps retain explicit routes, their own
+schemas and domain stores; there is no generic CRUD layer or configurable app shell.
 
-Recommended order:
+`ui/base.css` owns design tokens and global defaults. Shared components own control appearance;
+app styles own domain layouts and specialized interactions. `config/vite` supplies common Vite
+wiring, while each app supplies its plugins, port, manifest and specific build behavior.
 
-1. `packages/ui`: design tokens, base CSS, app shell, nav primitives.
-2. `packages/server`: static asset handler, COOP/COEP headers, Node request helpers, Vite dev API adapter.
-3. `services/sync`: encrypted snapshot storage.
-4. `packages/sync-client`: vault keys, pairing URLs, encrypted upload/download.
-5. `packages/browser-db`: DB worker protocol and OPFS helpers, only after the app differences are understood.
-6. `packages/config`: shared TypeScript/Vitest/ESLint configuration, only after multiple apps live in the monorepo.
+Do uses shared encrypted snapshot sync, including background sync and suite callbacks. Its previous
+pairing protocol is incompatible; devices must pair again without changing their existing local data.
 
-## Migration Plan
-
-1. Move `mark`, `do`, and `kin` into `apps/` and make the repository a pnpm workspace. Done.
-2. Keep root scripts for app-level dev/build/test/typecheck commands. Done.
-3. Normalize Mark Docker deployment from the monorepo root. Done.
-4. Add a root Compose profile for running `do` separately from the default Mark service. Done.
-5. Fix the current `do` server split before treating its sync routes as production architecture.
-6. Add `apps/home`. Done.
-7. Extract `packages/ui` from actual shared styles.
-8. Extract `packages/server`.
-9. Build `services/sync`.
-10. Add `packages/sync-client` after one app successfully syncs through the service.
+Extract another package only when useful reuse pressure exists.
 
 ## Maintenance Rules
 

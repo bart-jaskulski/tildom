@@ -45,6 +45,7 @@ jobs:
               - 'apps/home/**'
               - 'packages/config/**'
               - 'packages/ui/**'
+              - 'packages/sync-client/**'
               - 'apps/home/Dockerfile'
               - 'docker/static-spa.conf'
               - 'package.json'
@@ -92,6 +93,7 @@ jobs:
               - '.github/workflows/container-images.yml'
             do:
               - 'apps/do/**'
+              - 'packages/sync-client/**'
               - 'packages/browser-db/**'
               - 'packages/config/**'
               - 'packages/ui/**'
@@ -195,6 +197,7 @@ jobs:
         shell: bash
         env:
           MARK_SYNC_BASE_URL: ${{ vars.MARK_SYNC_BASE_URL }}
+          DO_SYNC_BASE_URL: ${{ vars.DO_SYNC_BASE_URL }}
           API_BASE_URL: ${{ vars.API_BASE_URL }}
         run: |
           if [ "${{ matrix.image }}" = "mark" ]; then
@@ -204,7 +207,14 @@ jobs:
               echo "VITE_API_BASE_URL=${API_BASE_URL:-https://api.tildom.app}"
               echo "EOF"
             } >> "$GITHUB_OUTPUT"
-          elif [ "${{ matrix.image }}" = "do" ] || [ "${{ matrix.image }}" = "hey" ]; then
+          elif [ "${{ matrix.image }}" = "do" ]; then
+            {
+              echo "args<<EOF"
+              echo "VITE_SYNC_BASE_URL=${DO_SYNC_BASE_URL:-https://sync.tildom.app}"
+              echo "VITE_API_BASE_URL=${API_BASE_URL:-https://api.tildom.app}"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          elif [ "${{ matrix.image }}" = "hey" ]; then
             {
               echo "args<<EOF"
               echo "VITE_API_BASE_URL=${API_BASE_URL:-https://api.tildom.app}"

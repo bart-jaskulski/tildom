@@ -10,24 +10,24 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.92",
+    "@hono/node-server": "^2.1.4",
     "@mozilla/readability": "^0.6.0",
-    "@ai-sdk/google": "^4.0.23",
-    "@hono/node-server": "^2.0.11",
-    "ai": "^7.0.37",
-    "hono": "^4.12.23",
-    "jsdom": "^27.4.0",
-    "turndown": "^7.2.2",
-    "zod": "^4.4.3"
+    "ai": "^7.0.133",
+    "hono": "^4.13.13",
+    "jsdom": "^30.1.2",
+    "turndown": "^7.2.4",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@types/jsdom": "^21.1.7",
-    "@types/node": "^22.19.19",
-    "@types/turndown": "^5.0.5",
-    "tsx": "^4.23.0",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.7"
+    "@types/jsdom": "^30.0.0",
+    "@types/node": "^26.6.4",
+    "@types/turndown": "^5.0.6",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.3"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=26.0.0"
   }
 }

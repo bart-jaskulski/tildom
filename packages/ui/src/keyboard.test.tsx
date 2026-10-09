@@ -34,7 +34,7 @@ describe("createVimNavigation", () => {
     const callback = vi.fn();
     const Harness = () => {
       createVimNavigation([{ lhs: "h", callback }]);
-      return <div data-testid="editor" contentEditable="true" />;
+      return <div data-testid="editor" contentEditable={true} />;
     };
 
     const { getByTestId } = render(() => <Harness />);
@@ -49,7 +49,7 @@ describe("createVimNavigation", () => {
     const callback = vi.fn();
     const Harness = () => {
       createVimNavigation([{ lhs: "Escape", callback }]);
-      return <div data-testid="editor" contentEditable="true" />;
+      return <div data-testid="editor" contentEditable={true} />;
     };
 
     const { getByTestId } = render(() => <Harness />);

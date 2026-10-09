@@ -3,9 +3,9 @@
   flex-direction: column;
   min-height: 100vh;
   min-height: 100dvh;
-  background: var(--bg-canvas, #fafafa);
-  color: var(--fg-default, #24292e);
-  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background: var(--bg-canvas);
+  color: var(--fg-default);
+  font-family: inherit;
 }
 
 .shell {
@@ -24,8 +24,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 1.5rem;
-  border-bottom: 1px solid var(--border-color, #e1e4e8);
-  background: var(--bg-surface, #ffffff);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-surface);
   font-size: 12px;
 }
 
@@ -33,7 +33,7 @@
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  color: var(--syntax-keyword, #d73a49);
+  color: var(--syntax-keyword);
   text-decoration: none;
   font-weight: bold;
 }
@@ -43,11 +43,11 @@
 }
 
 .devBadge {
-  background: var(--syntax-bg-active, #dbedff);
+  background: var(--syntax-bg-active);
   padding: 2px 8px;
   font-size: 11px;
   font-weight: bold;
-  color: var(--syntax-string, #032f62);
+  color: var(--syntax-string);
 }
 
 .jumpNav {
@@ -58,8 +58,8 @@
   align-items: center;
   gap: 0.5ch;
   padding: 0.5rem 1.5rem;
-  background: var(--bg-canvas, #fafafa);
-  border-bottom: 1px solid var(--border-color, #e1e4e8);
+  background: var(--bg-canvas);
+  border-bottom: 1px solid var(--border-color);
   overflow-x: auto;
   white-space: nowrap;
   -webkit-overflow-scrolling: touch;
@@ -72,29 +72,29 @@
   font-size: 12px;
   font-family: inherit;
   font-weight: bold;
-  color: var(--fg-muted, #6a737d);
+  color: var(--fg-muted);
   text-decoration: none;
   padding: 0 1ch;
   border-bottom: 2px solid transparent;
 }
 
 .jumpLink:hover {
-  color: var(--fg-default, #24292e);
-  background: var(--syntax-bg-active, #dbedff);
-  border-bottom-color: var(--fg-default, #24292e);
+  color: var(--fg-default);
+  background: var(--syntax-bg-active);
+  border-bottom-color: var(--fg-default);
 }
 
 .jumpLink:focus-visible,
 .copyBtn:focus-visible,
 .sampleRow:focus-visible {
-  outline: 2px solid var(--border-focus, #24292e);
+  outline: 2px solid var(--border-focus);
   outline-offset: 2px;
 }
 
 /* Intro Hero */
 .intro {
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--border-color, #e1e4e8);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .introTitle {
@@ -102,12 +102,12 @@
   font-size: clamp(1.5rem, 3vw, 2.25rem);
   font-weight: 900;
   letter-spacing: -0.03em;
-  color: var(--fg-default, #24292e);
+  color: var(--fg-default);
 }
 
 .introSubtitle {
   margin: 0;
-  color: var(--fg-muted, #6a737d);
+  color: var(--fg-muted);
   font-size: 13px;
   line-height: 1.6;
   max-width: 80ch;
@@ -117,7 +117,7 @@
 .section {
   margin-top: 2.5rem;
   padding-top: 1.5rem;
-  border-top: 2px solid var(--border-color, #e1e4e8);
+  border-top: 2px solid var(--border-color);
   scroll-margin-top: 3.5rem;
 }
 
@@ -136,11 +136,11 @@
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--syntax-keyword, #d73a49);
+  color: var(--syntax-keyword);
 }
 
 .sectionDesc {
-  color: var(--fg-muted, #6a737d);
+  color: var(--fg-muted);
   font-size: 12px;
 }
 
@@ -161,8 +161,8 @@
 }
 
 .swatchCard {
-  border: 1px solid var(--border-color, #e1e4e8);
-  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
   padding: 0.75rem;
   display: flex;
   flex-direction: column;
@@ -171,23 +171,23 @@
 
 .swatchColor {
   height: 36px;
-  border: 1px solid var(--border-color, #e1e4e8);
+  border: 1px solid var(--border-color);
 }
 
 .swatchToken {
   font-size: 11px;
   font-weight: bold;
-  color: var(--fg-default, #24292e);
+  color: var(--fg-default);
 }
 
 .swatchValue {
   font-size: 11px;
-  color: var(--syntax-string, #032f62);
+  color: var(--syntax-string);
 }
 
 .swatchRole {
   font-size: 11px;
-  color: var(--fg-muted, #6a737d);
+  color: var(--fg-muted);
 }
 
 /* Component Container Boxes */
@@ -197,8 +197,8 @@
   flex-direction: column;
   gap: 1rem;
   padding: 1.5rem;
-  border: 1px solid var(--border-color, #e1e4e8);
-  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
 }
 
 .componentBoxLabel {
@@ -207,7 +207,7 @@
   font-weight: bold;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--fg-muted, #6a737d);
+  color: var(--fg-muted);
 }
 
 .componentRow {
@@ -220,16 +220,16 @@
 /* Interactive Playground Workbench */
 .workbench {
   min-width: 0;
-  border: 1px solid var(--border-color, #e1e4e8);
-  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
   display: flex;
   flex-direction: column;
 }
 
 .workbenchPreview {
   padding: 2rem 1.5rem;
-  background: var(--bg-canvas, #fafafa);
-  border-bottom: 1px solid var(--border-color, #e1e4e8);
+  background: var(--bg-canvas);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -242,8 +242,8 @@
   align-items: center;
   gap: 1.5rem;
   padding: 1rem 1.5rem;
-  background: var(--bg-surface, #ffffff);
-  border-bottom: 1px solid var(--border-color, #e1e4e8);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-color);
   font-size: 12px;
 }
 
@@ -257,7 +257,7 @@
 .controlLabel {
   font-size: 11px;
   font-weight: bold;
-  color: var(--fg-muted, #6a737d);
+  color: var(--fg-muted);
   text-transform: uppercase;
 }
 
@@ -266,10 +266,10 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.6rem 1.5rem;
-  background: var(--bg-canvas, #fafafa);
+  background: var(--bg-canvas);
   font-family: inherit;
   font-size: 12px;
-  color: var(--syntax-string, #032f62);
+  color: var(--syntax-string);
   gap: 1rem;
   overflow-x: auto;
 }
@@ -284,23 +284,23 @@
   font-family: inherit;
   font-size: 11px;
   font-weight: bold;
-  background: var(--bg-surface, #ffffff);
-  border: 1px solid var(--border-color, #e1e4e8);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
   padding: 0 1ch;
   cursor: pointer;
-  color: var(--fg-default, #24292e);
+  color: var(--fg-default);
   white-space: nowrap;
 }
 
 .copyBtn:hover {
-  background: var(--syntax-bg-active, #dbedff);
+  background: var(--syntax-bg-active);
 }
 
 .popoverTrigger {
   min-height: 44px;
   padding: 0 1.5ch;
-  border: 2px solid var(--fg-default, #24292e);
-  background: var(--bg-surface, #ffffff);
+  border: 2px solid var(--fg-default);
+  background: var(--bg-surface);
   font: inherit;
   font-size: 12px;
   font-weight: bold;
@@ -308,17 +308,17 @@
 }
 
 .popoverTrigger:hover {
-  background: var(--syntax-bg-active, #dbedff);
+  background: var(--syntax-bg-active);
 }
 
 .popoverTrigger:focus-visible {
-  outline: 2px solid var(--border-focus, #24292e);
+  outline: 2px solid var(--border-focus);
   outline-offset: 2px;
 }
 
 .usageNote {
   margin: 0;
-  color: var(--fg-muted, #6a737d);
+  color: var(--fg-muted);
   font-size: 12px;
   line-height: 1.5;
   max-width: 75ch;
@@ -339,12 +339,12 @@
   display: grid;
   gap: 0.35rem;
   font-size: 12px;
-  color: var(--fg-muted, #6a737d);
+  color: var(--fg-muted);
 }
 
 /* Sample Row Simulation */
 .listRail {
-  border-left: 2px solid var(--border-color, #e1e4e8);
+  border-left: 2px solid var(--border-color);
   padding-left: 1ch;
   display: flex;
   flex-direction: column;
@@ -356,7 +356,7 @@
   flex-direction: column;
   gap: 0.25rem;
   padding: 0.75rem 1ch;
-  border-bottom: 1px solid var(--border-color, #e1e4e8);
+  border-bottom: 1px solid var(--border-color);
   transition: background-color 0.1s ease-out;
   cursor: pointer;
   text-decoration: none;
@@ -371,31 +371,31 @@
 }
 
 .sampleRow:hover {
-  background: var(--syntax-bg-active, #dbedff);
+  background: var(--syntax-bg-active);
 }
 
 .sampleRowActive {
-  background: var(--syntax-bg-active, #dbedff);
+  background: var(--syntax-bg-active);
 }
 
 .rowTitle {
   font-weight: bold;
   font-size: 14px;
-  color: var(--syntax-string, #032f62);
+  color: var(--syntax-string);
   display: flex;
   align-items: center;
   gap: 0.5ch;
 }
 
 .unreadDot {
-  color: var(--syntax-keyword, #d73a49);
+  color: var(--syntax-keyword);
   font-size: 18px;
   line-height: 0;
 }
 
 .rowMeta {
   font-size: 12px;
-  color: var(--fg-muted, #6a737d);
+  color: var(--fg-muted);
   display: flex;
   gap: 1ch;
   flex-wrap: wrap;
@@ -411,8 +411,8 @@
 }
 
 .defCard {
-  border: 1px solid var(--border-color, #e1e4e8);
-  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
   padding: 0.75rem;
   display: flex;
   flex-direction: column;
@@ -422,7 +422,7 @@
 .defTerm {
   font-size: 10px;
   font-weight: bold;
-  color: var(--fg-muted, #6a737d);
+  color: var(--fg-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -430,7 +430,7 @@
 .defDesc {
   font-size: 13px;
   font-weight: bold;
-  color: var(--syntax-string, #032f62);
+  color: var(--syntax-string);
   margin: 0;
 }
 
@@ -448,15 +448,15 @@
   align-items: center;
   gap: 0.5rem;
   padding: 1rem;
-  border: 1px solid var(--border-color, #e1e4e8);
-  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
   min-width: 90px;
 }
 
 .iconLabel {
   font-size: 11px;
   font-weight: bold;
-  color: var(--fg-muted, #6a737d);
+  color: var(--fg-muted);
 }
 
 /* Do's & Don'ts */
@@ -467,7 +467,7 @@
 }
 
 .doCard {
-  border-top: 1px solid var(--border-color, #e1e4e8);
+  border-top: 1px solid var(--border-color);
   padding: 1.25rem 0;
   display: flex;
   flex-direction: column;
@@ -475,7 +475,7 @@
 }
 
 .dontCard {
-  border-top: 1px solid var(--border-color, #e1e4e8);
+  border-top: 1px solid var(--border-color);
   padding: 1.25rem 0;
   display: flex;
   flex-direction: column;
@@ -490,28 +490,28 @@
 }
 
 .doHeader {
-  color: var(--syntax-string, #032f62);
+  color: var(--syntax-string);
 }
 
 .dontHeader {
-  color: var(--syntax-error, #d73a49);
+  color: var(--syntax-error);
 }
 
 .dodontText {
   font-size: 12px;
-  color: var(--fg-muted, #6a737d);
+  color: var(--fg-muted);
   line-height: 1.5;
   margin: 0;
 }
 
 /* AI Context Box */
 .aiContextBox {
-  border: 1px solid var(--border-color, #e1e4e8);
-  background: var(--bg-canvas, #fafafa);
+  border: 1px solid var(--border-color);
+  background: var(--bg-canvas);
   padding: 1.25rem;
   font-size: 12px;
   line-height: 1.5;
-  color: var(--fg-default, #24292e);
+  color: var(--fg-default);
   overflow-x: auto;
 }
 

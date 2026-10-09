@@ -12,9 +12,9 @@
   width: 100%;
   background: linear-gradient(
     90deg,
-    var(--border-color, #e1e4e8) 25%,
-    var(--syntax-bg-active, #dbedff) 50%,
-    var(--border-color, #e1e4e8) 75%
+    var(--border-color) 25%,
+    var(--syntax-bg-active) 50%,
+    var(--border-color) 75%
   );
   background-size: 200% 100%;
   animation: pulse 1.6s ease-in-out infinite;
@@ -37,6 +37,6 @@
 @media (prefers-reduced-motion: reduce) {
   .pulseLine {
     animation: none;
-    background: var(--border-color, #e1e4e8);
+    background: var(--border-color);
   }
 }

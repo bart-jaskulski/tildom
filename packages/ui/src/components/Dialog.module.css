@@ -3,11 +3,11 @@
   inset: 0;
   margin: auto;
   padding: 0;
-  border: 1px solid var(--fg-default, #24292e);
-  background: var(--bg-surface, #ffffff);
-  color: var(--fg-default, #24292e);
-  box-shadow: 4px 4px 0 var(--syntax-bg-active, #dbedff);
-  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  border: 1px solid var(--fg-default);
+  background: var(--bg-surface);
+  color: var(--fg-default);
+  box-shadow: 4px 4px 0 var(--syntax-bg-active);
+  font-family: inherit;
   width: min(60ch, calc(100vw - 2rem));
   max-width: 100%;
   max-height: calc(100vh - 4rem);
@@ -31,8 +31,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 1.25ch;
-  border-bottom: 1px solid var(--border-color, #e1e4e8);
-  background: var(--bg-canvas, #fafafa);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-canvas);
   min-height: 44px;
   box-sizing: border-box;
 }
@@ -42,7 +42,7 @@
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: var(--fg-default, #24292e);
+  color: var(--fg-default);
 }
 
 .closeButton {
@@ -55,7 +55,7 @@
   margin: -0.5rem -1.25ch -0.5rem 0;
   border: 0;
   background: transparent;
-  color: var(--fg-muted, #6a737d);
+  color: var(--fg-muted);
   font-family: inherit;
   font-size: 16px;
   cursor: pointer;
@@ -63,11 +63,11 @@
   transition: color 0.1s ease-out;
 
   &:hover {
-    color: var(--syntax-keyword, #d73a49);
+    color: var(--syntax-keyword);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--fg-default, #24292e);
+    outline: 2px solid var(--fg-default);
     outline-offset: -2px;
   }
 }

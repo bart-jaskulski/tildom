@@ -1,6 +1,10 @@
+import { Route, Router, useNavigate, type RouteSectionProps } from "@solidjs/router";
 import {
   For,
   Show,
+  createContext,
+  useContext,
+  type JSX,
   createEffect,
   createMemo,
   createSignal,
@@ -36,15 +40,21 @@ import {
   writeChatDraft,
   writeSettings,
 } from "./lib/store";
-import type { Chat, MemoryFile, Message, SearchResult, Settings, Surface } from "./lib/types";
+import type { Chat, MemoryFile, Message, SearchResult, Settings } from "./lib/types";
 import { pwaInstall } from "./lib/pwaInstall";
-import { Search } from "@tildom/ui";
+import { Button, Checkbox, Dialog, Input, Search, Select, Textarea } from "@tildom/ui";
 import AppHeader from "./components/AppHeader";
 import ChatWorkspace from "./components/ChatWorkspace";
 import MemoryWorkspace from "./components/MemoryWorkspace";
 import { compactDate } from "./lib/presentation";
 
 const time = (timestamp: number) => new Intl.DateTimeFormat([], { hour: "2-digit", minute: "2-digit" }).format(timestamp);
+
+const WorkspaceContext = createContext<{ chats: () => JSX.Element; memory: () => JSX.Element; settings: () => JSX.Element }>();
+
+const ChatsRoute = () => useContext(WorkspaceContext)!.chats();
+const MemoryRoute = () => useContext(WorkspaceContext)!.memory();
+const SettingsRoute = () => useContext(WorkspaceContext)!.settings();
 
 const brokerOrigin = import.meta.env.VITE_HOME_BASE_URL ?? (import.meta.env.DEV ? "http://localhost:5170" : "https://tildom.app");
 
@@ -60,9 +70,8 @@ function SuiteCallback() {
   return <main><p>Connecting hey to suite sync…</p><Show when={error()}><p role="alert">{error()}</p></Show></main>;
 }
 
-export default function App() {
-  if (location.pathname.startsWith("/suite/")) return <SuiteCallback />;
-  const [surface, setSurface] = createSignal<Surface>("chats");
+function Workspace(props: RouteSectionProps) {
+  const navigate = useNavigate();
   const [chats, setChats] = createSignal<Chat[]>([]);
   const [messages, setMessages] = createSignal<Message[]>([]);
   const [memoryFiles, setMemoryFiles] = createSignal<MemoryFile[]>([]);
@@ -136,6 +145,7 @@ export default function App() {
   };
 
   const openChat = async (id: string) => {
+    navigate("/");
     setActiveChatId(id);
     setMessages(await listMessages(id));
     setDraft(await readChatDraft(id));
@@ -148,7 +158,7 @@ export default function App() {
   const openMemory = async (path: string) => {
     const file = memoryFiles().find((candidate) => candidate.path === path);
     if (!file) return;
-    setSurface("memory");
+    navigate("/memory");
     setActiveMemoryPath(path);
     setMemoryDraft(file.content);
     setMobileMemoryOpen(true);
@@ -373,10 +383,104 @@ export default function App() {
     else void openMemory(result.id);
   };
 
+  const routes = {
+    chats: () => (<ChatWorkspace
+                chats={chats} activeChat={activeChat} activeChatId={activeChatId} messages={messages} draft={draft} setDraft={setDraft}
+                sending={sending} editingMessage={editingMessage} mobileOpen={mobileChatOpen} setMobileOpen={setMobileChatOpen}
+                menuOpen={chatMenuOpen} setMenuOpen={setChatMenuOpen} atBottom={isAtBottom} setAtBottom={setIsAtBottom}
+                openChat={openChat} createChat={async () => { const id = await createChat(); await refreshChats(id); setMobileChatOpen(true); }}
+                editMessage={beginMessageEdit} send={send} stop={stop} scrollToBottom={scrollToBottom} openRename={beginRename}
+                openDelete={() => { setChatMenuOpen(false); deleteDialog?.showModal(); }} resizeComposer={resizeComposer}
+                bindTranscript={(element) => { transcript = element; }} bindComposer={(element) => { composerInput = element; }}
+              />),
+    memory: () => (<MemoryWorkspace groups={memoryGroups} active={activeMemory} activePath={activeMemoryPath} draft={memoryDraft} setDraft={setMemoryDraft} mobileOpen={mobileMemoryOpen} setMobileOpen={setMobileMemoryOpen} openFile={openMemory} save={saveMemory} />),
+    settings: () => (<Show when={settings()}>
+              {(preferences) => <section class="settings">
+                <section class="settings-section">
+                  <h1>Agent</h1>
+                  <label class="setting-line">
+                    <span>tone</span>
+                    <Select
+                      value={preferences().tone}
+                      onChange={(event) => void savePreferences({ ...preferences(), tone: event.currentTarget.value as Settings["tone"] })}
+                    >
+                      <option value="gentle">gentle</option>
+                      <option value="balanced">balanced</option>
+                      <option value="direct">direct</option>
+                    </Select>
+                  </label>
+                  <label class="setting-line">
+                    <span>response length</span>
+                    <Select
+                      value={preferences().responseLength}
+                      onChange={(event) => void savePreferences({ ...preferences(), responseLength: event.currentTarget.value as Settings["responseLength"] })}
+                    >
+                      <option value="short">short</option>
+                      <option value="balanced">balanced</option>
+                      <option value="detailed">detailed</option>
+                    </Select>
+                  </label>
+                  <label class="instructions">
+                    <span>instructions</span>
+                    <Textarea
+                      rows="4"
+                      value={preferences().instructions}
+                      onChange={(event) => void savePreferences({ ...preferences(), instructions: event.currentTarget.value })}
+                    />
+                  </label>
+                </section>
+
+                <section class="settings-section">
+                  <h2>Memory</h2>
+                  <Checkbox checked={preferences().memoryEnabled} onChange={(checked) => void savePreferences({ ...preferences(), memoryEnabled: checked })} label="use memory" />
+                </section>
+
+                <section class="settings-section">
+                  <h2>Keyboard</h2>
+                  <Checkbox checked={preferences().vimEnabled} onChange={(checked) => void savePreferences({ ...preferences(), vimEnabled: checked })} label="enable Vim keys" />
+                </section>
+
+                <Show when={pwaInstall.available() || pwaInstall.needsSafariInstructions()}>
+                  <section class="settings-section">
+                    <h2>Install</h2>
+                    <Show when={pwaInstall.available()}>
+                      <Button type="button" onClick={() => void pwaInstall.prompt()}>install hey</Button>
+                    </Show>
+                    <Show when={!pwaInstall.available() && pwaInstall.needsSafariInstructions()}>
+                      <p>In Safari, use Share → Add to Home Screen.</p>
+                    </Show>
+                  </section>
+                </Show>
+
+                <section class="settings-section">
+                  <h2>Sync</h2>
+                  <p>{syncSignals.isPaired() ? syncSignals.statusText() : "Not connected. Data stays local."}</p>
+                  <div class="button-row">
+                    <Show
+                      when={syncSignals.isPaired()}
+                      fallback={
+                        <Button
+                          type="button"
+                          disabled={syncBusy()}
+                          onClick={() => pairDialog?.showModal()}
+                        >create sync vault</Button>
+                      }
+                    >
+                      <Button type="button" disabled={syncBusy()} onClick={() => void runSync(syncNow)}>sync now</Button>
+                      <Button type="button" disabled={syncBusy()} onClick={() => pairDialog?.showModal()}>pair another device</Button>
+                    </Show>
+                  </div>
+                  <Show when={syncError()}><p class="sync-error" role="alert">{syncError()}</p></Show>
+                </section>
+              </section>}
+            </Show>),
+  };
+
   return (
+    <WorkspaceContext.Provider value={routes}>
     <Search query={search} onSearch={setSearch}>
       <div class="app-shell">
-        <AppHeader surface={surface} setSurface={setSurface} />
+        <AppHeader />
 
         <main>
           <Show when={!loading()} fallback={<div class="state">opening hey.sqlite3…</div>}>
@@ -384,7 +488,7 @@ export default function App() {
               <section class="state error-state">
                 <h1>Hey couldn’t open its local database.</h1>
                 <p>{error()}</p>
-                <button class="button" onClick={() => location.reload()}>retry</button>
+                <Button onClick={() => location.reload()}>retry</Button>
               </section>
             }>
               <Show when={search().trim()}>
@@ -406,147 +510,35 @@ export default function App() {
                 </section>
               </Show>
 
-            <Show when={!search().trim() && surface() === "chats"}>
-              <ChatWorkspace
-                chats={chats} activeChat={activeChat} activeChatId={activeChatId} messages={messages} draft={draft} setDraft={setDraft}
-                sending={sending} editingMessage={editingMessage} mobileOpen={mobileChatOpen} setMobileOpen={setMobileChatOpen}
-                menuOpen={chatMenuOpen} setMenuOpen={setChatMenuOpen} atBottom={isAtBottom} setAtBottom={setIsAtBottom}
-                openChat={openChat} createChat={async () => { const id = await createChat(); await refreshChats(id); setMobileChatOpen(true); }}
-                editMessage={beginMessageEdit} send={send} stop={stop} scrollToBottom={scrollToBottom} openRename={beginRename}
-                openDelete={() => { setChatMenuOpen(false); deleteDialog?.showModal(); }} resizeComposer={resizeComposer}
-                bindTranscript={(element) => { transcript = element; }} bindComposer={(element) => { composerInput = element; }}
-              />
-            </Show>
+            <Show when={!search().trim()}>{props.children}</Show>
 
-            <Show when={!search().trim() && surface() === "memory"}>
-              <MemoryWorkspace groups={memoryGroups} active={activeMemory} activePath={activeMemoryPath} draft={memoryDraft} setDraft={setMemoryDraft} mobileOpen={mobileMemoryOpen} setMobileOpen={setMobileMemoryOpen} openFile={openMemory} save={saveMemory} />
-            </Show>
-
-            <Show when={!search().trim() && surface() === "settings" && settings()}>
-              {(preferences) => <section class="settings">
-                <section class="settings-section">
-                  <h1>Agent</h1>
-                  <label class="setting-line">
-                    <span>tone</span>
-                    <select
-                      value={preferences().tone}
-                      onChange={(event) => void savePreferences({ ...preferences(), tone: event.currentTarget.value as Settings["tone"] })}
-                    >
-                      <option value="gentle">gentle</option>
-                      <option value="balanced">balanced</option>
-                      <option value="direct">direct</option>
-                    </select>
-                  </label>
-                  <label class="setting-line">
-                    <span>response length</span>
-                    <select
-                      value={preferences().responseLength}
-                      onChange={(event) => void savePreferences({ ...preferences(), responseLength: event.currentTarget.value as Settings["responseLength"] })}
-                    >
-                      <option value="short">short</option>
-                      <option value="balanced">balanced</option>
-                      <option value="detailed">detailed</option>
-                    </select>
-                  </label>
-                  <label class="instructions">
-                    <span>instructions</span>
-                    <textarea
-                      rows="4"
-                      value={preferences().instructions}
-                      onChange={(event) => void savePreferences({ ...preferences(), instructions: event.currentTarget.value })}
-                    />
-                  </label>
-                </section>
-
-                <section class="settings-section">
-                  <h2>Memory</h2>
-                  <label class="checkbox-line">
-                    <input
-                      type="checkbox"
-                      checked={preferences().memoryEnabled}
-                      onChange={(event) => void savePreferences({ ...preferences(), memoryEnabled: event.currentTarget.checked })}
-                    />
-                    <span>[{preferences().memoryEnabled ? "x" : " "}] use memory</span>
-                  </label>
-                </section>
-
-                <section class="settings-section">
-                  <h2>Keyboard</h2>
-                  <label class="checkbox-line">
-                    <input
-                      type="checkbox"
-                      checked={preferences().vimEnabled}
-                      onChange={(event) => void savePreferences({ ...preferences(), vimEnabled: event.currentTarget.checked })}
-                    />
-                    <span>[{preferences().vimEnabled ? "x" : " "}] enable Vim keys</span>
-                  </label>
-                </section>
-
-                <Show when={pwaInstall.available() || pwaInstall.needsSafariInstructions()}>
-                  <section class="settings-section">
-                    <h2>Install</h2>
-                    <Show when={pwaInstall.available()}>
-                      <button class="button" type="button" onClick={() => void pwaInstall.prompt()}>install hey</button>
-                    </Show>
-                    <Show when={!pwaInstall.available() && pwaInstall.needsSafariInstructions()}>
-                      <p>In Safari, use Share → Add to Home Screen.</p>
-                    </Show>
-                  </section>
-                </Show>
-
-                <section class="settings-section">
-                  <h2>Sync</h2>
-                  <p>{syncSignals.isPaired() ? syncSignals.statusText() : "Not connected. Data stays local."}</p>
-                  <div class="button-row">
-                    <Show
-                      when={syncSignals.isPaired()}
-                      fallback={
-                        <button
-                          class="button"
-                          type="button"
-                          disabled={syncBusy()}
-                          onClick={() => pairDialog?.showModal()}
-                        >create sync vault</button>
-                      }
-                    >
-                      <button class="button" type="button" disabled={syncBusy()} onClick={() => void runSync(syncNow)}>sync now</button>
-                      <button class="button" type="button" disabled={syncBusy()} onClick={() => pairDialog?.showModal()}>pair another device</button>
-                    </Show>
-                  </div>
-                  <Show when={syncError()}><p class="sync-error" role="alert">{syncError()}</p></Show>
-                </section>
-              </section>}
-            </Show>
           </Show>
         </Show>
       </main>
 
-      <dialog ref={renameDialog} aria-labelledby="rename-title">
-        <form method="dialog" onSubmit={submitRename}>
-          <header><h2 id="rename-title">Rename chat</h2></header>
+      <Dialog ref={(element) => { renameDialog = element; }} title="Rename chat">
+        <form class="dialog-form" method="dialog" onSubmit={submitRename}>
           <label for="rename-input">name</label>
-          <input ref={renameInput} id="rename-input" required />
+          <Input ref={renameInput} id="rename-input" required />
           <footer>
-            <button class="button" type="button" onClick={() => renameDialog?.close()}>cancel</button>
-            <button class="button primary" type="submit">rename</button>
+            <Button type="button" onClick={() => renameDialog?.close()}>cancel</Button>
+            <Button type="submit">rename</Button>
           </footer>
         </form>
-      </dialog>
+      </Dialog>
 
-      <dialog ref={deleteDialog} aria-labelledby="delete-title">
-        <form method="dialog" onSubmit={(event) => { event.preventDefault(); void confirmDelete(); }}>
-          <header><h2 id="delete-title">Delete this chat?</h2></header>
+      <Dialog ref={(element) => { deleteDialog = element; }} title="Delete this chat?">
+        <form class="dialog-form" method="dialog" onSubmit={(event) => { event.preventDefault(); void confirmDelete(); }}>
           <p>“{activeChat()?.title}” and its messages will be permanently removed from this device.</p>
           <footer>
-            <button class="button" type="button" onClick={() => deleteDialog?.close()}>cancel</button>
-            <button class="button danger" type="submit">delete chat</button>
+            <Button type="button" onClick={() => deleteDialog?.close()}>cancel</Button>
+            <Button danger type="submit">delete chat</Button>
           </footer>
         </form>
-      </dialog>
+      </Dialog>
 
-      <dialog ref={pairDialog} aria-labelledby="pair-title">
-        <form method="dialog">
-          <header><h2 id="pair-title">{joinSecret() ? "Join sync vault" : "Sync"}</h2></header>
+      <Dialog ref={(element) => { pairDialog = element; }} title={joinSecret() ? "Join sync vault" : "Sync"}>
+        <form class="dialog-form" method="dialog">
           <Show when={joinSecret()}>
             <p>Pairing replaces this device with the latest encrypted snapshot from the vault.</p>
           </Show>
@@ -555,44 +547,55 @@ export default function App() {
           </Show>
           <Show when={!joinSecret() && syncSignals.isPaired()}>
             <p>Open this link on the other device.</p>
-            <input class="pair-link" aria-label="Pairing link" readOnly value={pairUrl()} />
+            <Input class="pair-link" aria-label="Pairing link" readOnly value={pairUrl()} />
           </Show>
           <Show when={syncError()}><p class="sync-error" role="alert">{syncError()}</p></Show>
           <footer>
-            <button class="button" value="cancel" disabled={syncBusy()}>cancel</button>
+            <Button type="submit" value="cancel" disabled={syncBusy()}>cancel</Button>
             <Show when={joinSecret()}>
-              <button class="button primary" type="button" disabled={syncBusy()} onClick={() => void joinPair()}>
+              <Button type="button" disabled={syncBusy()} onClick={() => void joinPair()}>
                 {syncBusy() ? "pairing…" : "join vault"}
-              </button>
+              </Button>
             </Show>
             <Show when={!joinSecret() && !syncSignals.isPaired()}>
-              <button class="button primary" type="button" disabled={syncBusy()} onClick={() => void runSync(createSyncVault)}>
+              <Button type="button" disabled={syncBusy()} onClick={() => void runSync(createSyncVault)}>
                 {syncBusy() ? "creating…" : "create vault"}
-              </button>
+              </Button>
             </Show>
             <Show when={!joinSecret() && syncSignals.isPaired()}>
-              <button
-                class="button danger"
+              <Button danger
                 type="button"
                 disabled={syncBusy()}
                 onClick={() => void runSync(async () => {
                   await disconnectSync();
                   pairDialog?.close();
                 })}
-              >disconnect</button>
-              <button
-                class="button primary"
+              >disconnect</Button>
+              <Button
                 type="button"
                 disabled={syncBusy() || !pairUrl()}
                 onClick={() => void navigator.clipboard.writeText(pairUrl()).then(() => showToast("Pairing link copied"))}
-              >copy link</button>
+              >copy link</Button>
             </Show>
           </footer>
         </form>
-      </dialog>
+      </Dialog>
 
       <Show when={toast()}><div class="toast" role="status">{toast()}</div></Show>
     </div>
   </Search>
+  </WorkspaceContext.Provider>
   );
+}
+
+export default function App() {
+  return <Router>
+    <Route path="/suite/:operation" component={SuiteCallback} />
+    <Route path="/" component={Workspace}>
+      <Route path="/" component={ChatsRoute} />
+      <Route path="/memory" component={MemoryRoute} />
+      <Route path="/settings" component={SettingsRoute} />
+      <Route path="*404" component={() => <section class="state"><h1>Page not found</h1><a href="/">Return to chats</a></section>} />
+    </Route>
+  </Router>;
 }

@@ -12,15 +12,15 @@
   "dependencies": {
     "@tildom/sync-client": "workspace:*",
     "@tildom/ui": "workspace:*",
-    "solid-js": "^1.9.13"
+    "solid-js": "^1.9.17"
   },
   "devDependencies": {
     "@tildom/config": "workspace:*",
-    "typescript": "^6.0.3",
-    "vite": "^8.0.14",
-    "vite-plugin-solid": "^2.11.12"
+    "typescript": "~6.0.3",
+    "vite": "^8.3.3",
+    "vite-plugin-solid": "^2.11.14"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=26.0.0"
   }
 }

@@ -1,5 +1,3 @@
-export type Surface = "chats" | "memory" | "settings";
-
 export type Chat = {
   id: string;
   title: string;

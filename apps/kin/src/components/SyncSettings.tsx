@@ -1,3 +1,4 @@
+import { Button } from "@tildom/ui";
 import QRCode from "qrcode";
 import { Show, createEffect, createMemo, createSignal, onMount } from "solid-js";
 import { buildPairingUrl, clearPairingHash, parsePairingSecret } from "@tildom/sync-client";
@@ -60,7 +61,7 @@ export default function SyncSettings() {
       <p>Full database snapshots are encrypted on this device before upload.</p>
       <Show when={joinSecret()}>
         <p>Pairing replaces this device with the latest remote snapshot.</p>
-        <button type="button" class="kin-button" disabled={busy()} onClick={() => void join()}>{busy() ? "joining…" : "join vault"}</button>
+        <Button type="button" class="kin-button" disabled={busy()} onClick={() => void join()}>{busy() ? "joining…" : "join vault"}</Button>
       </Show>
       <Show when={!syncSignals.isReady()}>
         <dl class={`${styles.status} ${styles.loading}`} aria-busy="true">
@@ -70,7 +71,7 @@ export default function SyncSettings() {
         </dl>
       </Show>
       <Show when={syncSignals.isReady() && !syncSignals.isPaired() && !joinSecret()}>
-        <button type="button" class="kin-button" disabled={busy()} onClick={() => void run(createSyncVault)}>{busy() ? "creating…" : "create sync vault"}</button>
+        <Button type="button" class="kin-button" disabled={busy()} onClick={() => void run(createSyncVault)}>{busy() ? "creating…" : "create sync vault"}</Button>
       </Show>
       <Show when={syncSignals.isReady() && syncSignals.isPaired()}>
         <dl class={styles.status}>
@@ -79,13 +80,13 @@ export default function SyncSettings() {
           <div><dt>local</dt><dd>{syncSignals.hasLocalChanges() ? "pending changes" : "clean"}</dd></div>
         </dl>
         <div class={styles.actions}>
-          <button type="button" class="kin-button" disabled={busy()} onClick={() => void run(syncNow)}>{busy() ? "syncing…" : "sync now"}</button>
-          <button type="button" class="kin-button" disabled={busy() || !pairUrl()} onClick={() => void run(() => navigator.clipboard.writeText(pairUrl()))}>copy pair link</button>
-          <button type="button" class="kin-button kin-danger-button" disabled={busy()} onClick={() => void run(disconnectSync)}>disconnect</button>
+          <Button type="button" class="kin-button" disabled={busy()} onClick={() => void run(syncNow)}>{busy() ? "syncing…" : "sync now"}</Button>
+          <Button type="button" class="kin-button" disabled={busy() || !pairUrl()} onClick={() => void run(() => navigator.clipboard.writeText(pairUrl()))}>copy pair link</Button>
+          <Button danger type="button" class="kin-button kin-danger-button" disabled={busy()} onClick={() => void run(disconnectSync)}>disconnect</Button>
         </div>
-        <button type="button" class="kin-link-button" aria-expanded={showQr()} onClick={() => setShowQr(!showQr())}>
+        <Button variant="text" type="button" class="kin-link-button" aria-expanded={showQr()} onClick={() => setShowQr(!showQr())}>
           [{showQr() ? "hide pairing QR" : "show pairing QR"}]
-        </button>
+        </Button>
         <Show when={showQr() && qrDataUrl()}>
           <img class={styles.qr} src={qrDataUrl()} alt="Pairing QR code" />
         </Show>
