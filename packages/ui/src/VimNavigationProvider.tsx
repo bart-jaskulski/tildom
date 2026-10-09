@@ -5,7 +5,7 @@ const VimNavigationContext = createContext<{ setKeymaps: (keymaps: VimKeymap[]) 
 
 export function VimNavigationProvider(props: ParentProps<{ keymaps?: VimKeymap[] }>) {
   const [localKeymaps, setLocalKeymaps] = createSignal<VimKeymap[]>([]);
-  const keymaps = () => [...(props.keymaps ?? []), ...localKeymaps()];
+  const keymaps = () => [...localKeymaps(), ...(props.keymaps ?? [])];
   createVimNavigation(keymaps);
   createEffect(() => setActiveVimKeymaps(keymaps()));
 

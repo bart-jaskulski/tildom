@@ -19,6 +19,20 @@ export const setActiveVimKeymaps = (keymaps: VimKeymap[]) => {
 
 export type VimKeymaps = VimKeymap[] | Accessor<VimKeymap[]>;
 
+function isTypingTarget(target: EventTarget | Element | null): boolean {
+  if (!target || !(target instanceof HTMLElement)) return false;
+  if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT") {
+    return true;
+  }
+  if (target.isContentEditable) {
+    return true;
+  }
+  if (target.closest?.('[contenteditable="true"], [contenteditable=""], [role="textbox"]')) {
+    return true;
+  }
+  return false;
+}
+
 export function createVimNavigation(keymaps: VimKeymaps) {
   onMount(() => {
     const getKeymaps = () => typeof keymaps === "function" ? keymaps() : keymaps;
@@ -36,15 +50,18 @@ export function createVimNavigation(keymaps: VimKeymaps) {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (window.innerWidth <= 768 || !getSharedPreferences().vimKeys) return;
 
-      const activeEl = document.activeElement;
-      const isTyping = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
-      if (isTyping) {
+      const activeEl = document.activeElement as HTMLElement | null;
+      const targetEl = event.target as HTMLElement | null;
+      const typingEl = isTypingTarget(activeEl) ? activeEl : isTypingTarget(targetEl) ? targetEl : null;
+      if (typingEl) {
         if (event.key === "Escape") {
-          (activeEl as HTMLElement).blur();
+          typingEl.blur();
           event.preventDefault();
         }
         return;
       }
+
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
 
       if (event.key === "?") {
         setActiveVimKeymaps(getKeymaps());
