@@ -19,7 +19,29 @@ To maintain a strict layout structure, we align elements to a simulated characte
 ### Grid Constraints
 * **Max-Width:** Use `120ch` as a soft maximum for dense reading and working content, not as a frame around the entire viewport. App backgrounds, header rules, and layout regions may span the available width; narrower text measures should be chosen for readability.
 * **Corners:** Strict `border-radius: 0px` across all apps. No rounded corners.
-* **Spacing Scale:** Spacing is defined in standardized steps, utilizing `ch` (character width) for horizontal alignment and `rem` or `px` for vertical padding.
+* **Spacing Scale:** Spacing is defined by a single base unit controlling vertical rhythm with `calc()` and character-based horizontal steps:
+  ```css
+  /* Vertical rhythm scale (controlled by --space-unit with calc) */
+  --space-unit: 0.25rem; /* 4px baseline */
+  --space-1: var(--space-unit);                     /* 0.25rem (4px)  */
+  --space-2: calc(var(--space-unit) * 2);           /* 0.5rem  (8px)  */
+  --space-3: calc(var(--space-unit) * 3);           /* 0.75rem (12px) */
+  --space-4: calc(var(--space-unit) * 4);           /* 1rem    (16px) */
+  --space-5: calc(var(--space-unit) * 5);           /* 1.25rem (20px) */
+  --space-6: calc(var(--space-unit) * 6);           /* 1.5rem  (24px) */
+  --space-8: calc(var(--space-unit) * 8);           /* 2rem    (32px) */
+  --space-10: calc(var(--space-unit) * 10);         /* 2.5rem  (40px) */
+  --space-12: calc(var(--space-unit) * 12);         /* 3rem    (48px) */
+  --space-16: calc(var(--space-unit) * 16);         /* 4rem    (64px) */
+
+  /* Horizontal character grid scale (controlled by --space-ch with calc) */
+  --space-ch: 1ch;
+  --space-x-half: calc(var(--space-ch) * 0.5);      /* 0.5ch */
+  --space-x-1: var(--space-ch);                     /* 1ch */
+  --space-x-1-5: calc(var(--space-ch) * 1.5);       /* 1.5ch */
+  --space-x-2: calc(var(--space-ch) * 2);           /* 2ch */
+  --space-x-3: calc(var(--space-ch) * 3);           /* 3ch */
+  ```
 
 ### Typography
 The entire interface relies strictly on system monospaced fonts. We do not load external font files, keeping performance fast and dependencies minimal.

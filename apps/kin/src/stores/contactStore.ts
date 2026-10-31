@@ -113,18 +113,31 @@ const appStore = createRoot(() => {
     setState,
     refreshContacts,
     setReady: (value: boolean) => setState("isReady", value),
+    clearContacts: () => setState({ contacts: [], isReady: false, searchQuery: "" }),
   };
 });
 
+let initPromise: Promise<void> | null = null;
 export const initializeContactStore = async () => {
-  console.debug("Initializing contact store...");
-  try {
-    await db.init();
-    await appStore.refreshContacts();
-    appStore.setReady(true);
-  } catch (error) {
-    console.error("Failed to initialize contact store:", error);
-  }
+  if (appStore.state.isReady) return;
+  if (initPromise) return initPromise;
+  initPromise = (async () => {
+    console.debug("Initializing contact store...");
+    try {
+      await db.init();
+      await appStore.refreshContacts();
+      appStore.setReady(true);
+    } catch (error) {
+      console.error("Failed to initialize contact store:", error);
+    } finally {
+      initPromise = null;
+    }
+  })();
+  return initPromise;
+};
+
+export const clearContactStore = () => {
+  appStore.clearContacts();
 };
 
 export const contacts = () => appStore.state.contacts;

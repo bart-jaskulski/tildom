@@ -15,6 +15,27 @@
   --highlight-blue: #005cc5;
   --highlight-green: #22863a;
   --highlight-orange: #e36209;
+
+  /* Vertical rhythm scale (controlled by single base unit with calc) */
+  --space-unit: 0.25rem;
+  --space-1: var(--space-unit);
+  --space-2: calc(var(--space-unit) * 2);
+  --space-3: calc(var(--space-unit) * 3);
+  --space-4: calc(var(--space-unit) * 4);
+  --space-5: calc(var(--space-unit) * 5);
+  --space-6: calc(var(--space-unit) * 6);
+  --space-8: calc(var(--space-unit) * 8);
+  --space-10: calc(var(--space-unit) * 10);
+  --space-12: calc(var(--space-unit) * 12);
+  --space-16: calc(var(--space-unit) * 16);
+
+  /* Horizontal character grid scale (controlled by single base unit with calc) */
+  --space-ch: 1ch;
+  --space-x-half: calc(var(--space-ch) * 0.5);
+  --space-x-1: var(--space-ch);
+  --space-x-1-5: calc(var(--space-ch) * 1.5);
+  --space-x-2: calc(var(--space-ch) * 2);
+  --space-x-3: calc(var(--space-ch) * 3);
 }
 
 * {

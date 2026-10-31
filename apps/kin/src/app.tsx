@@ -1,12 +1,14 @@
 import { Router, Route, useLocation, useNavigate, useSearchParams } from "@solidjs/router";
 import { MetaProvider, Meta, Title } from "@solidjs/meta";
-import { lazy, onMount, Show, Suspense, type ParentProps } from "solid-js";
+import { lazy, onMount, createEffect, Show, Suspense, type ParentProps } from "solid-js";
 import { KeybindHelp, Search, VimNavigationProvider, type VimKeymap } from "@tildom/ui";
 import AppNav from "./components/AppNav";
 import Home from "./routes/index";
 import PersonLoading from "./routes/person/PersonLoading";
+import LockScreen from "./components/LockScreen";
 import { initializeSync } from "./lib/syncClient";
-import { initializeContactStore } from "./stores/contactStore";
+import { initializeContactStore, isContactStoreReady } from "./stores/contactStore";
+import { initBiometrics, isBiometricEnabled, isUnlocked } from "./lib/biometrics";
 import { pwaInstall } from "./lib/pwaInstall";
 import "./app.css";
 
@@ -60,11 +62,19 @@ function RouteLoading() {
 }
 
 export default function App() {
-  onMount(async () => {
+  onMount(() => {
     pwaInstall.initialize();
-    await initializeContactStore();
-    window.setTimeout(() => void initializeSync(), 1_000);
+    initBiometrics();
   });
+
+  createEffect(() => {
+    if (isUnlocked() && !isContactStoreReady()) {
+      void initializeContactStore();
+      window.setTimeout(() => void initializeSync(), 1_000);
+    }
+  });
+
+  const isLocked = () => isBiometricEnabled() && !isUnlocked();
 
   return (
     <Router
@@ -94,24 +104,26 @@ export default function App() {
           <MetaProvider>
             <Title>{isShowcase() ? "showcase | kin.tildom" : "kin.tildom"}</Title>
             <Meta name="theme-color" content="#d73a49" />
-            <Search query={searchQuery} onSearch={handleSearch}>
-              <KinVimNavigation>
-                <Show
-                  when={!isShowcase()}
-                  fallback={
-                    <div class="kin-page">
-                      <AppNav active={activeNav()} />
+            <Show when={!isLocked()} fallback={<LockScreen />}>
+              <Search query={searchQuery} onSearch={handleSearch}>
+                <KinVimNavigation>
+                  <Show
+                    when={!isShowcase()}
+                    fallback={
+                      <div class="kin-page">
+                        <AppNav active={activeNav()} />
+                        {props.children}
+                      </div>
+                    }
+                  >
+                    <Suspense fallback={<RouteLoading />}>
                       {props.children}
-                    </div>
-                  }
-                >
-                  <Suspense fallback={<RouteLoading />}>
-                    {props.children}
-                  </Suspense>
-                </Show>
-                <KeybindHelp />
-              </KinVimNavigation>
-            </Search>
+                    </Suspense>
+                  </Show>
+                  <KeybindHelp />
+                </KinVimNavigation>
+              </Search>
+            </Show>
           </MetaProvider>
         );
       }}

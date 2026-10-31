@@ -1,19 +1,40 @@
 @import "tailwindcss";
 @import "@tildom/ui/base.css";
 
+@theme {
+  --color-canvas: var(--bg-canvas);
+  --color-surface: var(--bg-surface);
+  --color-fg: var(--fg-default);
+  --color-muted: var(--fg-muted);
+  --color-keyword: var(--syntax-keyword);
+  --color-string: var(--syntax-string);
+  --color-comment: var(--syntax-comment);
+  --color-error: var(--syntax-error);
+  --color-active: var(--syntax-bg-active);
+  --color-border: var(--border-color);
+  --color-highlight-blue: var(--highlight-blue);
+
+  --spacing-ch-half: var(--space-x-half);
+  --spacing-ch-1: var(--space-x-1);
+  --spacing-ch-1-5: var(--space-x-1-5);
+  --spacing-ch-2: var(--space-x-2);
+  --spacing-ch-3: var(--space-x-3);
+  --spacing-ch-4: calc(var(--space-ch) * 4);
+}
+
 /* Layout Rails & Guides */
 .tui-container {
   max-width: 120ch;
   width: 100%;
   margin: 0 auto;
-  padding: 2.5rem 3ch;
+  padding: var(--space-10) var(--space-x-3);
   display: flex;
   flex-direction: column;
 }
 
 /* Custom utility for monospace gutters & numbering */
 .tui-gutter {
-  width: 3ch;
+  width: var(--space-x-3);
   text-align: right;
   color: var(--fg-muted);
   user-select: none;
@@ -23,7 +44,7 @@
 /* Custom list items with guide rails */
 .tui-item-row {
   border-left: 2px solid var(--border-color);
-  padding: 0.75rem 0 0.75rem 2.5ch;
+  padding: var(--space-3) 0 var(--space-3) calc(var(--space-x-2) + var(--space-x-half));
   position: relative;
   transition: all 0.1s ease-out;
 }
@@ -35,7 +56,7 @@
 }
 
 .tui-heading {
-  margin: 0 0 1rem;
+  margin: 0 0 var(--space-4);
   font-size: 16px;
   font-weight: bold;
   letter-spacing: 0.03em;
@@ -43,7 +64,7 @@
   color: var(--fg-default);
   display: flex;
   align-items: center;
-  gap: 1ch;
+  gap: var(--space-x-1);
 }
 
 .tui-heading::before {
@@ -57,7 +78,7 @@
   border-bottom: 2px solid var(--syntax-error);
   background: var(--syntax-bg-active);
   color: var(--syntax-error);
-  padding: 10px 16px;
+  padding: var(--space-2) var(--space-4);
   text-align: center;
   font-weight: bold;
   font-size: 13px;
@@ -68,6 +89,6 @@
 
 @media (max-width: 768px) {
   .tui-container {
-    padding: 1.5rem 1.5ch;
+    padding: var(--space-6) var(--space-x-1-5);
   }
 }

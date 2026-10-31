@@ -7,9 +7,8 @@ import {
   renderMarkdownishToHtml,
   toggleMarkdownTask,
 } from "@tildom/markdownish";
-import { Button, TextButton, useVimKeymaps } from "@tildom/ui";
+import { Button, Editor, TextButton, useVimKeymaps } from "@tildom/ui";
 import ItemLoading from "~/components/ItemLoading";
-import MemoEditor from "~/components/MemoEditor";
 import { formatRelativeTimestamp, splitNoteIntoTitleAndBody } from "~/lib/entries";
 import { parseHashTags } from "~/lib/tags";
 import { addCommentToEntry, deleteComment, deleteEntry, fetchEntryDetail, isEntryStoreReady, recordEntryOpen, updateComment, updateEntry } from "~/stores/entryStore";
@@ -93,10 +92,19 @@ export default function ItemPage() {
       return;
     }
 
-    const content = collapseTrailingTags((currentEntry.sourceUrl ?? currentEntry.canonicalUrl ?? currentEntry.body).replace(/^\n/, ""));
-    const existingTags = new Set(parseHashTags(`${currentEntry.title}\n${content}`));
-    const missingTags = currentEntry.tags.filter((tag) => !existingTags.has(tag));
-    setEditMemo([currentEntry.title, content, missingTags.map((tag) => `#${tag}`).join(" ")].filter(Boolean).join("\n"));
+    if (currentEntry.canonicalUrl) {
+      // For bookmarks: edit body and tags; title and canonicalUrl remain in header
+      const content = collapseTrailingTags(currentEntry.body.replace(/^\n/, ""));
+      const existingTags = new Set(parseHashTags(content));
+      const missingTags = currentEntry.tags.filter((tag) => !existingTags.has(tag));
+      setEditMemo([content, missingTags.map((tag) => `#${tag}`).join(" ")].filter(Boolean).join("\n\n"));
+    } else {
+      // For notes: title is line 1, body is line 2+
+      const content = collapseTrailingTags(currentEntry.body.replace(/^\n/, ""));
+      const existingTags = new Set(parseHashTags(`${currentEntry.title}\n${content}`));
+      const missingTags = currentEntry.tags.filter((tag) => !existingTags.has(tag));
+      setEditMemo([currentEntry.title, content, missingTags.map((tag) => `#${tag}`).join(" ")].filter(Boolean).join("\n\n"));
+    }
     setActionError(null);
     setIsEditing(true);
   };
@@ -117,10 +125,18 @@ export default function ItemPage() {
     setActionError(null);
 
     try {
-      const memo = splitNoteIntoTitleAndBody(editMemo());
+      let title = currentEntry.title;
+      let body = editMemo();
+
+      if (!currentEntry.canonicalUrl) {
+        const memo = splitNoteIntoTitleAndBody(editMemo());
+        title = memo.title;
+        body = memo.body;
+      }
+
       const updatedEntry = await updateEntry(currentEntry.id, {
-        title: memo.title,
-        content: memo.body,
+        title,
+        content: body,
         tags: parseHashTags(editMemo()).join(" "),
       });
       setIsEditing(false);
@@ -322,8 +338,23 @@ export default function ItemPage() {
                     <span>≈{readingTime()}m</span>
                   </Show>
                 </div>
-                <Show when={!isEditing()}>
-                  <div class={styles.entryActions}>
+                <div class={styles.entryActions}>
+                  <Show when={!isEditing()} fallback={
+                    <>
+                      <TextButton
+                        type="button"
+                        inline
+                        onClick={() => void submitEdit(new Event("submit") as SubmitEvent)}
+                        disabled={isEditSaving()}
+                      >
+                        {isEditSaving() ? "saving..." : "save"}
+                      </TextButton>
+                      <span aria-hidden="true">|</span>
+                      <TextButton type="button" inline onClick={cancelEditing}>
+                        cancel
+                      </TextButton>
+                    </>
+                  }>
                     <TextButton type="button" inline onClick={startEditing}>
                       edit
                     </TextButton>
@@ -340,50 +371,49 @@ export default function ItemPage() {
                     >
                       {isDeleting() ? "deleting..." : "delete"}
                     </TextButton>
-                  </div>
+                  </Show>
+                </div>
+
+                <Show when={currentEntry().canonicalUrl}>
+                  <h1 class={styles.title}>{currentEntry().title}</h1>
+
+                  <a
+                    href={currentEntry().canonicalUrl!}
+                    target="_blank"
+                    rel="noreferrer"
+                    class={`${styles.url} ${styles.subtext}`}
+                    onClick={() => void recordEntryOpen(currentEntry().id)}
+                  >
+                    {currentEntry().canonicalUrl}
+                  </a>
+
+                  <Show when={currentEntry().excerpt}>
+                    <p class={styles.preview}>{currentEntry().excerpt}</p>
+                  </Show>
                 </Show>
 
                 <Show when={!isEditing()} fallback={
-                  <form class={`${styles.memoForm} hn-form item-edit-form`} onSubmit={submitEdit}>
+                  <form class={`${styles.memoForm} item-edit-form`} onSubmit={submitEdit}>
                     <span id="edit-memo-label" class="visually-hidden">edit entry</span>
-                    <MemoEditor
+                    <Editor
                       id="edit-memo"
+                      ariaLabelledby="edit-memo-label"
                       value={editMemo()}
                       onInput={setEditMemo}
                       onSubmit={() => void submitEdit(new Event("submit") as SubmitEvent)}
-                      placeholder={"Title\nWrite your note… #tag"}
+                      placeholder={currentEntry().canonicalUrl ? "Write a note on this link… #tag" : "Title\nWrite your note… #tag"}
+                      titleFirstLine={!currentEntry().canonicalUrl}
+                      variant="borderless"
+                      autofocus
                     />
 
                     <Show when={actionError()}>
                       <p class="hn-error">{actionError()}</p>
                     </Show>
-
-                    <div class={styles.actions}>
-                      <Button type="submit" disabled={isEditSaving()}>
-                        {isEditSaving() ? "saving..." : "save changes"}
-                      </Button>
-                      <Button type="button" onClick={cancelEditing}>
-                        cancel
-                      </Button>
-                    </div>
                   </form>
                 }>
-                  <h1 class={styles.title}>{currentEntry().title}</h1>
-
-                  <Show when={currentEntry().canonicalUrl}>
-                    <a
-                      href={currentEntry().canonicalUrl!}
-                      target="_blank"
-                      rel="noreferrer"
-                      class={`${styles.url} ${styles.subtext}`}
-                      onClick={() => void recordEntryOpen(currentEntry().id)}
-                    >
-                      {currentEntry().canonicalUrl}
-                    </a>
-                  </Show>
-
-                  <Show when={currentEntry().excerpt}>
-                    <p class={styles.preview}>{currentEntry().excerpt}</p>
+                  <Show when={!currentEntry().canonicalUrl}>
+                    <h1 class={styles.title} onClick={startEditing}>{currentEntry().title}</h1>
                   </Show>
 
                   <Show when={bodyWithMissingTags(currentEntry())}>
@@ -449,23 +479,31 @@ export default function ItemPage() {
                           </>
                         }
                       >
-                        <form class="hn-form hn-stack item-edit-form" onSubmit={(event) => submitCommentEdit(event, comment.id)}>
+                        <form class="item-edit-form" onSubmit={(event) => submitCommentEdit(event, comment.id)}>
                           <span id={`comment-edit-${comment.id}-label`} class="visually-hidden">edit note</span>
-                          <MemoEditor
+                          <Editor
                             id={`comment-edit-${comment.id}`}
+                            ariaLabelledby={`comment-edit-${comment.id}-label`}
                             value={editingCommentBody()}
-                            compact
                             onInput={setEditingCommentBody}
                             onSubmit={() => void submitCommentEdit(new Event("submit") as SubmitEvent, comment.id)}
+                            variant="borderless"
+                            autofocus
                           />
-                          <div class={styles.actions}>
-                            <Button type="submit" disabled={commentSavingId() === comment.id}>
+                          <p class={styles.subtext} style={{ "margin-top": "var(--space-1)" }}>
+                            <TextButton
+                              type="button"
+                              inline
+                              onClick={(event) => void submitCommentEdit(new Event("submit") as SubmitEvent, comment.id)}
+                              disabled={commentSavingId() === comment.id}
+                            >
                               {commentSavingId() === comment.id ? "saving..." : "save"}
-                            </Button>
-                            <Button type="button" onClick={cancelCommentEditing}>
+                            </TextButton>
+                            <span> | </span>
+                            <TextButton type="button" inline onClick={cancelCommentEditing}>
                               cancel
-                            </Button>
-                          </div>
+                            </TextButton>
+                          </p>
                         </form>
                       </Show>
                     </article>
@@ -478,8 +516,9 @@ export default function ItemPage() {
 
                 <form class="hn-form" onSubmit={submitComment}>
                   <span id="comment-body-label" class="hn-label">add note</span>
-                  <MemoEditor
+                  <Editor
                     id="comment-body"
+                    ariaLabelledby="comment-body-label"
                     value={commentBody()}
                     compact
                     onInput={setCommentBody}

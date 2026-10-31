@@ -30,7 +30,7 @@ export const QRDisplay: Component<QRDisplayProps> = (props) => {
   return (
     <div class="flex w-full flex-col items-center gap-4">
       <Show when={error()}>
-        <p class="text-sm text-[var(--syntax-error)]">{error()}</p>
+        <p class="text-sm text-error">{error()}</p>
       </Show>
       <Show when={!error() && qrDataUrl()}>
         <img
@@ -39,7 +39,7 @@ export const QRDisplay: Component<QRDisplayProps> = (props) => {
           class="w-full max-w-[300px]"
         />
       </Show>
-      <p class="text-center text-xs text-[var(--fg-muted)]">
+      <p class="text-center text-xs text-muted">
         This QR contains the full join link for this vault.
       </p>
     </div>

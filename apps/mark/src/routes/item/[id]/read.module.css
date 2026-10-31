@@ -4,14 +4,14 @@
 }
 
 .header {
-  margin-bottom: 1rem;
-  padding-bottom: .25rem;
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-1);
   border-bottom: 1px solid var(--border-color);
 }
 
 .actions,
 .meta {
-  margin: 0 0 0.75rem;
+  margin: 0 0 var(--space-3);
   color: var(--fg-muted);
   font-size: 12px;
 }
@@ -43,12 +43,12 @@
 }
 
 .content :global(p) {
-  margin: 0 0 1.25rem;
+  margin: 0 0 var(--space-5);
 }
 
 .content :global(pre) {
   overflow-x: auto;
-  padding: 1rem;
+  padding: var(--space-4);
   border: 1px solid var(--border-color);
   background: var(--bg-canvas);
 }
@@ -65,11 +65,11 @@
 
 .scrollTop {
   position: fixed;
-  right: 1rem;
-  bottom: 1rem;
+  right: var(--space-4);
+  bottom: var(--space-4);
   z-index: 1;
   min-height: 44px;
-  padding: 0 1.5ch;
+  padding: 0 var(--space-x-1-5);
   border: 1px solid var(--syntax-error);
   background: var(--bg-surface);
   color: var(--syntax-error);

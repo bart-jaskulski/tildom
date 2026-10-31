@@ -1,0 +1,41 @@
+.lockedTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-x-1);
+  color: var(--syntax-keyword);
+  font-size: 11px;
+}
+
+.panel {
+  max-width: 54ch;
+  margin-top: var(--space-6);
+  padding: var(--space-6) var(--space-x-3);
+  border-left: 2px solid var(--border-color);
+  background: var(--bg-surface);
+}
+
+.title {
+  margin: 0 0 var(--space-2);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--fg-default);
+}
+
+.description {
+  margin: 0 0 var(--space-5);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg-muted);
+}
+
+.error {
+  margin: 0 0 var(--space-4);
+  font-size: 12px;
+  color: var(--syntax-error);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+}

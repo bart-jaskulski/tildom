@@ -1,8 +1,8 @@
 .loading {
   display: grid;
-  gap: 0.85rem;
+  gap: var(--space-3);
   max-width: 75ch;
-  padding-top: 0.35rem;
+  padding-top: var(--space-1);
 }
 
 .line {
@@ -13,23 +13,23 @@
 
 .meta {
   width: min(28ch, 44%);
-  height: 0.7rem;
+  height: var(--space-3);
 }
 
 .title {
   width: min(52ch, 78%);
-  height: 1.65rem;
+  height: var(--space-6);
 }
 
 .url {
   width: min(42ch, 64%);
-  height: 0.75rem;
+  height: var(--space-3);
 }
 
 .body {
   width: min(68ch, 96%);
   height: 6rem;
-  margin-top: 0.35rem;
+  margin-top: var(--space-1);
   border-left: 2px solid var(--border-color);
 }
 

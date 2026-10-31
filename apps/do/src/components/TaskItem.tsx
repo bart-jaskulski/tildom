@@ -148,8 +148,8 @@ export default function TaskItem(props: TaskItemProps) {
   return (
     <div class="relative w-full group/item flex flex-col">
       <div
-        class={`tui-item-row flex items-start gap-4 bg-[var(--bg-surface)] border-b border-[var(--border-color)] transition-colors hover:bg-[var(--syntax-bg-active)] ${
-          isEditing() ? "bg-[var(--syntax-bg-active)] border-l-[var(--syntax-keyword)]" : ""
+        class={`tui-item-row flex items-start gap-4 bg-surface border-b border-border transition-colors hover:bg-active ${
+          isEditing() ? "bg-active border-l-keyword" : ""
         }`}
       >
         {/* Monospace Checkbox [ ] or [x] with collapse toggle [-] / [+] */}
@@ -198,8 +198,8 @@ export default function TaskItem(props: TaskItemProps) {
               />
             }>
               <div
-                class={`w-full font-mono text-sm leading-normal text-[var(--fg-default)] cursor-text break-words ${
-                  props.completed ? 'line-through text-[var(--fg-muted)]' : ''
+                class={`w-full font-mono text-sm leading-normal text-fg cursor-text break-words ${
+                  props.completed ? 'line-through text-muted' : ''
                 }`}
                 onClick={() => setIsEditing(true)}
               >
@@ -245,9 +245,9 @@ export default function TaskItem(props: TaskItemProps) {
 
       {/* Inline Subtask Input Form */}
       <Show when={isAddingSubtask()}>
-        <div class="pl-[4ch] pr-4 py-2 border-b border-[var(--border-color)] bg-[var(--bg-canvas)] flex flex-col gap-2 font-mono">
+        <div class="pl-ch-4 pr-4 py-2 border-b border-border bg-canvas flex flex-col gap-2 font-mono">
           <div class="flex items-center gap-2">
-            <span class="text-xs text-[var(--fg-muted)]">❯ ADD STEP:</span>
+            <span class="text-xs text-muted">❯ ADD STEP:</span>
             <Input
               ref={subtaskInputRef}
               type="text"

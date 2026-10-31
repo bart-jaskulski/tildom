@@ -37,12 +37,12 @@ a:focus-visible {
   display: inline-flex;
   align-items: center;
   min-height: 48px;
-  padding-inline: 2ch;
+  padding-inline: var(--space-x-2);
   text-decoration: none;
 }
 
 .wordmark {
-  gap: 0.75rem;
+  gap: var(--space-3);
   color: var(--syntax-keyword);
   font-weight: 900;
   letter-spacing: -0.03em;
@@ -58,7 +58,7 @@ a:focus-visible {
   display: inline-flex;
   align-items: center;
   min-height: 48px;
-  padding-inline: 2ch;
+  padding-inline: var(--space-x-2);
   border-bottom: 2px solid var(--syntax-keyword);
   font-size: 12px;
   font-weight: 700;
@@ -86,7 +86,7 @@ main {
 }
 
 .launcher {
-  padding: clamp(2.5rem, 6vw, 6rem) clamp(1.25rem, 5vw, 5rem) 4rem;
+  padding: clamp(var(--space-10), 6vw, calc(var(--space-12) * 2)) clamp(var(--space-5), 5vw, calc(var(--space-10) * 2)) var(--space-16);
   border-right: 1px solid var(--border-color);
 }
 
@@ -102,7 +102,7 @@ h1 {
 
 .intro {
   max-width: 60ch;
-  margin: 1.5rem 0 clamp(2.5rem, 6vw, 5rem);
+  margin: var(--space-6) 0 clamp(var(--space-10), 6vw, calc(var(--space-10) * 2));
   color: var(--fg-muted);
   font-size: clamp(0.9rem, 1.3vw, 1.05rem);
 }
@@ -116,7 +116,7 @@ h1 {
 
 .app-link {
   display: grid;
-  grid-template-columns: 3.5ch 3rem minmax(8ch, 0.6fr) minmax(16ch, 1.4fr) auto;
+  grid-template-columns: 3.5ch var(--space-12) minmax(8ch, 0.6fr) minmax(16ch, 1.4fr) auto;
   align-items: center;
   min-height: 76px;
   border-bottom: 1px solid var(--border-color);
@@ -148,7 +148,7 @@ h1 {
   display: block;
   width: 32px;
   height: 32px;
-  margin-inline: 1ch;
+  margin-inline: var(--space-x-1);
 }
 
 .app-name {
@@ -170,7 +170,7 @@ h1 {
 }
 
 .arrow {
-  padding-inline: 1.5ch;
+  padding-inline: var(--space-x-1-5);
   color: var(--highlight-blue);
   font-weight: 800;
   transition: color 120ms ease-out, transform 120ms ease-out;
@@ -180,12 +180,12 @@ h1 {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: clamp(2.5rem, 6vw, 6rem) clamp(1.25rem, 3.5vw, 3.5rem) 4rem;
+  padding: clamp(var(--space-10), 6vw, calc(var(--space-12) * 2)) clamp(var(--space-5), 3.5vw, calc(var(--space-6) + var(--space-8))) var(--space-16);
   background: var(--bg-canvas);
 }
 
 .ledger-label {
-  margin: 0 0 2rem;
+  margin: 0 0 var(--space-8);
   color: var(--fg-muted);
   font-size: 11px;
   font-weight: 800;
@@ -195,12 +195,12 @@ h1 {
 
 .principle {
   margin: 0;
-  padding: 1.25rem 0 1.4rem;
+  padding: var(--space-5) 0 var(--space-6);
   border-top: 1px solid var(--border-color);
 }
 
 .principle dt {
-  margin-bottom: 0.35rem;
+  margin-bottom: var(--space-1);
   color: var(--highlight-blue);
   font-weight: 800;
 }
@@ -217,15 +217,15 @@ h1 {
 }
 
 .local-note {
-  margin: 4rem 0 0;
-  padding-top: 1rem;
+  margin: var(--space-16) 0 0;
+  padding-top: var(--space-4);
   border-top: 2px solid var(--fg-default);
   font-size: 13px;
 }
 
 .local-note strong {
   display: block;
-  margin-bottom: 0.4rem;
+  margin-bottom: var(--space-2);
   color: var(--fg-default);
 }
 
@@ -239,7 +239,7 @@ h1 {
   }
 
   .launcher {
-    padding-top: 4rem;
+    padding-top: var(--space-16);
     border-right: 0;
   }
 
@@ -254,11 +254,11 @@ h1 {
   }
 
   .github {
-    padding-inline: 1.5ch;
+    padding-inline: var(--space-x-1-5);
   }
 
   .launcher {
-    padding: 3rem 1rem;
+    padding: var(--space-12) var(--space-4);
   }
 
   h1 {
@@ -266,11 +266,11 @@ h1 {
   }
 
   .intro {
-    margin-bottom: 2.5rem;
+    margin-bottom: var(--space-10);
   }
 
   .app-link {
-    grid-template-columns: 3ch 2.6rem minmax(0, 1fr) 2.5rem;
+    grid-template-columns: var(--space-x-3) 2.6rem minmax(0, 1fr) 2.5rem;
     grid-template-rows: auto auto;
     min-height: 72px;
   }
@@ -283,46 +283,46 @@ h1 {
   .app-icon {
     width: 28px;
     height: 28px;
-    margin-inline: 0.7ch;
+    margin-inline: var(--space-x-half);
   }
 
   .app-desc {
     grid-column: 3 / 5;
     grid-row: 2;
-    padding: 0 1.5ch 0.75rem 0;
+    padding: 0 var(--space-x-1-5) var(--space-3) 0;
   }
 
   .app-name {
     grid-column: 3;
     grid-row: 1;
     align-self: end;
-    padding-top: 0.7rem;
+    padding-top: var(--space-3);
   }
 
   .arrow {
     grid-column: 4;
     grid-row: 1;
     align-self: end;
-    padding-bottom: 0.35rem;
+    padding-bottom: var(--space-1);
   }
 
   .ledger {
-    padding: 3rem 1rem;
+    padding: var(--space-12) var(--space-4);
   }
 }
 
 .suite-main { display: block; min-height: calc(100dvh - 48px); }
-.suite-panel { max-width: 82ch; padding: clamp(2rem, 6vw, 5rem) clamp(1.25rem, 5vw, 4rem); }
+.suite-panel { max-width: 82ch; padding: clamp(var(--space-8), 6vw, calc(var(--space-10) * 2)) clamp(var(--space-5), 5vw, var(--space-16)); }
 .suite-panel h1 { font-size: clamp(2rem, 5vw, 4rem); }
-.suite-section { margin-top: 2.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color); }
+.suite-section { margin-top: var(--space-10); padding-top: var(--space-5); border-top: 1px solid var(--border-color); }
 .suite-section h2 { font-size: 1rem; }
-.suite-actions { display: grid; gap: 0.75rem; max-width: 66ch; }
-.suite-actions.inline { display: flex; flex-wrap: wrap; margin-top: 0.75rem; }
-.suite-actions label { display: grid; gap: 0.35rem; color: var(--fg-muted); font-size: 12px; }
+.suite-actions { display: grid; gap: var(--space-3); max-width: 66ch; }
+.suite-actions.inline { display: flex; flex-wrap: wrap; margin-top: var(--space-3); }
+.suite-actions label { display: grid; gap: var(--space-1); color: var(--fg-muted); font-size: 12px; }
 .recovery-key { width: 100%; }
-.suite-apps { margin: 1rem 0 0; padding: 0; border-top: 1px solid var(--border-color); list-style: none; }
+.suite-apps { margin: var(--space-4) 0 0; padding: 0; border-top: 1px solid var(--border-color); list-style: none; }
 .suite-apps li { display: flex; align-items: center; justify-content: space-between; min-height: 60px; border-bottom: 1px solid var(--border-color); }
-.suite-apps span { display: flex; gap: 0.5ch; }
+.suite-apps span { display: flex; gap: var(--space-x-half); }
 .suite-status { color: var(--syntax-string); }
 .suite-error { color: var(--syntax-error); }
 

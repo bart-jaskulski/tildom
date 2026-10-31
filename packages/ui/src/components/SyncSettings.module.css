@@ -1,0 +1,81 @@
+.statusText {
+  font-size: 0.9rem;
+  color: var(--fg-default);
+}
+
+.statusMuted {
+  color: var(--fg-muted);
+}
+
+.pairDialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.qrContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-1) 0;
+}
+
+.qrContainer img {
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-height: 640px) {
+  .pairDialog {
+    gap: var(--space-2);
+  }
+
+  .qrContainer img {
+    max-height: 140px;
+    width: auto;
+  }
+}
+
+.pairUrlInput {
+  width: 100%;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: var(--space-2);
+  background-color: var(--bg-canvas);
+  border: 1px solid var(--border-color);
+  color: var(--syntax-string);
+  border-radius: 0;
+  outline: none;
+  box-sizing: border-box;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  resize: none;
+}
+
+.pairUrlInput:focus {
+  border-color: var(--fg-default);
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-color);
+}
+
+@media (max-width: 480px) {
+  .dialogActions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+}
+
+.error {
+  font-size: 0.8rem;
+  color: var(--syntax-error);
+  margin: var(--space-1) 0 0;
+}

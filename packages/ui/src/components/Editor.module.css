@@ -1,0 +1,148 @@
+.editor {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--fg-default);
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.12s ease;
+  position: relative;
+  display: block;
+
+  &:focus-within {
+    border: 2px solid var(--fg-default);
+  }
+}
+
+.editor :global(.cm-editor) {
+  width: 100%;
+  background: transparent;
+  color: var(--fg-default);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  outline: none;
+}
+
+.editor :global(.cm-focused) {
+  outline: none;
+}
+
+.editor :global(.cm-scroller) {
+  font-family: inherit;
+  line-height: inherit;
+  overflow: auto;
+}
+
+.editor :global(.cm-content) {
+  padding: 10px 1.5ch;
+  min-height: 6rem;
+  caret-color: var(--fg-default);
+  font-family: inherit;
+}
+
+/* Adjust padding on focus to avoid jump when border becomes 2px */
+.editor:focus-within :global(.cm-content) {
+  padding: 9px calc(1.5ch - 1px);
+}
+
+.editor :global(.cm-placeholder) {
+  color: var(--fg-muted);
+}
+
+.editor :global(.cm-selectionBackground),
+.editor :global(::selection) {
+  background-color: var(--syntax-bg-active) !important;
+}
+
+/* Compact variant */
+.compact :global(.cm-content) {
+  min-height: 4.5rem;
+  padding: 8px 1.2ch;
+}
+
+.compact:focus-within :global(.cm-content) {
+  padding: 7px calc(1.2ch - 1px);
+}
+
+/* Borderless variant (e.g. for seamless inline editing) */
+.borderless {
+  border: none;
+  background: transparent;
+
+  &:focus-within {
+    border: none;
+    outline: none;
+  }
+}
+
+.borderless :global(.cm-content) {
+  padding: 0;
+}
+
+.borderless:focus-within :global(.cm-content) {
+  padding: 0;
+}
+
+/* First line styled as Title if titleFirstLine is true */
+.titleFirstLine :global(.cm-line:first-child) {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.25;
+  margin-bottom: 0.5rem;
+}
+
+/* Markdownish inline syntax styling */
+.editor :global(.cm-md-delimiter) {
+  color: var(--syntax-comment);
+  opacity: 0.8;
+}
+
+.editor :global(.cm-md-hash) {
+  color: var(--syntax-keyword);
+  font-weight: 700;
+}
+
+.editor :global(.cm-md-heading) {
+  font-weight: 700;
+}
+
+.editor :global(.cm-md-strong) {
+  font-weight: 700;
+}
+
+.editor :global(.cm-md-emphasis) {
+  font-style: italic;
+}
+
+.editor :global(.cm-md-strike) {
+  text-decoration: line-through;
+}
+
+.editor :global(.cm-md-code) {
+  background-color: var(--bg-canvas);
+  padding: 0 0.3ch;
+  border: 1px solid var(--border-color);
+}
+
+.editor :global(.cm-md-link) {
+  color: var(--highlight-blue);
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.editor :global(.cm-md-task) {
+  color: var(--syntax-keyword);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.editor :global(.cm-md-tag) {
+  color: var(--syntax-keyword);
+}
+
+@media (max-width: 768px) {
+  .editor :global(.cm-content) {
+    font-size: 14px;
+  }
+}

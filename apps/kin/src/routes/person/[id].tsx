@@ -1,4 +1,4 @@
-import { Button, Input, Select, Textarea, useVimKeymaps } from "@tildom/ui";
+import { Button, Editor, Input, Select, useVimKeymaps, type EditorHandle } from "@tildom/ui";
 import { For, Show, createEffect, createResource, createSignal } from "solid-js";
 import { useNavigate, useParams } from "@solidjs/router";
 import {
@@ -75,7 +75,7 @@ export default function PersonDetail() {
   const [editingNoteBody, setEditingNoteBody] = createSignal("");
   const [editingDateNoteId, setEditingDateNoteId] = createSignal<string | null>(null);
   const [editingNoteDate, setEditingNoteDate] = createSignal("");
-  let noteInput: HTMLTextAreaElement | undefined;
+  let noteInput: EditorHandle | undefined;
 
   const openPerson = async (id: string, replace = false) => navigate(await fetchContactPath(id), { replace });
   const [detail, { refetch }] = createResource(
@@ -366,15 +366,16 @@ export default function PersonDetail() {
           <section class={styles.log} aria-label={`${person()!.name} timeline`}>
             <form class={styles.composer} onSubmit={addNote}>
               <label class="visually-hidden" for="new-note">Add timeline note</label>
-              <Textarea
+              <Editor
                 id="new-note"
-                ref={noteInput}
+                ref={(el) => {
+                  noteInput = el;
+                }}
                 class="kin-textarea"
                 value={noteBody()}
                 placeholder="Enter interaction notes, observations, or updates here (use #tags to index)…"
-                onInput={(event) => setNoteBody(event.currentTarget.value)}
-                onKeyDown={handleMarkdownishEnter}
-                required
+                onInput={setNoteBody}
+                onSubmit={() => void addNote(new Event("submit") as SubmitEvent)}
               />
               <div class={styles.composerActions}>
                 <label class={styles.dateField}>
@@ -437,14 +438,13 @@ export default function PersonDetail() {
                       />
                     )}>
                       <form class={styles.noteEditForm} onSubmit={(event) => void saveNote(event, note)}>
-                        <Textarea
-                          class="kin-textarea"
-                          aria-label="Timeline entry"
+                        <Editor
+                          id={`note-edit-${note.id}`}
+                          ariaLabel="Timeline entry"
                           value={editingNoteBody()}
                           autofocus
-                          onInput={(event) => setEditingNoteBody(event.currentTarget.value)}
-                          onKeyDown={handleMarkdownishEnter}
-                          required
+                          onInput={setEditingNoteBody}
+                          onSubmit={() => void saveNote(new Event("submit") as SubmitEvent, note)}
                         />
                         <div class={styles.noteEditActions}>
                           <Button type="submit" class="kin-primary-button">save</Button>

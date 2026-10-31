@@ -1,105 +1,101 @@
-import { Show, createSignal } from "solid-js";
-import { Button, Checkbox, createPreferences } from "@tildom/ui";
+import {
+  Checkbox,
+  DatabaseSettings,
+  SettingsContainer,
+  SettingsRow,
+  SettingsSection,
+  SyncSettings,
+  SystemSettings,
+  createPreferences,
+} from "@tildom/ui";
+import { Show } from "solid-js";
 import AppNav from "~/components/AppNav";
-import SyncSettings from "~/components/SyncSettings";
 import { db } from "~/lib/db";
-import styles from "./settings.module.css";
-import { markSyncDirty } from "~/lib/syncState";
 import { pwaInstall } from "~/lib/pwaInstall";
+import {
+  biometricError,
+  disableBiometric,
+  enableBiometric,
+  isBiometricBusy,
+  isBiometricEnabled,
+  isBiometricSupported,
+} from "~/lib/biometrics";
+import {
+  createSyncVault,
+  disconnectSync,
+  joinSyncVault,
+  refreshSyncState,
+  syncNow,
+  syncSignals,
+} from "~/lib/syncClient";
+import { getSyncConfig, markSyncDirty } from "~/lib/syncState";
+import styles from "./settings.module.css";
 
 export default function Settings() {
-  const [status, setStatus] = createSignal<string | null>(null);
-  const [error, setError] = createSignal<string | null>(null);
-  const [busy, setBusy] = createSignal<"export" | "import" | null>(null);
   const [preferences, setPreferences] = createPreferences();
-  let fileInput: HTMLInputElement | undefined;
 
-  const exportBackup = async () => {
-    setStatus(null); setError(null); setBusy("export");
-    try {
-      const bytes = await db.exportDatabase();
-      const url = URL.createObjectURL(new Blob([new Uint8Array(bytes).buffer], { type: "application/vnd.sqlite3" }));
-      Object.assign(document.createElement("a"), {
-        href: url,
-        download: `kin-tildom-${new Date().toISOString().slice(0, 10)}.sqlite3`,
-      }).click();
-      URL.revokeObjectURL(url);
-      setStatus("Database export started.");
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Failed to export database.");
-    } finally { setBusy(null); }
+  const handleImport = async () => {
+    await markSyncDirty();
   };
 
-  const importBackup = async (event: Event) => {
-    const file = (event.currentTarget as HTMLInputElement).files?.[0];
-    if (!file) return;
-    if (!window.confirm("Import this database backup? It will replace the current local database.")) {
-      if (fileInput) fileInput.value = "";
-      return;
-    }
-    setStatus(null); setError(null); setBusy("import");
-    try {
-      await db.importDatabase(new Uint8Array(await file.arrayBuffer()));
-      await markSyncDirty();
-      setStatus("Database imported.");
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Failed to import database.");
-    } finally {
-      setBusy(null);
-      if (fileInput) fileInput.value = "";
+  const handleReset = async () => {
+    await disconnectSync();
+    window.location.assign("/");
+  };
+
+  const handleBiometricToggle = async (checked: boolean) => {
+    if (checked) {
+      await enableBiometric();
+    } else {
+      await disableBiometric();
     }
   };
 
   return (
     <main class="kin-page">
       <AppNav active="settings" />
-      <section class={`kin-content ${styles.panel}`}>
-        <Show when={pwaInstall.available() || pwaInstall.needsSafariInstructions()}>
-          <section class={styles.section}>
-            <h1>Install</h1>
-            <Show when={pwaInstall.available()}>
-              <Button type="button" onClick={() => void pwaInstall.prompt()}>install kin</Button>
-            </Show>
-            <Show when={!pwaInstall.available() && pwaInstall.needsSafariInstructions()}>
-              <p>In Safari, use Share → Add to Home Screen.</p>
-            </Show>
-          </section>
-        </Show>
-        <section class={styles.section}>
-          <h1>Keyboard</h1>
-          <Checkbox
-            checked={preferences().vimKeys}
-            onChange={(checked) => setPreferences((current) => ({ ...current, vimKeys: checked }))}
-            label="enable Vim keys"
-          />
-          <p>Wide screens with a hardware keyboard. Use <kbd>j</kbd>/<kbd>k</kbd> to move, <kbd>e</kbd> to open, <kbd>/</kbd> to search, <kbd>i</kbd> to write, and <kbd>Esc</kbd> to return.</p>
-        </section>
+      <SettingsContainer>
+        <SystemSettings
+          vimKeys={preferences().vimKeys}
+          onVimKeysChange={(vimKeys) => setPreferences((current) => ({ ...current, vimKeys }))}
+          pwaInstall={pwaInstall}
+          appName="kin"
+        />
 
-        <SyncSettings />
+        <SettingsSection title="privacy">
+          <SettingsRow
+            label="biometric"
+            hint={isBiometricSupported() ? "locks after 5 min idle" : "platform authenticator unavailable"}
+          >
+            <Checkbox
+              checked={isBiometricEnabled()}
+              disabled={!isBiometricSupported() || isBiometricBusy()}
+              onChange={(checked) => void handleBiometricToggle(checked)}
+              label="biometric unlock"
+            />
+          </SettingsRow>
+          <Show when={biometricError()}>
+            <div class={styles.settingError} role="alert">{biometricError()}</div>
+          </Show>
+        </SettingsSection>
 
-        <section class={styles.section}>
-          <h2>Database</h2>
-          <p>Kin stays local in this browser. Export the complete SQLite database as a backup, or replace it with a previous export.</p>
-          <div class={styles.actions}>
-            <Button type="button" disabled={busy() !== null} onClick={exportBackup}>
-              {busy() === "export" ? "exporting…" : "export"}
-            </Button>
-            <Button as="label" class={styles.fileButton}>
-              <input
-                ref={fileInput}
-                type="file"
-                accept=".sqlite,.sqlite3,.db,application/vnd.sqlite3,application/x-sqlite3"
-                disabled={busy() !== null}
-                onChange={importBackup}
-              />
-              {busy() === "import" ? "importing…" : "import"}
-            </Button>
-          </div>
-        </section>
+        <SyncSettings
+          signals={syncSignals}
+          onSyncNow={syncNow}
+          onCreateVault={createSyncVault}
+          onJoinVault={joinSyncVault}
+          onDisconnect={disconnectSync}
+          onRefresh={refreshSyncState}
+          getSyncConfig={getSyncConfig}
+        />
 
-        <Show when={status()}><p class={styles.status} role="status">{status()}</p></Show>
-        <Show when={error()}><p class={styles.error} role="alert">{error()}</p></Show>
-      </section>
+        <DatabaseSettings
+          client={db}
+          filenamePrefix="kin"
+          onImport={handleImport}
+          onReset={handleReset}
+        />
+      </SettingsContainer>
     </main>
   );
 }

@@ -7,13 +7,10 @@
     "preview": "vite preview --host 0.0.0.0 --port 3000",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@codemirror/commands": "^6.11.1",
-    "@codemirror/lang-markdown": "^6.5.2",
-    "@codemirror/state": "^6.7.6",
-    "@codemirror/view": "^6.43.14",
     "@solidjs/meta": "^0.29.4",
     "@solidjs/router": "^1.0.0",
     "@sqlite.org/sqlite-wasm": "3.53.4-build2",
@@ -32,6 +29,7 @@
     "node": ">=26.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@solidjs/testing-library": "^0.8.10",
     "@testing-library/jest-dom": "^7.0.1",
     "@tildom/config": "workspace:*",

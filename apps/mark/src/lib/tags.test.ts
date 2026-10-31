@@ -26,6 +26,21 @@ describe("tag normalization", () => {
       .toEqual(["local-first"]);
   });
 
+  it("does not treat markdown headers, anchor links, or code comments as hashtags", () => {
+    const markdown = [
+      "# Header 1",
+      "## 1. Introduction",
+      "See [Installation](#installation) and [Setup](#setup).",
+      "```python",
+      "# python comment",
+      "#include <stdio.h>",
+      "```",
+      "Valid note content with #valid-tag and #another_tag.",
+    ].join("\n");
+
+    expect(parseHashTags(markdown)).toEqual(["valid-tag", "another-tag"]);
+  });
+
   it("keeps inline tags but removes a trailing tag-only block from excerpts", () => {
     expect(stripTrailingTagLines("A note about #gardening\n\n#plants #spring")).toBe("A note about #gardening");
   });

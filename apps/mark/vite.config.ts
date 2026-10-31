@@ -1,27 +1,9 @@
 import solid from "vite-plugin-solid";
 import { defineConfig } from "vite";
-import { fileURLToPath, URL } from "node:url";
-import { existsSync, readFileSync } from "node:fs";
 import { tildomPwa } from "@tildom/config/pwa";
 import { tildomAppConfig } from "@tildom/config/vite";
 
-const readLocalHttpsConfig = () => {
-  const keyPath = fileURLToPath(new URL("./localhost-key.pem", import.meta.url));
-  const certPath = fileURLToPath(new URL("./localhost.pem", import.meta.url));
-
-  if (!existsSync(keyPath) || !existsSync(certPath)) {
-    return undefined;
-  }
-
-  return {
-    key: readFileSync(keyPath),
-    cert: readFileSync(certPath),
-  };
-};
-
-export default defineConfig(({ mode }) => {
-  const https = mode === "test" ? undefined : readLocalHttpsConfig();
-
+export default defineConfig(() => {
   return tildomAppConfig(import.meta.url, {
     plugins: [
       solid(),
@@ -39,7 +21,6 @@ export default defineConfig(({ mode }) => {
     ],
     server: {
       port: 5173,
-      ...(https ? { https } : {}),
     },
     build: {
       modulePreload: {
@@ -49,6 +30,7 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: "jsdom",
       setupFiles: ["./src/test/setup.ts"],
+      exclude: ["**/node_modules/**", "**/dist/**", "**/e2e/**"],
     },
   });
 });

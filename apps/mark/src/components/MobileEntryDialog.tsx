@@ -1,3 +1,4 @@
+import type { EditorHandle } from "@tildom/ui";
 import EntryComposer from "./EntryComposer";
 import styles from "./MobileEntryDialog.module.css";
 
@@ -9,7 +10,7 @@ type MobileEntryDialogProps = {
   onSubmit: (event: SubmitEvent) => void;
   onPasteLink: () => void;
   dialogRef: (element: HTMLDialogElement) => void;
-  textareaRef: (element: HTMLTextAreaElement) => void;
+  textareaRef: (element: EditorHandle) => void;
 };
 
 export default function MobileEntryDialog(props: MobileEntryDialogProps) {

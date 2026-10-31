@@ -1,20 +1,31 @@
+import { DatabaseSync } from "node:sqlite";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MARK_DB_MIGRATIONS } from "~/lib/schema";
 
-const sqlMock = vi.hoisted(() => vi.fn((strings: TemplateStringsArray, ...values: unknown[]) => Promise.resolve([])));
-const queryMock = vi.hoisted(() => vi.fn());
+let memDb: DatabaseSync;
 
-const sqlCalls = () =>
-  sqlMock.mock.calls.map(([strings, ...values]) => ({
-    sql: (strings as unknown as string[]).join("?"),
-    values,
-  }));
+const createTestDb = () => {
+  const db = new DatabaseSync(":memory:");
+  db.exec("PRAGMA foreign_keys = ON;");
+  for (const m of MARK_DB_MIGRATIONS) {
+    db.exec(m.sql);
+  }
+  return db;
+};
 
 vi.mock("~/lib/db", () => ({
   client: {
-    subscribe: vi.fn(),
-    sql: sqlMock,
+    subscribe: vi.fn(() => () => {}),
     init: vi.fn(),
-    query: queryMock,
+    query: vi.fn((sql: string, params: unknown[] = []) => {
+      const stmt = memDb.prepare(sql);
+      return Promise.resolve(stmt.all(...(params as any[])));
+    }),
+    sql: vi.fn((strings: TemplateStringsArray, ...values: unknown[]) => {
+      const sql = strings.join("?");
+      const stmt = memDb.prepare(sql);
+      return Promise.resolve(stmt.all(...(values as any[])));
+    }),
   },
 }));
 
@@ -22,237 +33,201 @@ vi.mock("~/lib/syncState", () => ({
   markSyncDirty: vi.fn(),
 }));
 
-import { addCommentToEntry, createEntry, deleteComment, deleteEntry, fetchEntryDetail, recordEntryOpen, replaceEntryTags, updateComment, updateEntry } from "./entryStore";
+import {
+  addCommentToEntry,
+  createEntry,
+  deleteComment,
+  deleteEntry,
+  fetchEntryDetail,
+  recordEntryOpen,
+  replaceEntryTags,
+  updateComment,
+  updateEntry,
+} from "./entryStore";
 
-describe("entryStore mutations", () => {
+describe("entryStore (Real SQLite Behavioral Integration)", () => {
   beforeEach(() => {
-    sqlMock.mockReset().mockResolvedValue([]);
-    queryMock.mockReset().mockResolvedValue([]);
+    memDb = createTestDb();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
-
-    vi.spyOn(crypto, "randomUUID").mockReturnValue("00000000-0000-4000-8000-000000000001");
   });
 
-  it("creates note entries locally", async () => {
-    await createEntry("A useful note");
+  const queryEntries = (where = "1=1", params: any[] = []) =>
+    memDb.prepare(`SELECT * FROM entries WHERE ${where}`).all(...params) as any[];
 
-    const call = sqlCalls()[0];
-    expect(call.sql).toContain("INSERT INTO entries");
-    expect(call.values).toEqual(expect.arrayContaining(["00000000-0000-4000-8000-000000000001", "A useful note"]));
+  const queryTagsForEntry = (entryId: string) => {
+    const rows = memDb.prepare(`
+      SELECT tags.name
+      FROM entry_tags
+      JOIN tags ON tags.id = entry_tags.tag_id
+      WHERE entry_tags.entry_id = ?
+      ORDER BY tags.name ASC
+    `).all(entryId) as { name: string }[];
+    return rows.map((r) => r.name);
+  };
+
+  it("creates note entries in SQLite", async () => {
+    const entryId = await createEntry("A useful note");
+
+    const rows = queryEntries("id = ?", [entryId]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].title).toBe("A useful note");
+    expect(rows[0].body).toBe("");
+    expect(rows[0].canonical_url).toBeNull();
   });
 
-  it("indexes hashtags written in a note", async () => {
-    await createEntry("Garden plans\nPlant #herbs with #local-first notes");
+  it("indexes hashtags into real SQLite tag tables", async () => {
+    const entryId = await createEntry("Garden plans\nPlant #herbs with #local-first notes");
 
-    const tagCall = sqlCalls().find((call) => call.sql.includes("INSERT INTO entry_tags"));
-    expect(tagCall?.values).toEqual(expect.arrayContaining(["00000000-0000-4000-8000-000000000001"]));
+    const tags = queryTagsForEntry(entryId);
+    expect(tags).toEqual(["herbs", "local-first"]);
   });
 
   it("uses first line as title and keeps the rest as note body", async () => {
-    await createEntry("Trip notes\n- day 1\n- day 2");
+    const entryId = await createEntry("Trip notes\n- day 1\n- day 2");
 
-    const call = sqlCalls()[0];
-    expect(call.sql).toContain("INSERT INTO entries");
-    expect(call.values).toEqual(expect.arrayContaining(["00000000-0000-4000-8000-000000000001", "Trip notes", "- day 1\n- day 2"]));
+    const rows = queryEntries("id = ?", [entryId]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].title).toBe("Trip notes");
+    expect(rows[0].body).toBe("- day 1\n- day 2");
   });
 
-  it("creates URL entries with normalized local URL fields", async () => {
-    await createEntry("example.com/path#fragment");
+  it("creates URL entries with normalized URL fields", async () => {
+    const entryId = await createEntry("example.com/path#fragment");
 
-    const call = sqlCalls()[0];
-    expect(call.sql).toContain("INSERT INTO entries");
-    expect(call.values).toEqual(expect.arrayContaining(["00000000-0000-4000-8000-000000000001", "https://example.com/path", "https://example.com/path", "example.com"]));
+    const rows = queryEntries("id = ?", [entryId]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].source_url).toBe("https://example.com/path");
+    expect(rows[0].canonical_url).toBe("https://example.com/path");
+    expect(rows[0].domain).toBe("example.com");
   });
 
   it("reuses an existing entry for a duplicate URL", async () => {
-    queryMock.mockResolvedValue([{ id: "entry-1" }]);
+    const firstId = await createEntry("https://example.com/article");
+    const secondId = await createEntry("https://example.com/article");
 
-    await expect(createEntry("https://example.com/article")).resolves.toBe("entry-1");
-    expect(sqlMock).not.toHaveBeenCalled();
-    expect(fetch).not.toHaveBeenCalled();
+    expect(secondId).toBe(firstId);
+
+    const rows = queryEntries("canonical_url = ?", ["https://example.com/article"]);
+    expect(rows).toHaveLength(1);
   });
 
-  it("saves URL entries before metadata enrichment completes", async () => {
-    vi.mocked(fetch).mockReturnValue(new Promise(() => {}));
+  it("adds comments to an entry and touches last_commented_at", async () => {
+    const entryId = await createEntry("Entry with comments");
+    const beforeEntry = queryEntries("id = ?", [entryId])[0];
 
-    await createEntry("https://example.com/article");
+    const commentId = await addCommentToEntry(entryId, "first follow-up");
+    expect(commentId).toBeTruthy();
 
-    expect(fetch).toHaveBeenCalledWith(
-      "http://localhost:8788/v1/mark/metadata",
-      expect.objectContaining({
-        method: "POST",
-        headers: { Accept: "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify({ url: "https://example.com/article" }),
-      }),
-    );
-    const call = sqlCalls()[0];
-    expect(call.sql).toContain("INSERT INTO entries");
-    expect(call.values).toEqual(expect.arrayContaining(["example.com", null, "idle"]));
+    const comments = memDb.prepare("SELECT * FROM comments WHERE entry_id = ?").all(entryId) as any[];
+    expect(comments).toHaveLength(1);
+    expect(comments[0].body).toBe("first follow-up");
+
+    const afterEntry = queryEntries("id = ?", [entryId])[0];
+    expect(afterEntry.last_commented_at).toBeGreaterThanOrEqual(beforeEntry.last_commented_at);
   });
 
-  it("adds comments and touches the parent entry", async () => {
-    await addCommentToEntry("entry-1", "follow-up");
+  it("updates note entries in SQLite", async () => {
+    const entryId = await createEntry("Initial title\nInitial body");
 
-    const calls = sqlCalls();
-    expect(calls[0].sql).toContain("INSERT INTO comments");
-    expect(calls[0].values).toEqual(expect.arrayContaining(["00000000-0000-4000-8000-000000000001", "entry-1", "follow-up"]));
-    expect(calls[1].sql).toContain("UPDATE entries");
-    expect(calls[1].values).toEqual(expect.arrayContaining(["entry-1"]));
-  });
-
-  it("updates entries", async () => {
-    await updateEntry("entry-1", {
+    await updateEntry(entryId, {
       title: "Updated title",
-      content: "example.com/updated#fragment",
-    });
-
-    const call = sqlCalls()[0];
-    expect(call.sql).toContain("UPDATE entries");
-    expect(call.values).toEqual(
-      expect.arrayContaining([
-        "https://example.com/updated",
-        "https://example.com/updated",
-        "example.com",
-        "Updated title",
-        "",
-        "entry-1",
-      ]),
-    );
-  });
-
-  it("reports duplicate links when updating an entry", async () => {
-    sqlMock.mockRejectedValue(new Error("UNIQUE constraint failed: entries.canonical_url"));
-
-    await expect(updateEntry("entry-1", {
-      title: "Updated title",
-      content: "example.com/updated",
-    })).rejects.toThrow("This link is already saved");
-  });
-
-  it("stores non-url content as note body and clears URL fields", async () => {
-    await updateEntry("entry-1", {
-      title: "Updated note",
       content: "updated note body",
     });
 
-    const call = sqlCalls()[0];
-    expect(call.sql).toContain("UPDATE entries");
-    expect(call.values).toEqual(
-      expect.arrayContaining([
-        null,
-        null,
-        null,
-        "Updated note",
-        "updated note body",
-        "entry-1",
-      ]),
-    );
+    const rows = queryEntries("id = ?", [entryId]);
+    expect(rows[0].title).toBe("Updated title");
+    expect(rows[0].body).toBe("updated note body");
   });
 
-  it("keeps a leading URL when tags follow it", async () => {
-    await updateEntry("entry-1", {
+  it("enforces canonical_url uniqueness and rejects duplicate URLs on update", async () => {
+    await createEntry("https://example.com/first");
+    const secondId = await createEntry("https://example.com/second");
+
+    await expect(
+      updateEntry(secondId, {
+        title: "Colliding title",
+        content: "https://example.com/first",
+      }),
+    ).rejects.toThrow("This link is already saved");
+  });
+
+  it("keeps a leading URL when tags follow it in update", async () => {
+    const entryId = await createEntry("Initial");
+
+    await updateEntry(entryId, {
       title: "Saved article",
       content: "example.com/article\n\n#read #research",
     });
 
-    const call = sqlCalls()[0];
-    expect(call.sql).toContain("UPDATE entries");
-    expect(call.values).toEqual(expect.arrayContaining(["https://example.com/article", "#read #research", "entry-1"]));
+    const rows = queryEntries("id = ?", [entryId]);
+    expect(rows[0].canonical_url).toBe("https://example.com/article");
+    expect(rows[0].body).toBe("#read #research");
   });
 
-  it("deletes entries with their comments", async () => {
-    await deleteEntry("entry-1");
+  it("deletes entries with cascading comments and tags in SQLite", async () => {
+    const entryId = await createEntry("To delete #temporary");
+    await addCommentToEntry(entryId, "temporary comment");
 
-    const calls = sqlCalls();
-    expect(calls[0].sql).toContain("DELETE FROM comments WHERE entry_id = ?");
-    expect(calls[0].values).toEqual(["entry-1"]);
-    expect(calls[1].sql).toContain("DELETE FROM entry_tags WHERE entry_id = ?");
-    expect(calls[1].values).toEqual(["entry-1"]);
-    expect(calls[2].sql).toContain("DELETE FROM entries WHERE id = ?");
-    expect(calls[2].values).toEqual(["entry-1"]);
+    await deleteEntry(entryId);
+
+    expect(queryEntries("id = ?", [entryId])).toHaveLength(0);
+    const comments = memDb.prepare("SELECT * FROM comments WHERE entry_id = ?").all(entryId);
+    expect(comments).toHaveLength(0);
+    const entryTags = memDb.prepare("SELECT * FROM entry_tags WHERE entry_id = ?").all(entryId);
+    expect(entryTags).toHaveLength(0);
   });
 
   it("updates comments", async () => {
-    await updateComment("comment-1", "updated comment");
+    const entryId = await createEntry("Entry");
+    const comment = (await addCommentToEntry(entryId, "initial comment"))!;
 
-    const call = sqlCalls()[0];
-    expect(call.sql).toContain("UPDATE comments");
-    expect(call.values).toEqual(expect.arrayContaining(["updated comment", "comment-1"]));
+    await updateComment(comment.id, "updated comment");
+
+    const comments = memDb.prepare("SELECT * FROM comments WHERE id = ?").all(comment.id) as any[];
+    expect(comments[0].body).toBe("updated comment");
   });
 
   it("deletes comments", async () => {
-    await deleteComment("comment-1");
+    const entryId = await createEntry("Entry");
+    const comment = (await addCommentToEntry(entryId, "to delete"))!;
 
-    const call = sqlCalls()[0];
-    expect(call.sql).toContain("DELETE FROM comments WHERE id = ?");
-    expect(call.values).toEqual(["comment-1"]);
+    await deleteComment(comment.id);
+
+    const comments = memDb.prepare("SELECT * FROM comments WHERE id = ?").all(comment.id);
+    expect(comments).toHaveLength(0);
   });
 
-  it("maps entry detail queries into entry and comment objects", async () => {
-    queryMock.mockImplementation((sql: string) => {
-      if (sql.includes("WHERE e.id = ?")) {
-        return Promise.resolve([
-          {
-            id: "entry-1",
-            source_url: "example.com",
-            canonical_url: "https://example.com",
-            domain: "example.com",
-            title: "Example",
-            body: "private context",
-            excerpt: "excerpt",
-            excerpt_status: "ready",
-            excerpt_error: null,
-            created_at: 10,
-            updated_at: 11,
-            last_commented_at: 12,
-            first_opened_at: null,
-            last_opened_at: null,
-            comment_count: 1,
-            tag_names: "ai sqlite",
-          },
-        ]);
-      }
+  it("retrieves full entry detail with tags and comments from real tables", async () => {
+    const entryId = await createEntry("Detailed Entry\nBody text\n#sqlite #local-first");
+    await addCommentToEntry(entryId, "Comment one");
 
-      if (sql.includes("FROM comments")) {
-        return Promise.resolve([
-          {
-            id: "comment-1",
-            entry_id: "entry-1",
-            body: "first comment",
-            created_at: 20,
-            updated_at: 21,
-          },
-        ]);
-      }
+    const detail = await fetchEntryDetail(entryId);
 
-      return Promise.resolve([]);
-    });
-
-    const detail = await fetchEntryDetail("entry-1");
-
-    expect(detail.entry?.title).toBe("Example");
+    expect(detail.entry?.title).toBe("Detailed Entry");
+    expect(detail.entry?.body).toBe("Body text\n#sqlite #local-first");
     expect(detail.entry?.commentCount).toBe(1);
-    expect(detail.entry?.tags).toEqual(["ai", "sqlite"]);
-    expect(detail.comments).toEqual([
-      {
-        id: "comment-1",
-        entryId: "entry-1",
-        body: "first comment",
-        createdAt: 20,
-        updatedAt: 21,
-      },
-    ]);
+    expect(detail.entry?.tags).toEqual(expect.arrayContaining(["local-first", "sqlite"]));
+    expect(detail.comments).toHaveLength(1);
+    expect(detail.comments[0].body).toBe("Comment one");
   });
 
   it("rejects manual tag edits over the per-entry limit", async () => {
-    await expect(replaceEntryTags("entry-1", "one two three four five six")).rejects.toThrow("Use 5 tags or fewer");
+    const entryId = await createEntry("Tag limit test");
+
+    await expect(replaceEntryTags(entryId, "one two three four five six")).rejects.toThrow(
+      "Use 5 tags or fewer",
+    );
   });
 
   it("records when an entry is opened without changing its content", async () => {
-    await recordEntryOpen("entry-1");
+    const entryId = await createEntry("Open test");
+    const before = queryEntries("id = ?", [entryId])[0];
+    expect(before.first_opened_at).toBeNull();
 
-    const call = sqlCalls()[0];
-    expect(call.sql).toContain("first_opened_at = COALESCE(first_opened_at, ?)");
-    expect(call.values).toEqual(expect.arrayContaining(["entry-1"]));
+    await recordEntryOpen(entryId);
+
+    const after = queryEntries("id = ?", [entryId])[0];
+    expect(after.first_opened_at).toBeGreaterThan(0);
+    expect(after.last_opened_at).toBeGreaterThan(0);
   });
 });

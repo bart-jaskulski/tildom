@@ -1,6 +1,6 @@
 .feedNote {
-  margin: 0 0 1.5rem;
-  padding: 0.75rem 1.5ch;
+  margin-bottom: var(--space-6);
+  padding: var(--space-3) var(--space-x-1-5);
   border-left: 2px solid var(--highlight-blue);
   background: var(--bg-canvas);
   font-size: 13px;
@@ -33,18 +33,18 @@
 }
 .entryList {
   margin: 0;
-  padding: 0 0 calc(2.5rem + env(safe-area-inset-bottom));
+  padding: 0 0 calc(var(--space-10) + env(safe-area-inset-bottom));
   list-style: none;
 }
 
 .entryItem {
   position: relative;
-  margin-bottom: 1.35rem;
+  margin-bottom: var(--space-5);
   counter-increment: entry-counter;
 }
 
 .pagination {
-  margin: 2rem 0 0;
+  margin-top: var(--space-8);
 }
 
 .desktopComposer {
@@ -57,12 +57,12 @@
   right: 0;
   bottom: 0;
   left: 0;
-  padding: 0.75rem 1.5ch max(1ch, env(safe-area-inset-bottom));
+  padding: var(--space-3) var(--space-x-1-5) max(var(--space-x-1), env(safe-area-inset-bottom));
   border-top: 1px solid var(--border-color);
   background: var(--bg-canvas);
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(44px, 1fr);
-  gap: 1ch;
+  gap: var(--space-x-1);
 }
 
 .mobileBar button {
@@ -74,8 +74,8 @@
 }
 
 .mobilePaste svg {
-  width: 17px;
-  height: 17px;
+  width: var(--space-4);
+  height: var(--space-4);
 }
 
 @media (min-width: 641px) {

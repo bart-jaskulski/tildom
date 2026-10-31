@@ -2,16 +2,16 @@
   display: grid;
   width: 100%;
   max-width: 80ch;
-  gap: 1.25rem;
+  gap: var(--space-5);
 }
 
-.form textarea {
+.form :global(.cm-content) {
   min-height: 100px;
 }
 
 .error {
   margin: 0;
-  padding: 0.75rem 1.5ch;
+  padding: var(--space-3) var(--space-x-1-5);
   border-left: 2px solid var(--syntax-error);
   background: var(--bg-canvas);
   color: var(--syntax-error);
@@ -22,7 +22,7 @@
 .actions {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(44px, 1fr);
-  gap: 1ch;
+  gap: var(--space-x-1);
 }
 
 .actions button {
@@ -34,16 +34,16 @@
 }
 
 .paste svg {
-  width: 17px;
-  height: 17px;
+  width: var(--space-4);
+  height: var(--space-4);
 }
 
 .mobile {
   max-width: none;
-  gap: 1.5rem;
+  gap: var(--space-6);
 }
 
-.mobile textarea {
+.mobile :global(.cm-content) {
   min-height: 10rem;
   font-size: 16px;
 }

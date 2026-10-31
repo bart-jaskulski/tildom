@@ -109,7 +109,7 @@ export default function Home() {
   };
 
   return (
-    <div class="min-h-screen flex flex-col font-mono text-[var(--fg-default)] bg-[var(--bg-canvas)]">
+    <div class="min-h-screen flex flex-col font-mono text-fg bg-canvas">
       <Title>do.tildom</Title>
 
       <AppNav active="tasks" />
@@ -158,11 +158,11 @@ export default function Home() {
         </section>
 
         {/* Task List Header */}
-        <div class="border-b border-[var(--fg-default)] pb-1 mb-4 flex justify-between items-end">
-          <span class="text-xs font-bold text-[var(--fg-muted)] tracking-wider">
+        <div class="border-b border-fg pb-1 mb-4 flex justify-between items-end">
+          <span class="text-xs font-bold text-muted tracking-wider">
             {`BUFFER: tasks.db (${visibleTasks().length} items)`}
           </span>
-          <span class="text-xs font-bold text-[var(--fg-muted)]">
+          <span class="text-xs font-bold text-muted">
             ORDER: URGENCY_RANKING
           </span>
         </div>

@@ -58,7 +58,7 @@ export default function Layout(props: ParentProps) {
               when={!isShowcase()}
               fallback={props.children}
             >
-              <main class={styles.content}>
+              <main class={`${styles.content} ${activeTab() === "settings" ? styles.settingsContent : ""}`.trim()}>
                 <Suspense fallback={location.pathname.startsWith("/item/") || location.pathname === "/share-target" ? <ItemLoading /> : <RouteLoading />}>
                   {props.children}
                 </Suspense>

@@ -5,6 +5,7 @@ import Badge from "../components/Badge";
 import EmptyState from "../components/EmptyState";
 import Input from "../components/Input";
 import Textarea from "../components/Textarea";
+import Editor from "../components/Editor";
 import Checkbox from "../components/Checkbox";
 import RadioButton from "../components/RadioButton";
 import StatusBanner from "../components/StatusBanner";
@@ -15,6 +16,8 @@ import Tabline from "../components/Tabline";
 import Dialog from "../components/Dialog";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Popover from "../components/Popover";
+import { SettingsContainer, SettingsSection, SettingsRow, SettingsActions } from "../components/Settings";
+import QRDisplay from "../components/QRDisplay";
 import { showVimHelp } from "../keyboard";
 import { VimNavigationProvider, useVimKeymaps } from "../VimNavigationProvider";
 import styles from "./Showcase.module.css";
@@ -81,6 +84,20 @@ function ShowcaseContent(props: ShowcaseProps) {
   const [demoNotice, setDemoNotice] = createSignal<string | null>(null);
   const [badgeNotice, setBadgeNotice] = createSignal<string | null>(null);
 
+  // Editor showcase state
+  const [editorVal, setEditorVal] = createSignal(
+    "# Project Note\n\nLocal-first software architecture with markdownish notes.\n\n- [ ] Review PR #release\n- [x] Extract shared CodeMirror editor\n- [ ] Test cross-browser compatibility\n\nSupports **bold**, *italic*, ~~strikethrough~~, inline `code`, and [Tildom](https://tildom.app) links."
+  );
+  const [editorCompact, setEditorCompact] = createSignal(false);
+  const [editorBorderless, setEditorBorderless] = createSignal(false);
+  const [editorTitleFirstLine, setEditorTitleFirstLine] = createSignal(false);
+  const [editorSubmitCount, setEditorSubmitCount] = createSignal(0);
+
+  // Settings showcase state
+  const [demoVim, setDemoVim] = createSignal(true);
+  const [demoPairOpen, setDemoPairOpen] = createSignal(false);
+  const [demoBackupStatus, setDemoBackupStatus] = createSignal<string | null>(null);
+
   // Register demo Vim keymaps on showcase page
   useVimKeymaps([
     { lhs: "?", callback: () => showVimHelp(), help: "show this keyboard shortcuts panel" },
@@ -145,6 +162,8 @@ function ShowcaseContent(props: ShowcaseProps) {
       <nav class={styles.jumpNav} aria-label="Showcase Sections">
         <a href="#sec-foundations" class={styles.jumpLink}>Foundations</a>
         <a href="#sec-primitives" class={styles.jumpLink}>Controls</a>
+        <a href="#sec-editor" class={styles.jumpLink}>Editor</a>
+        <a href="#sec-settings" class={styles.jumpLink}>Settings</a>
         <a href="#sec-feedback" class={styles.jumpLink}>Feedback</a>
         <a href="#sec-patterns" class={styles.jumpLink}>Patterns</a>
         <a href="#sec-overlays" class={styles.jumpLink}>Overlays</a>
@@ -320,8 +339,16 @@ function ShowcaseContent(props: ShowcaseProps) {
                       value={"Local-first note line 1\nNote line 2"}
                     />
                   </label>
+                  <label class={styles.formLabel}>
+                    Markdownish Editor (Option A inline syntax, interactive tasks, Mod-Enter):
+                    <Editor
+                      compact
+                      value={"# Project Note\n- [ ] Review PR #release\n- [x] Extract shared editor\nSupports **bold**, *italic*, `code`, and [docs](https://tildom.app)"}
+                      placeholder="Enter markdown note..."
+                    />
+                  </label>
                 </div>
-                <p class={styles.usageNote}>Use <code>Input</code> for one line and <code>Textarea autoResize</code> for longer text. Keep visible labels in the form; placeholders are examples.</p>
+                <p class={styles.usageNote}>Use <code>Input</code> for single-line text, <code>Textarea</code> for basic multiline, and <code>Editor</code> for rich Markdownish editing with list continuation and task support.</p>
               </div>
 
               {/* Checkboxes & Radios */}
@@ -331,7 +358,7 @@ function ShowcaseContent(props: ShowcaseProps) {
                   <Checkbox
                     checked={checkboxState()}
                     onChange={setCheckboxState}
-                    label="Enable local OPFS vault"
+                    label="Enable local vault"
                   />
                   <Checkbox
                     checked={false}
@@ -360,6 +387,145 @@ function ShowcaseContent(props: ShowcaseProps) {
           </div>
         </section>
 
+        {/* Markdownish Editor */}
+        <section id="sec-editor" class={styles.section}>
+          <div class={styles.sectionHeader}>
+            <h2 class={styles.sectionTitle}>Markdownish Editor</h2>
+            <span class={styles.sectionDesc}>CodeMirror-based editor with Option A inline syntax, interactive task checkboxes, and zero layout shift</span>
+          </div>
+
+          <div class={styles.componentBox}>
+            <div style={{ display: "flex", "flex-wrap": "wrap", gap: "0.5rem", "margin-bottom": "0.75rem", "align-items": "center" }}>
+              <Button
+                variant={editorCompact() ? "default" : "text"}
+                bracket
+                onClick={() => setEditorCompact(!editorCompact())}
+              >
+                compact: {editorCompact() ? "on" : "off"}
+              </Button>
+              <Button
+                variant={editorBorderless() ? "default" : "text"}
+                bracket
+                onClick={() => setEditorBorderless(!editorBorderless())}
+              >
+                borderless: {editorBorderless() ? "on" : "off"}
+              </Button>
+              <Button
+                variant={editorTitleFirstLine() ? "default" : "text"}
+                bracket
+                onClick={() => setEditorTitleFirstLine(!editorTitleFirstLine())}
+              >
+                title first line: {editorTitleFirstLine() ? "on" : "off"}
+              </Button>
+              <Show when={editorSubmitCount() > 0}>
+                <span class={styles.rowMeta}>Mod-Enter submitted: {editorSubmitCount()}x</span>
+              </Show>
+            </div>
+
+            <div style={{
+              background: editorBorderless() ? "var(--bg-canvas)" : "transparent",
+              padding: editorBorderless() ? "1rem" : "0",
+              border: editorBorderless() ? "1px dashed var(--border-color)" : "none",
+            }}>
+              <Editor
+                value={editorVal()}
+                onInput={setEditorVal}
+                compact={editorCompact()}
+                variant={editorBorderless() ? "borderless" : "default"}
+                titleFirstLine={editorTitleFirstLine()}
+                onSubmit={() => setEditorSubmitCount((c) => c + 1)}
+                placeholder="Write in markdown..."
+              />
+            </div>
+
+            <div style={{ display: "flex", "flex-wrap": "wrap", gap: "1.5ch", "margin-top": "0.75rem", "font-size": "12px", color: "var(--fg-muted)" }}>
+              <span>lines: {editorVal().split("\n").length}</span>
+              <span>·</span>
+              <span>characters: {editorVal().length}</span>
+              <span>·</span>
+              <span>tasks: {(editorVal().match(/[-*+]\s+\[x\]/g) || []).length} done / {(editorVal().match(/[-*+]\s+\[[ xX]\]/g) || []).length} total</span>
+              <span>·</span>
+              <span>Mod-Enter to submit, Escape to blur</span>
+            </div>
+            <p class={styles.usageNote} style={{ "margin-top": "0.75rem" }}>
+              Option A keeps markdown syntax tokens visible and dimmed, preventing layout jitter. Click task checkboxes directly in the editor to toggle them.
+            </p>
+          </div>
+        </section>
+
+        {/* Settings & Pairing Primitives */}
+        <section id="sec-settings" class={styles.section}>
+          <div class={styles.sectionHeader}>
+            <h2 class={styles.sectionTitle}>Settings & Pairing Primitives</h2>
+            <span class={styles.sectionDesc}>Radical minimalism key-value settings layout with zero essay prose</span>
+          </div>
+
+          <div class={styles.componentBox}>
+            <SettingsContainer style={{ "max-width": "100%", padding: "0" }}>
+              <SettingsSection title="system">
+                <SettingsRow label="navigation" hint="j/k, gg, G">
+                  <Checkbox
+                    checked={demoVim()}
+                    onChange={setDemoVim}
+                    label="vim keys"
+                  />
+                </SettingsRow>
+                <SettingsRow label="app">
+                  <Button bracket onClick={() => setDemoNotice("PWA install triggered")}>
+                    install tildom
+                  </Button>
+                </SettingsRow>
+              </SettingsSection>
+
+              <SettingsSection title="sync">
+                <SettingsRow label="status">
+                  <span>synced · rev 42 · clean</span>
+                </SettingsRow>
+                <SettingsRow label="actions">
+                  <SettingsActions>
+                    <Button bracket onClick={() => setDemoNotice("Manual sync triggered")}>
+                      sync now
+                    </Button>
+                    <Button bracket onClick={() => setDemoPairOpen(true)}>
+                      pair device
+                    </Button>
+                    <Button danger bracket onClick={() => setDemoNotice("Disconnect confirmed")}>
+                      disconnect
+                    </Button>
+                  </SettingsActions>
+                </SettingsRow>
+              </SettingsSection>
+
+              <SettingsSection title="data">
+                <SettingsRow label="backup">
+                  <SettingsActions>
+                    <Button bracket onClick={() => {
+                      setDemoBackupStatus("database exported");
+                      setTimeout(() => setDemoBackupStatus(null), 2500);
+                    }}>
+                      export
+                    </Button>
+                    <Button bracket onClick={() => {
+                      setDemoBackupStatus("database imported");
+                      setTimeout(() => setDemoBackupStatus(null), 2500);
+                    }}>
+                      import
+                    </Button>
+                    <Button danger bracket onClick={() => setDemoNotice("Database erase requested")}>
+                      erase db
+                    </Button>
+                  </SettingsActions>
+                </SettingsRow>
+                <Show when={demoBackupStatus()}>
+                  <p style={{ "font-size": "0.8rem", color: "var(--syntax-keyword)", margin: "0.25rem 0 0" }}>
+                    {demoBackupStatus()}
+                  </p>
+                </Show>
+              </SettingsSection>
+            </SettingsContainer>
+          </div>
+        </section>
+
         {/* 3. Feedback & States */}
         <section id="sec-feedback" class={styles.section}>
           <div class={styles.sectionHeader}>
@@ -373,7 +539,7 @@ function ShowcaseContent(props: ShowcaseProps) {
               <p class={styles.componentBoxLabel}>StatusBanner (Guide Rail Callouts):</p>
               <div class={styles.grid}>
                 <StatusBanner type="status">
-                  Database snapshot exported successfully. Local OPFS sync vault clean.
+                  Database snapshot exported successfully. Local sync vault clean.
                 </StatusBanner>
                 <StatusBanner type="error">
                   Sync connection interrupted: Unable to reach sync.tildom.app. Offline mode active.
@@ -763,6 +929,60 @@ function ShowcaseContent(props: ShowcaseProps) {
             </Button>
           </div>
         </form>
+      </Dialog>
+
+      {/* Interactive Pairing Dialog for Showcase */}
+      <Dialog
+        open={demoPairOpen()}
+        onClose={() => setDemoPairOpen(false)}
+        title="pair device"
+        hideCloseButton
+      >
+        <div style={{ display: "flex", "flex-direction": "column", gap: "0.75rem" }}>
+          <div style={{ display: "flex", "justify-content": "center", padding: "0.25rem 0" }}>
+            <QRDisplay value="https://tildom.app/#pair=sec_demo12345" size={190} />
+          </div>
+          <textarea
+            rows={2}
+            readOnly
+            value="https://tildom.app/#pair=sec_demo12345"
+            style={{
+              width: "100%",
+              "font-family": "inherit",
+              "font-size": "12px",
+              "line-height": "1.4",
+              padding: "0.5rem",
+              background: "var(--bg-canvas)",
+              border: "1px solid var(--border-color)",
+              color: "var(--syntax-string)",
+              "border-radius": "0",
+              outline: "none",
+              "box-sizing": "border-box",
+              "word-break": "break-all",
+              resize: "none",
+            }}
+            onFocus={(e) => e.currentTarget.select()}
+          />
+          <div style={{
+            display: "flex",
+            "justify-content": "flex-end",
+            "align-items": "center",
+            gap: "0.5rem",
+            "margin-top": "0.5rem",
+            "padding-top": "0.75rem",
+            "border-top": "1px solid var(--border-color)",
+          }}>
+            <Button bracket variant="text" onClick={() => setDemoPairOpen(false)}>
+              close
+            </Button>
+            <Button bracket onClick={() => {
+              setDemoNotice("Pairing link copied to clipboard");
+              setDemoPairOpen(false);
+            }}>
+              copy link
+            </Button>
+          </div>
+        </div>
       </Dialog>
 
       {/* Global Keybind Help Modal */}

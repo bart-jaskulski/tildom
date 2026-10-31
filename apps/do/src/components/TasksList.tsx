@@ -80,10 +80,10 @@ function TaskNode(props: TaskNodeProps) {
 
         {/* Flat TUI Subtask Indicator/Button */}
         <Show when={hasChildren() && !isExpanded()}>
-          <div class="px-4 py-2 bg-[var(--bg-canvas)] border-b border-[var(--border-color)] flex items-center">
+          <div class="px-4 py-2 bg-canvas border-b border-border flex items-center">
             <button
               type="button"
-              class="text-xs font-mono text-[var(--highlight-blue)] hover:underline cursor-pointer"
+              class="text-xs font-mono text-highlight-blue hover:underline cursor-pointer"
               onClick={expand}
               aria-label={`Show ${props.node.children.length} subtasks`}
             >
@@ -94,7 +94,7 @@ function TaskNode(props: TaskNodeProps) {
       </div>
 
       <Show when={hasChildren() && isExpanded()}>
-        <div class="relative pl-6 ml-3.5 border-l-2 border-[var(--border-color)] pb-3">
+        <div class="relative pl-6 ml-3.5 border-l-2 border-border pb-3">
           <div class="pt-2">
             <TaskBranch
               tasks={props.node.children}

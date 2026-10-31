@@ -56,7 +56,7 @@ main {
 .conversation-actions button,
 .mobile-back {
   min-height: 44px;
-  padding: 0 1ch;
+  padding: 0 var(--space-x-1);
   border: 0;
   background: transparent;
   color: var(--syntax-string);
@@ -74,7 +74,7 @@ main {
 .new-chat {
   flex: 1;
   justify-content: flex-start;
-  padding-inline: 2ch;
+  padding-inline: var(--space-x-2);
 }
 
 .chat-row {
@@ -83,7 +83,7 @@ main {
   align-items: center;
   width: 100%;
   min-height: 44px;
-  padding: .45rem 1.5ch .45rem 0;
+  padding: var(--space-2) var(--space-x-1-5) var(--space-2) 0;
   border: 0;
   border-left: 2px solid transparent;
   background: transparent;
@@ -116,7 +116,7 @@ main {
 }
 
 .chat-row time {
-  padding-left: 1ch;
+  padding-left: var(--space-x-1);
   color: var(--fg-muted);
   font-size: 11px;
   white-space: nowrap;
@@ -140,7 +140,7 @@ main {
   align-items: center;
   justify-content: space-between;
   min-height: 48px;
-  padding: 0 2ch;
+  padding: 0 var(--space-x-2);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -184,7 +184,7 @@ main {
 
 .conversation-menu button {
   width: 100%;
-  padding: 0 1.5ch;
+  padding: 0 var(--space-x-1-5);
   text-align: left;
 }
 
@@ -196,15 +196,15 @@ main {
   width: 100%;
   max-width: 80ch;
   margin: 0 auto;
-  padding: 2rem 3ch 4rem;
+  padding: var(--space-8) var(--space-x-3) var(--space-16);
   overflow-y: auto;
   scroll-behavior: smooth;
 }
 
 .message {
   max-width: 74ch;
-  margin: 0 0 2rem;
-  padding-left: 2ch;
+  margin: 0 0 var(--space-8);
+  padding-left: var(--space-x-2);
   border-left: 1px solid;
 }
 
@@ -218,8 +218,8 @@ main {
 
 .message header {
   display: flex;
-  gap: 1.5ch;
-  margin-bottom: .45rem;
+  gap: var(--space-x-1-5);
+  margin-bottom: var(--space-2);
   color: var(--fg-muted);
   font-size: 12px;
 }
@@ -244,7 +244,7 @@ main {
 }
 
 .message p {
-  margin: 0 0 .8rem;
+  margin: 0 0 var(--space-3);
   line-height: 1.65;
 }
 
@@ -268,14 +268,14 @@ main {
 }
 
 .composer {
-  width: calc(100% - 6ch);
+  width: calc(100% - var(--space-x-3) * 2);
   max-width: 78ch;
-  margin: 0 auto 1.25rem;
+  margin: 0 auto var(--space-5);
 }
 
 .scroll-bottom {
   position: absolute;
-  right: 3ch;
+  right: var(--space-x-3);
   bottom: 5.5rem;
   z-index: 2;
   width: 44px;
@@ -311,7 +311,7 @@ main {
   height: 44px;
   min-height: 44px;
   max-height: 30vh;
-  padding: .75rem 1.25ch;
+  padding: var(--space-3) var(--space-x-1-5);
   line-height: 1.5;
   overflow-y: auto;
   resize: none;
@@ -320,7 +320,7 @@ main {
 .composer button {
   align-self: stretch;
   min-width: 9ch;
-  padding: 0 2ch;
+  padding: 0 var(--space-x-2);
   border: 0;
   border-left: 1px solid var(--border-color);
   background: var(--fg-default);
@@ -340,7 +340,7 @@ main {
   align-items: center;
   width: 100%;
   min-height: 48px;
-  padding: .5rem 2ch;
+  padding: var(--space-2) var(--space-x-2);
   border: 0;
   background: transparent;
   color: var(--fg-default);
@@ -350,7 +350,7 @@ main {
 }
 
 .file-row > span:first-child {
-  width: 2ch;
+  width: var(--space-x-2);
   color: var(--fg-muted);
 }
 
@@ -366,7 +366,7 @@ main {
 
 .file-group > p {
   margin: 0;
-  padding: 1rem 2ch .35rem;
+  padding: var(--space-4) var(--space-x-2) var(--space-1);
   color: var(--fg-muted);
   font-size: 11px;
   font-weight: 700;
@@ -378,7 +378,7 @@ main {
 
 .memory-editor textarea {
   min-height: 0;
-  padding: 2rem 3ch;
+  padding: var(--space-8) var(--space-x-3);
   color: var(--fg-default);
   line-height: 1.65;
   resize: none;
@@ -393,24 +393,24 @@ main {
   align-items: center;
   justify-content: space-between;
   min-height: 68px;
-  padding: .7rem 3ch;
+  padding: var(--space-3) var(--space-x-3);
   border-top: 1px solid var(--border-color);
   color: var(--fg-muted);
   font-size: 11px;
 }
 
 .settings {
-  width: calc(100% - 6ch);
+  width: calc(100% - var(--space-x-3) * 2);
   max-width: 88ch;
   margin: 0 auto;
-  padding: 1.5rem 0 5rem;
+  padding: var(--space-6) 0 calc(var(--space-10) * 2);
 }
 
 .settings-section {
   display: grid;
-  gap: .75rem;
+  gap: var(--space-3);
   margin: 0;
-  padding: 1.25rem 0;
+  padding: var(--space-5) 0;
   border-top: 1px solid var(--border-color);
 }
 
@@ -425,7 +425,7 @@ main {
 }
 
 .settings-section > p {
-  margin: -.35rem 0 0 3ch;
+  margin: calc(var(--space-1) * -1) 0 0 var(--space-x-3);
   color: var(--fg-muted);
 }
 
@@ -434,7 +434,7 @@ main {
   align-items: center;
   justify-content: space-between;
   min-height: 44px;
-  gap: 3ch;
+  gap: var(--space-x-3);
 }
 
 .settings select {
@@ -443,7 +443,7 @@ main {
 
 .instructions {
   display: grid;
-  gap: .5rem;
+  gap: var(--space-2);
 }
 
 .instructions textarea {
@@ -453,20 +453,20 @@ main {
 
 .button-row {
   display: flex;
-  gap: 1ch;
-  padding: 1rem 0;
+  gap: var(--space-x-1);
+  padding: var(--space-4) 0;
 }
 
 .search-results {
-  width: calc(100% - 6ch);
+  width: calc(100% - var(--space-x-3) * 2);
   max-width: 88ch;
   margin: 0 auto;
-  padding: 2rem 0;
+  padding: var(--space-8) 0;
 }
 
 .feed-note {
-  margin: 0 0 1.5rem;
-  padding: .75rem 1.5ch;
+  margin: 0 0 var(--space-6);
+  padding: var(--space-3) var(--space-x-1-5);
   border-left: 2px solid var(--highlight-blue);
 }
 
@@ -488,15 +488,15 @@ main {
 
 .result-list li {
   position: relative;
-  margin: 0 0 1.35rem 2ch;
+  margin: 0 0 var(--space-5) var(--space-x-2);
   counter-increment: result;
 }
 
 .result-list li::before {
   position: absolute;
-  top: .8rem;
-  right: calc(100% + 1.5ch);
-  width: 3ch;
+  top: var(--space-3);
+  right: calc(100% + var(--space-x-1-5));
+  width: var(--space-x-3);
   color: var(--fg-muted);
   content: counter(result);
   text-align: right;
@@ -507,7 +507,7 @@ main {
   grid-template-columns: minmax(0, 1fr) auto;
   width: 100%;
   min-height: 56px;
-  padding: .7rem 1.5ch;
+  padding: var(--space-3) var(--space-x-1-5);
   border: 0;
   border-left: 2px solid var(--border-color);
   background: transparent;
@@ -533,7 +533,7 @@ main {
 
 .result-detail {
   grid-column: 1 / -1;
-  margin-top: .35rem;
+  margin-top: var(--space-1);
   color: var(--fg-muted);
   font-size: 12px;
 }
@@ -548,7 +548,7 @@ mark {
 
 .empty,
 .state {
-  padding: 2rem 3ch;
+  padding: var(--space-8) var(--space-x-3);
   color: var(--fg-muted);
 }
 
@@ -572,7 +572,7 @@ mark {
 
 .dialog-form label {
   display: block;
-  margin-bottom: .4rem;
+  margin-bottom: var(--space-2);
   color: var(--fg-muted);
   font-size: 11px;
   font-weight: 700;
@@ -583,8 +583,8 @@ mark {
   display: flex;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 1ch;
-  margin-top: 1.5rem;
+  gap: var(--space-x-1);
+  margin-top: var(--space-6);
 }
 
 .pair-link {
@@ -598,10 +598,10 @@ mark {
 
 .toast {
   position: fixed;
-  right: 2ch;
-  bottom: 1.5rem;
+  right: var(--space-x-2);
+  bottom: var(--space-6);
   z-index: 20;
-  padding: .8rem 1.5ch;
+  padding: var(--space-3) var(--space-x-1-5);
   border: 1px solid var(--fg-default);
   background: var(--fg-default);
   color: var(--bg-surface);
@@ -642,7 +642,7 @@ mark {
   .conversation-header,
   .editor-heading {
     min-height: 48px;
-    padding: 0 1.5ch;
+    padding: 0 var(--space-x-1-5);
   }
 
   .conversation-header h1 {
@@ -658,25 +658,25 @@ mark {
   }
 
   .conversation-actions button {
-    padding: 0 .7ch;
+    padding: 0 var(--space-x-half);
   }
 
   .transcript {
-    padding: 1.5rem 1.5ch 3rem;
+    padding: var(--space-6) var(--space-x-1-5) var(--space-12);
   }
 
   .message {
-    margin-bottom: 1.6rem;
+    margin-bottom: var(--space-6);
   }
 
   .composer {
-    width: calc(100% - 3ch);
-    margin-bottom: .8rem;
+    width: calc(100% - var(--space-x-3));
+    margin-bottom: var(--space-3);
   }
 
   .composer button {
     min-width: 7ch;
-    padding: 0 1ch;
+    padding: 0 var(--space-x-1);
   }
 
   .file-list {
@@ -698,11 +698,11 @@ mark {
   }
 
   .memory-editor textarea {
-    padding: 1.25rem 1.5ch;
+    padding: var(--space-5) var(--space-x-1-5);
   }
 
   .memory-editor footer {
-    padding: .6rem 1.5ch;
+    padding: var(--space-2) var(--space-x-1-5);
   }
 
   .memory-editor footer > button {
@@ -711,15 +711,15 @@ mark {
 
   .settings,
   .search-results {
-    width: calc(100% - 3ch);
+    width: calc(100% - var(--space-x-3));
   }
 
   .settings {
-    padding-top: 1.5rem;
+    padding-top: var(--space-6);
   }
 
   .setting-line {
-    gap: 1.5ch;
+    gap: var(--space-x-1-5);
   }
 
   .settings select {
@@ -731,11 +731,11 @@ mark {
   }
 
   .result-list li {
-    margin-left: 1.25ch;
+    margin-left: var(--space-x-1);
   }
 
   .result-list li::before {
-    right: calc(100% + .75ch);
-    width: 2ch;
+    right: calc(100% + var(--space-x-half));
+    width: var(--space-x-2);
   }
 }

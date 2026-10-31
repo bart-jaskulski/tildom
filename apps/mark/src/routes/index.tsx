@@ -2,7 +2,7 @@ import { Title } from "@solidjs/meta";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { For, Show, createEffect, createMemo, createResource, createSignal, onMount, onCleanup } from "solid-js";
 import { isServer } from "solid-js/web";
-import { Button, useVimKeymaps } from "@tildom/ui";
+import { Button, useVimKeymaps, type EditorHandle } from "@tildom/ui";
 import ClipboardPaste from "lucide-solid/icons/clipboard-paste";
 import EntryComposer from "~/components/EntryComposer";
 import MobileEntryDialog from "~/components/MobileEntryDialog";
@@ -11,7 +11,7 @@ import EntryListItemPreview from "~/components/EntryListItemPreview";
 import { client } from "~/lib/db";
 import { isUrlOnlyInput, type Entry, type SearchResult } from "~/lib/entries";
 import { searchLocalEntries } from "~/lib/searchIndex";
-import { createEntry, deleteEntry, entries, isEntryStoreReady, recordEntryOpen } from "~/stores/entryStore";
+import { createEntry, deleteEntry, entries, initializeEntryStore, isEntryStoreReady, recordEntryOpen } from "~/stores/entryStore";
 
 const PAGE_SIZE = 20;
 const STARTUP_ROWS = [0, 1, 2];
@@ -62,8 +62,8 @@ function StartupEntries() {
 export default function Home() {
   const [params, setParams] = useSearchParams();
   const [entryBody, setEntryBody] = createSignal("");
-  let desktopEntryTextarea: HTMLTextAreaElement | undefined;
-  let mobileEntryTextarea: HTMLTextAreaElement | undefined;
+  let desktopEntryEditor: EditorHandle | undefined;
+  let mobileEntryEditor: EditorHandle | undefined;
   let mobileComposer: HTMLDialogElement | undefined;
   const [error, setError] = createSignal<string | null>(null);
   const [isSaving, setIsSaving] = createSignal(false);
@@ -98,11 +98,11 @@ export default function Home() {
   const focusEntryComposer = () => {
     if (window.matchMedia("(max-width: 640px)").matches) {
       if (!mobileComposer?.open) mobileComposer?.showModal();
-      requestAnimationFrame(() => mobileEntryTextarea?.focus());
+      requestAnimationFrame(() => mobileEntryEditor?.focus());
       return;
     }
 
-    desktopEntryTextarea?.focus();
+    desktopEntryEditor?.focus();
   };
 
   createEffect(() => {
@@ -189,7 +189,9 @@ export default function Home() {
   const hasMore = createMemo(() => currentPage() < totalPages());
 
   const saveEntry = async (body: string) => {
-    if (!isEntryStoreReady()) return;
+    if (!isEntryStoreReady()) {
+      await initializeEntryStore();
+    }
 
     setError(null);
     setIsSaving(true);
@@ -257,7 +259,7 @@ export default function Home() {
                 onSubmit={handleSubmit}
                 onPasteLink={() => void handleClipboardSave()}
                 textareaRef={(element) => {
-                  desktopEntryTextarea = element;
+                  desktopEntryEditor = element;
                 }}
               />
             </div>
@@ -289,7 +291,7 @@ export default function Home() {
                 mobileComposer = element;
               }}
               textareaRef={(element) => {
-                mobileEntryTextarea = element;
+                mobileEntryEditor = element;
               }}
             />
           </>

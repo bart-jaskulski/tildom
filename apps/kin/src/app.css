@@ -12,11 +12,11 @@
   width: 100%;
   max-width: 120ch;
   margin: 0 auto;
-  padding: 1.5rem 3ch 2.5rem;
+  padding: var(--space-6) var(--space-x-3) var(--space-10);
 }
 
 @media (max-width: 768px) {
   .kin-content {
-    padding: 1rem 1.5ch 2rem;
+    padding: var(--space-4) var(--space-x-1-5) var(--space-8);
   }
 }

@@ -232,7 +232,7 @@ export default function TaskPrompt(props: TaskPromptProps) {
     <>
       {/* TUI FIXED BOTTOM BAR BUTTON */}
       <div
-        class="fixed bottom-0 left-0 right-0 z-50 bg-[var(--bg-canvas)] border-t-2 border-[var(--border-color)] transition-transform duration-200"
+        class="fixed bottom-0 left-0 right-0 z-50 bg-canvas border-t-2 border-border transition-transform duration-200"
         style={{ transform: props.visible && !isOpen() ? 'translateY(0)' : 'translateY(100%)' }}
       >
         <div class="max-w-xl mx-auto p-4">
@@ -274,7 +274,7 @@ export default function TaskPrompt(props: TaskPromptProps) {
                 <div class="flex flex-col gap-3 pt-2">
                   {/* Bracket-styled due date button */}
                   <div class="flex items-center gap-2">
-                    <span class="text-xs font-mono text-[var(--fg-muted)]">DUE DATE:</span>
+                    <span class="text-xs font-mono text-muted">DUE DATE:</span>
                     <Input
                       type="date"
                       aria-label="Choose due date"
@@ -303,7 +303,7 @@ export default function TaskPrompt(props: TaskPromptProps) {
                 </div>
 
                 <Show when={isAiEnabled() && !isOnline()}>
-                  <p class="text-xs text-[var(--syntax-error)] font-bold uppercase pt-1">
+                  <p class="text-xs text-error font-bold uppercase pt-1">
                     ! AI breakdown needs network. Saving as local-only task.
                   </p>
                 </Show>
@@ -311,7 +311,7 @@ export default function TaskPrompt(props: TaskPromptProps) {
 
               <Show when={mode() === "clarify"}>
                 <div class="flex flex-col gap-4">
-                  <div class="border-l-4 border-[var(--highlight-blue)] bg-[var(--bg-canvas)] p-3 text-xs font-mono text-[var(--syntax-string)]">
+                  <div class="border-l-4 border-highlight-blue bg-canvas p-3 text-xs font-mono text-string">
                     {clarification()}
                   </div>
 
@@ -327,7 +327,7 @@ export default function TaskPrompt(props: TaskPromptProps) {
                     />
                   </div>
 
-                  <div class="flex justify-end gap-2 border-t border-[var(--border-color)] pt-3">
+                  <div class="flex justify-end gap-2 border-t border-border pt-3">
                     <Button
                       type="button"
                       onClick={() => { setMode("default"); setClarification(""); }}
@@ -343,7 +343,7 @@ export default function TaskPrompt(props: TaskPromptProps) {
                     </Button>
                   </div>
                   <Show when={!isOnline()}>
-                    <p class="text-xs text-[var(--syntax-error)] font-bold uppercase">
+                    <p class="text-xs text-error font-bold uppercase">
                       ! Reconnect to continue AI clarification flow.
                     </p>
                   </Show>

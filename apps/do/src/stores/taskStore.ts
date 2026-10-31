@@ -212,16 +212,23 @@ const taskStore = createRoot(() => {
     void refreshWorkspaceState(state.selectedWorkspaceId ?? readSelectedWorkspacePreference());
   });
 
+  let initPromise: Promise<void> | null = null;
+
   const initializeTaskStore = async () => {
     if (isServer) return;
+    if (initPromise) return initPromise;
 
-    try {
-      await db.init();
-      await refreshWorkspaceState(readSelectedWorkspacePreference());
-      setState("isSynced", true);
-    } catch (err) {
-      console.error("Failed to initialize task store:", err);
-    }
+    initPromise = (async () => {
+      try {
+        await db.init();
+        await refreshWorkspaceState(readSelectedWorkspacePreference());
+        setState("isSynced", true);
+      } catch (err) {
+        console.error("Failed to initialize task store:", err);
+      }
+    })();
+
+    return initPromise;
   };
 
   const tasks = createMemo(() => {
@@ -293,10 +300,14 @@ type NewTaskPayload = {
 };
 
 export const addTask = async (data: NewTaskPayload, parentId: string | null = null) => {
+  if (!state.selectedWorkspaceId && !parentId) {
+    await initializeTaskStore();
+  }
+
   const id = nanoid();
   const workspaceId = parentId
     ? (await db.sql<{ workspace_id: string }>`SELECT workspace_id FROM tasks WHERE id = ${parentId}`)[0]?.workspace_id
-    : state.selectedWorkspaceId;
+    : (state.selectedWorkspaceId || DEFAULT_WORKSPACE_ID);
 
   if (!workspaceId) {
     throw new Error("Cannot create a task without a selected workspace");

@@ -1,7 +1,6 @@
 import { Show } from "solid-js";
 import ClipboardPaste from "lucide-solid/icons/clipboard-paste";
-import { Button } from "@tildom/ui";
-import Textarea from "./Textarea";
+import { Button, Editor, type EditorHandle } from "@tildom/ui";
 import styles from "./EntryComposer.module.css";
 
 type EntryComposerProps = {
@@ -13,19 +12,19 @@ type EntryComposerProps = {
   onInput: (value: string) => void;
   onSubmit: (event: SubmitEvent) => void;
   onPasteLink: () => void;
-  textareaRef: (element: HTMLTextAreaElement) => void;
+  textareaRef?: (element: EditorHandle) => void;
 };
 
 export default function EntryComposer(props: EntryComposerProps) {
   return (
     <form class={styles.form} classList={{ [styles.mobile]: props.mobile }} onSubmit={props.onSubmit}>
       <label class="visually-hidden" for={props.id}>save</label>
-      <Textarea
+      <Editor
         id={props.id}
         ref={props.textareaRef}
         value={props.value}
-        onInput={(event) => props.onInput(event.currentTarget.value)}
-        rows={5}
+        onInput={props.onInput}
+        onSubmit={() => props.onSubmit(new Event("submit") as SubmitEvent)}
         placeholder="Paste a link or write a note"
       />
 

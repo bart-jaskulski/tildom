@@ -1,6 +1,6 @@
 import { A } from "@solidjs/router";
-import { For, Show } from "solid-js";
-import { Search, TextButton, useSearchContext } from "@tildom/ui";
+import { For, Show, createSignal } from "solid-js";
+import { Search, useSearchContext } from "@tildom/ui";
 import { hasEntryLink, type Entry, type SearchResult } from "~/lib/entries";
 import { stripTrailingTagLines } from "~/lib/tags";
 import styles from "./EntryListItemPreview.module.css";
@@ -30,6 +30,10 @@ export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
   const searchCtx = useSearchContext();
   const entry = () => props.entry;
   let touchStart: { x: number; y: number } | undefined;
+  let isHorizontalGesture = false;
+  const [swipeOffset, setSwipeOffset] = createSignal(0);
+  const [isSwiping, setIsSwiping] = createSignal(false);
+
   const title = () => entry().title || entry().domain || "Untitled";
   const readingTime = () => Math.max(1, Math.ceil(entry().readerTextLength / 1_000));
   const query = () => props.searchQuery ?? searchCtx.query();
@@ -40,35 +44,90 @@ export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
   ].some((value) => value.toLowerCase().includes(term)));
   const resetTouch = () => {
     touchStart = undefined;
+    isHorizontalGesture = false;
   };
   const handlePointerDown = (event: PointerEvent) => {
-    if (event.pointerType === "touch") touchStart = { x: event.clientX, y: event.clientY };
+    if (!props.onDelete || event.pointerType !== "touch") return;
+    touchStart = { x: event.clientX, y: event.clientY };
+    isHorizontalGesture = false;
+  };
+  const handlePointerMove = (event: PointerEvent) => {
+    if (!touchStart || event.pointerType !== "touch") return;
+
+    const dx = event.clientX - touchStart.x;
+    const dy = event.clientY - touchStart.y;
+
+    if (!isHorizontalGesture) {
+      if (Math.abs(dy) > Math.abs(dx)) {
+        resetTouch();
+        return;
+      }
+      if (Math.abs(dx) > 8) {
+        isHorizontalGesture = true;
+        try {
+          (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+        } catch {}
+      }
+    }
+
+    if (isHorizontalGesture) {
+      setIsSwiping(true);
+      setSwipeOffset(Math.max(-120, Math.min(0, dx)));
+    }
   };
   const handlePointerUp = (event: PointerEvent) => {
     const start = touchStart;
+    const swiped = isSwiping();
     resetTouch();
+    setIsSwiping(false);
     if (!start || event.pointerType !== "touch") return;
+
+    try {
+      (event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId);
+    } catch {}
 
     const horizontalDistance = event.clientX - start.x;
     const verticalDistance = event.clientY - start.y;
-    if (!props.onDelete || horizontalDistance > -72 || Math.abs(horizontalDistance) <= Math.abs(verticalDistance)) return;
 
-    window.addEventListener("click", (clickEvent) => {
-      clickEvent.preventDefault();
-      clickEvent.stopPropagation();
-    }, { capture: true, once: true });
-    props.onDelete(entry().id);
+    if (swiped || Math.abs(horizontalDistance) > 10) {
+      window.addEventListener("click", (clickEvent) => {
+        clickEvent.preventDefault();
+        clickEvent.stopPropagation();
+      }, { capture: true, once: true });
+    }
+
+    if (props.onDelete && horizontalDistance <= -72 && Math.abs(horizontalDistance) > Math.abs(verticalDistance)) {
+      props.onDelete(entry().id);
+    }
+
+    setSwipeOffset(0);
+  };
+  const handlePointerCancel = (event: PointerEvent) => {
+    try {
+      (event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId);
+    } catch {}
+    resetTouch();
+    setIsSwiping(false);
+    setSwipeOffset(0);
   };
 
   return (
     <article
       class={styles.row}
-      classList={{ [styles.activeRow]: props.isActive }}
+      classList={{
+        [styles.activeRow]: props.isActive,
+        [styles.swiping]: isSwiping(),
+        [styles.swipeDelete]: swipeOffset() <= -72,
+      }}
+      style={{
+        transform: swipeOffset() !== 0 ? `translateX(${swipeOffset()}px)` : undefined,
+      }}
       data-entry-row
       data-active={props.isActive ? "" : undefined}
       onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      onPointerCancel={resetTouch}
+      onPointerCancel={handlePointerCancel}
     >
       <Show
         when={!props.loading}
@@ -81,20 +140,38 @@ export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
         )}
       >
         <div class={styles.titleline}>
-          <A href={`/item/${entry().id}`} class={styles.title}>
-            <Show when={!entry().firstOpenedAt}>
-              <span class={styles.unopenedMarker} title="Not opened yet" aria-label="Not opened yet">•</span>
+          <div class={styles.titleGroup}>
+            <A href={`/item/${entry().id}`} class={styles.title}>
+              <Show when={!entry().firstOpenedAt}>
+                <span class={styles.unopenedMarker} title="Not opened yet" aria-label="Not opened yet">•</span>
+              </Show>
+              <Search.Highlight>{title()}</Search.Highlight>
+            </A>
+            <Show when={entry().canonicalUrl}>
+              {" "}
+              <a
+                href={entry().canonicalUrl!}
+                rel="noreferrer"
+                target="_blank"
+                class={styles.externalLink}
+              >[<ExternalLink />]</a>
             </Show>
-            <Search.Highlight>{title()}</Search.Highlight>
-          </A>
-          <Show when={entry().canonicalUrl}>
-            {" "}
-            <a
-              href={entry().canonicalUrl!}
-              rel="noreferrer"
-              target="_blank"
-              class={styles.externalLink}
-            >[<ExternalLink />]</a>
+          </div>
+
+          <Show when={props.onDelete}>
+            <button
+              type="button"
+              class={styles.deleteButton}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                props.onDelete?.(entry().id);
+              }}
+              title="Delete entry"
+              aria-label="Delete entry"
+            >
+              delete
+            </button>
           </Show>
         </div>
 
@@ -110,25 +187,10 @@ export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
           <Show when={entry().commentCount > 0}>
             <span>{entry().commentCount} {entry().commentCount === 1 ? "note" : "notes"}</span>
           </Show>
-        </div>
-
-        <div class={styles.actions}>
-          <A href={`/item/${entry().id}`}>edit</A>
           <Show when={entry().canonicalUrl}>
-            <span aria-hidden="true">|</span>
-            <A href={`/item/${entry().id}/read`}>
+            <A href={`/item/${entry().id}/read`} class={styles.readLink}>
               read
             </A>
-          </Show>
-          <Show when={props.onDelete}>
-            <span aria-hidden="true">|</span>
-            <TextButton
-              type="button"
-              inline
-              onClick={() => props.onDelete?.(entry().id)}
-            >
-              delete
-            </TextButton>
           </Show>
         </div>
 

@@ -39,7 +39,14 @@ export const normalizeTagList = (values: string[]) => {
 export const parseTagInput = (input: string) => normalizeTagList(input.split(/[,\s]+/));
 
 export const parseHashTags = (input: string) => {
-  const matches = input.matchAll(/(?:^|[^\w/])#([a-z0-9][a-z0-9_-]*)/gi);
+  // Strip code blocks, inline code, markdown link destinations, and HTML tags
+  const sanitized = input
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/`[^`\n]+`/g, "")
+    .replace(/\[([^\]\n]*)\]\([^)\n]*\)/g, "$1")
+    .replace(/<[^>\n]+>/g, "");
+
+  const matches = sanitized.matchAll(/(?:^|[^\w/])#([a-z][a-z0-9_-]*)/gi);
   return normalizeTagList(Array.from(matches, (match) => match[1]));
 };
 

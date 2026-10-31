@@ -6,12 +6,11 @@
   border: 1px solid var(--fg-default);
   background: var(--bg-surface);
   color: var(--fg-default);
-  box-shadow: 4px 4px 0 var(--syntax-bg-active);
   font-family: inherit;
-  width: min(60ch, calc(100vw - 2rem));
+  width: min(54ch, calc(100vw - 1.5rem));
   max-width: 100%;
-  max-height: calc(100vh - 4rem);
-  max-height: calc(100dvh - 4rem);
+  max-height: calc(100vh - 3rem);
+  max-height: calc(100dvh - 3rem);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -77,4 +76,10 @@
   overflow-y: auto;
   font-size: 13px;
   line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+  .body {
+    padding: 1rem 1.25ch;
+  }
 }
