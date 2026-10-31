@@ -2,7 +2,7 @@
   "name": "kin.tildom",
   "type": "module",
   "scripts": {
-    "dev": "HTTPS=false vite",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0 --port 3000",
     "typecheck": "tsc --noEmit",

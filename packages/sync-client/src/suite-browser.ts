@@ -26,6 +26,7 @@ export const connectAppToSuite = async (
   brokerOrigin: string,
   getConfig: () => Promise<SyncConfig | undefined>,
   join: (secret: string) => Promise<unknown>,
+  confirm?: (message: string) => Promise<boolean> | boolean,
 ) => {
   const values = readHash();
   const state = values.get("state");
@@ -33,8 +34,11 @@ export const connectAppToSuite = async (
   history.replaceState(history.state, "", location.pathname);
   if (!state || !secret) throw new Error("Invalid suite connection request");
   if (await getConfig()) throw new Error("This app is already connected to a sync vault");
-  if (!window.confirm(`Connect ${appId} to suite sync? This replaces this device with the remote vault when one exists.`)) {
-    throw new Error("Connection cancelled");
+  if (confirm) {
+    const confirmed = await confirm(`Connect ${appId} to suite sync? This replaces this device with the remote vault when one exists.`);
+    if (!confirmed) {
+      throw new Error("Connection cancelled");
+    }
   }
   await join(secret);
   returnToBroker(brokerOrigin, { app: appId, state });

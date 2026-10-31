@@ -42,7 +42,7 @@ import {
 } from "./lib/store";
 import type { Chat, MemoryFile, Message, SearchResult, Settings } from "./lib/types";
 import { pwaInstall } from "./lib/pwaInstall";
-import { Button, Checkbox, Dialog, Input, Search, Select, Textarea } from "@tildom/ui";
+import { Button, Checkbox, ConfirmDialog, Dialog, Input, Search, Select, Textarea } from "@tildom/ui";
 import AppHeader from "./components/AppHeader";
 import ChatWorkspace from "./components/ChatWorkspace";
 import MemoryWorkspace from "./components/MemoryWorkspace";
@@ -60,14 +60,43 @@ const brokerOrigin = import.meta.env.VITE_HOME_BASE_URL ?? (import.meta.env.DEV 
 
 function SuiteCallback() {
   const [error, setError] = createSignal("");
+  const [confirmPrompt, setConfirmPrompt] = createSignal<{
+    message: string;
+    resolve: (value: boolean) => void;
+  } | null>(null);
+
+  const requestConfirm = (message: string) =>
+    new Promise<boolean>((resolve) => {
+      setConfirmPrompt({ message, resolve });
+    });
+
   onMount(async () => {
     try {
       await db.init();
       if (location.pathname.endsWith("/register")) await registerAppWithSuite("hey", brokerOrigin, getSyncConfig);
-      else await connectAppToSuite("hey", brokerOrigin, getSyncConfig, joinSyncVault);
+      else await connectAppToSuite("hey", brokerOrigin, getSyncConfig, joinSyncVault, requestConfirm);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Suite connection failed"); }
   });
-  return <main><p>Connecting hey to suite sync…</p><Show when={error()}><p role="alert">{error()}</p></Show></main>;
+  return (
+    <main>
+      <p>Connecting hey to suite sync…</p>
+      <Show when={error()}><p role="alert">{error()}</p></Show>
+      <ConfirmDialog
+        open={Boolean(confirmPrompt())}
+        title="Connect to suite sync?"
+        message={confirmPrompt()?.message}
+        confirmText="connect"
+        onConfirm={() => {
+          confirmPrompt()?.resolve(true);
+          setConfirmPrompt(null);
+        }}
+        onCancel={() => {
+          confirmPrompt()?.resolve(false);
+          setConfirmPrompt(null);
+        }}
+      />
+    </main>
+  );
 }
 
 function Workspace(props: RouteSectionProps) {

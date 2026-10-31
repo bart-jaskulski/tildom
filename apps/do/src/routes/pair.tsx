@@ -11,6 +11,7 @@ export default function PairPage() {
   const [pendingSecret, setPendingSecret] = createSignal<string | null>(null);
   const [joinUrl, setJoinUrl] = createSignal("");
   const [confirmJoin, setConfirmJoin] = createSignal(false);
+  const [confirmDisconnect, setConfirmDisconnect] = createSignal(false);
   const [busy, setBusy] = createSignal(false);
   const [message, setMessage] = createSignal("");
 
@@ -74,7 +75,7 @@ export default function PairPage() {
             await navigator.clipboard.writeText(joinUrl());
             setMessage("Link copied. Keep it private: it grants access to your tasks.");
           })}>Copy pairing link</Button>
-          <Button disabled={busy()} onClick={() => void run(disconnectSync)}>Disconnect this device</Button>
+          <Button disabled={busy()} onClick={() => setConfirmDisconnect(true)}>Disconnect this device</Button>
         </Show>
         <Show when={message()}><p role="status">{message()}</p></Show>
         <Show when={syncSignals.status() === "error"}><p role="alert">{syncSignals.statusText()}</p></Show>
@@ -87,6 +88,21 @@ export default function PairPage() {
         isBusy={busy()}
         onConfirm={() => run(join)}
         onCancel={() => { if (!busy()) setConfirmJoin(false); }}
+      />
+      <ConfirmDialog
+        open={confirmDisconnect()}
+        title="Disconnect this device?"
+        message="Disconnect sync? Local tasks will remain on this device."
+        confirmText="disconnect"
+        danger
+        isBusy={busy()}
+        onConfirm={() => {
+          setConfirmDisconnect(false);
+          void run(disconnectSync);
+        }}
+        onCancel={() => {
+          if (!busy()) setConfirmDisconnect(false);
+        }}
       />
     </div>
   );

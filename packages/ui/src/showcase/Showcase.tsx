@@ -15,7 +15,7 @@ import KeybindHelp from "../components/KeybindHelp";
 import Tabline from "../components/Tabline";
 import Dialog from "../components/Dialog";
 import ConfirmDialog from "../components/ConfirmDialog";
-import Popover from "../components/Popover";
+import Popover, { PopoverItem } from "../components/Popover";
 import { SettingsContainer, SettingsSection, SettingsRow, SettingsActions } from "../components/Settings";
 import QRDisplay from "../components/QRDisplay";
 import { showVimHelp } from "../keyboard";
@@ -784,20 +784,15 @@ function ShowcaseContent(props: ShowcaseProps) {
                     anchorName="--demo-popover-anchor"
                     positionArea="bottom span-right"
                   >
-                    <div style={{ display: "flex", "flex-direction": "column", gap: "0.5rem", "min-width": "24ch" }}>
-                      <div style={{ "font-weight": "bold", "border-bottom": "1px solid var(--border-color)", "padding-bottom": "0.25rem" }}>
-                        Quick Actions Menu
-                      </div>
-                      <div style={{ "font-size": "12px", color: "var(--fg-muted)" }}>
-                        Top-layer popover anchored with pure CSS.
-                      </div>
-                  <Button variant="text" onClick={() => setConfirmNotice("Action: Export triggered (demo)")}>
-                        [ export database ]
-                      </Button>
-                  <Button variant="text" onClick={() => setConfirmNotice("Action: Clear filter triggered (demo)")}>
-                        [ clear filters ]
-                      </Button>
+                    <div style={{ padding: "0.5rem 1.25ch", "border-bottom": "1px solid var(--border-color)", "font-size": "11px", color: "var(--fg-muted)", "text-transform": "uppercase", "letter-spacing": "0.04em" }}>
+                      Quick Actions
                     </div>
+                    <PopoverItem onClick={() => setConfirmNotice("Action: Export triggered (demo)")}>
+                      [ export database ]
+                    </PopoverItem>
+                    <PopoverItem onClick={() => setConfirmNotice("Action: Clear filter triggered (demo)")}>
+                      [ clear filters ]
+                    </PopoverItem>
                   </Popover>
 
                   <Button variant="text" onClick={() => showVimHelp()}>

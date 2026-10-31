@@ -1,6 +1,7 @@
 import { JSX, Show, createMemo, createSignal, onMount, splitProps } from "solid-js";
 import { buildPairingUrl, clearPairingHash, parsePairingSecret } from "@tildom/sync-client";
 import Button from "./Button";
+import ConfirmDialog from "./ConfirmDialog";
 import Dialog from "./Dialog";
 import QRDisplay from "./QRDisplay";
 import { SettingsSection, SettingsRow, SettingsActions } from "./Settings";
@@ -46,6 +47,7 @@ export default function SyncSettings(props: SyncSettingsProps) {
   const [joinSecret, setJoinSecret] = createSignal<string | null>(null);
   const [pairUrl, setPairUrl] = createSignal("");
   const [showPair, setShowPair] = createSignal(false);
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = createSignal(false);
   const [copied, setCopied] = createSignal(false);
 
   const isReady = () => (local.ready ?? true) && local.signals.isReady();
@@ -141,9 +143,9 @@ export default function SyncSettings(props: SyncSettingsProps) {
 
   const handleDisconnect = () => {
     if (!local.onDisconnect) return;
-    if (!window.confirm("Disconnect sync? Local data will remain on this device.")) return;
     run("disconnecting", async () => {
       await local.onDisconnect!();
+      setShowDisconnectConfirm(false);
       setShowPair(false);
       setPairUrl("");
     });
@@ -223,7 +225,7 @@ export default function SyncSettings(props: SyncSettingsProps) {
                   danger
                   bracket
                   disabled={busy()}
-                  onClick={handleDisconnect}
+                  onClick={() => setShowDisconnectConfirm(true)}
                 >
                   {busyAction() === "disconnecting" ? "disconnecting..." : "disconnect"}
                 </Button>
@@ -275,6 +277,19 @@ export default function SyncSettings(props: SyncSettingsProps) {
             </div>
           </div>
         </Dialog>
+
+        <ConfirmDialog
+          open={showDisconnectConfirm()}
+          title="Disconnect sync?"
+          message="Disconnect sync? Local data will remain on this device."
+          confirmText="disconnect"
+          danger
+          isBusy={busyAction() === "disconnecting"}
+          onConfirm={handleDisconnect}
+          onCancel={() => {
+            if (busyAction() !== "disconnecting") setShowDisconnectConfirm(false);
+          }}
+        />
       </Show>
 
       <Show when={error()}>

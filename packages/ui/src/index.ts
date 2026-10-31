@@ -62,7 +62,7 @@ export * from "./components/Dialog";
 export { default as ConfirmDialog } from "./components/ConfirmDialog";
 export * from "./components/ConfirmDialog";
 
-export { default as Popover } from "./components/Popover";
+export { default as Popover, PopoverItem } from "./components/Popover";
 export * from "./components/Popover";
 
 export * from "./components/Settings";

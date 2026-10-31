@@ -1,3 +1,4 @@
+import { createEffect, onCleanup } from "solid-js";
 import type { EditorHandle } from "@tildom/ui";
 import EntryComposer from "./EntryComposer";
 import styles from "./MobileEntryDialog.module.css";
@@ -16,6 +17,18 @@ type MobileEntryDialogProps = {
 export default function MobileEntryDialog(props: MobileEntryDialogProps) {
   let dialog: HTMLDialogElement | undefined;
 
+  createEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return;
+    const vv = window.visualViewport;
+    const onResize = () => {
+      if (dialog?.open && dialog.contains(document.activeElement)) {
+        dialog.scrollIntoView({ block: "end", behavior: "smooth" });
+      }
+    };
+    vv.addEventListener("resize", onResize);
+    onCleanup(() => vv.removeEventListener("resize", onResize));
+  });
+
   return (
     <dialog
       ref={(element) => {
@@ -26,6 +39,9 @@ export default function MobileEntryDialog(props: MobileEntryDialogProps) {
       aria-label="Add link"
       onClick={(event) => {
         if (event.target === event.currentTarget) dialog?.close();
+      }}
+      onFocusIn={(e) => {
+        e.currentTarget.scrollIntoView({ block: "end", behavior: "smooth" });
       }}
     >
       <div class={styles.actions}>

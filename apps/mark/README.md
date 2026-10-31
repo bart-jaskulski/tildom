@@ -26,8 +26,6 @@ pnpm dev
 
 The Vite dev server defaults to `http://localhost:5173`.
 
-For local HTTPS, place `localhost-key.pem` and `localhost.pem` in this app directory or the repository root. HTTPS is automatically enabled when using an external host (`--host`) or when `HTTPS=true`. The app can still typecheck, test, and build without those files.
-
 ## Verification
 
 From the repository root:

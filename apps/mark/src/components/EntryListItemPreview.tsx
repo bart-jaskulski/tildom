@@ -1,6 +1,6 @@
 import { A } from "@solidjs/router";
 import { For, Show, createSignal } from "solid-js";
-import { Search, useSearchContext } from "@tildom/ui";
+import { Button, Popover, PopoverItem, Search, useSearchContext } from "@tildom/ui";
 import { hasEntryLink, type Entry, type SearchResult } from "~/lib/entries";
 import { stripTrailingTagLines } from "~/lib/tags";
 import styles from "./EntryListItemPreview.module.css";
@@ -29,10 +29,7 @@ const previewText = (entry: Entry | SearchResult) => {
 export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
   const searchCtx = useSearchContext();
   const entry = () => props.entry;
-  let touchStart: { x: number; y: number } | undefined;
-  let isHorizontalGesture = false;
-  const [swipeOffset, setSwipeOffset] = createSignal(0);
-  const [isSwiping, setIsSwiping] = createSignal(false);
+  const [copied, setCopied] = createSignal(false);
 
   const title = () => entry().title || entry().domain || "Untitled";
   const readingTime = () => Math.max(1, Math.ceil(entry().readerTextLength / 1_000));
@@ -42,73 +39,15 @@ export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
     previewText(entry()),
     ...entry().tags,
   ].some((value) => value.toLowerCase().includes(term)));
-  const resetTouch = () => {
-    touchStart = undefined;
-    isHorizontalGesture = false;
-  };
-  const handlePointerDown = (event: PointerEvent) => {
-    if (!props.onDelete || event.pointerType !== "touch") return;
-    touchStart = { x: event.clientX, y: event.clientY };
-    isHorizontalGesture = false;
-  };
-  const handlePointerMove = (event: PointerEvent) => {
-    if (!touchStart || event.pointerType !== "touch") return;
 
-    const dx = event.clientX - touchStart.x;
-    const dy = event.clientY - touchStart.y;
-
-    if (!isHorizontalGesture) {
-      if (Math.abs(dy) > Math.abs(dx)) {
-        resetTouch();
-        return;
-      }
-      if (Math.abs(dx) > 8) {
-        isHorizontalGesture = true;
-        try {
-          (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
-        } catch {}
-      }
-    }
-
-    if (isHorizontalGesture) {
-      setIsSwiping(true);
-      setSwipeOffset(Math.max(-120, Math.min(0, dx)));
-    }
-  };
-  const handlePointerUp = (event: PointerEvent) => {
-    const start = touchStart;
-    const swiped = isSwiping();
-    resetTouch();
-    setIsSwiping(false);
-    if (!start || event.pointerType !== "touch") return;
-
+  const handleCopyLink = async () => {
+    const url = entry().canonicalUrl || entry().sourceUrl;
+    if (!url || typeof navigator === "undefined") return;
     try {
-      (event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId);
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
     } catch {}
-
-    const horizontalDistance = event.clientX - start.x;
-    const verticalDistance = event.clientY - start.y;
-
-    if (swiped || Math.abs(horizontalDistance) > 10) {
-      window.addEventListener("click", (clickEvent) => {
-        clickEvent.preventDefault();
-        clickEvent.stopPropagation();
-      }, { capture: true, once: true });
-    }
-
-    if (props.onDelete && horizontalDistance <= -72 && Math.abs(horizontalDistance) > Math.abs(verticalDistance)) {
-      props.onDelete(entry().id);
-    }
-
-    setSwipeOffset(0);
-  };
-  const handlePointerCancel = (event: PointerEvent) => {
-    try {
-      (event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId);
-    } catch {}
-    resetTouch();
-    setIsSwiping(false);
-    setSwipeOffset(0);
   };
 
   return (
@@ -116,18 +55,9 @@ export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
       class={styles.row}
       classList={{
         [styles.activeRow]: props.isActive,
-        [styles.swiping]: isSwiping(),
-        [styles.swipeDelete]: swipeOffset() <= -72,
-      }}
-      style={{
-        transform: swipeOffset() !== 0 ? `translateX(${swipeOffset()}px)` : undefined,
       }}
       data-entry-row
       data-active={props.isActive ? "" : undefined}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerCancel}
     >
       <Show
         when={!props.loading}
@@ -157,41 +87,51 @@ export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
               >[<ExternalLink />]</a>
             </Show>
           </div>
-
-          <Show when={props.onDelete}>
-            <button
-              type="button"
-              class={styles.deleteButton}
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                props.onDelete?.(entry().id);
-              }}
-              title="Delete entry"
-              aria-label="Delete entry"
-            >
-              delete
-            </button>
-          </Show>
         </div>
 
         <div class={styles.meta}>
-          <Show when={entry().domain}>
-            <A href={`/?q=${encodeURIComponent(entry().domain!)}&domain=${encodeURIComponent(entry().domain!)}`} class={styles.domain}>
-              ({entry().domain})
-            </A>
-          </Show>
-          <Show when={entry().readerTextLength > 0}>
-            <span>≈{readingTime()}m</span>
-          </Show>
-          <Show when={entry().commentCount > 0}>
-            <span>{entry().commentCount} {entry().commentCount === 1 ? "note" : "notes"}</span>
-          </Show>
-          <Show when={entry().canonicalUrl}>
-            <A href={`/item/${entry().id}/read`} class={styles.readLink}>
-              read
-            </A>
-          </Show>
+          <div class={styles.metaLead}>
+            <Show when={entry().domain}>
+              <A href={`/?q=${encodeURIComponent(entry().domain!)}&domain=${encodeURIComponent(entry().domain!)}`} class={styles.domain}>
+                ({entry().domain})
+              </A>
+            </Show>
+            <Show when={entry().readerTextLength > 0}>
+              <span>≈{readingTime()}m</span>
+            </Show>
+            <Show when={entry().commentCount > 0}>
+              <span>{entry().commentCount} {entry().commentCount === 1 ? "note" : "notes"}</span>
+            </Show>
+          </div>
+
+          <div class={styles.menuAnchor}>
+            <Button
+              variant="text"
+              type="button"
+              class={styles.menuTrigger}
+              aria-label={`Actions for ${title()}`}
+              popovertarget={`entry-actions-${entry().id}`}
+              style={{ "anchor-name": `--entry-anchor-${entry().id}` }}
+            >
+              [ ··· ]
+            </Button>
+            <Popover
+              id={`entry-actions-${entry().id}`}
+              anchorName={`--entry-anchor-${entry().id}`}
+              positionArea="bottom span-left"
+            >
+              <Show when={entry().canonicalUrl || entry().sourceUrl}>
+                <PopoverItem onClick={() => void handleCopyLink()}>
+                  {copied() ? "[ copied! ]" : "[ copy link ]"}
+                </PopoverItem>
+              </Show>
+              <Show when={props.onDelete}>
+                <PopoverItem danger onClick={() => props.onDelete?.(entry().id)}>
+                  [ delete ]
+                </PopoverItem>
+              </Show>
+            </Popover>
+          </div>
         </div>
 
         <Show when={previewText(entry())}>

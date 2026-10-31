@@ -42,83 +42,30 @@ describe("EntryListItemPreview", () => {
   afterEach(() => {
     cleanup();
   });
-  it("renders title, domain, note count, and reader link without inline actions row", () => {
+  it("renders title, domain, and note count without inline actions row", () => {
     renderPreview();
 
     expect(screen.getByText("Test Bookmark")).toBeInTheDocument();
     expect(screen.getByText("(example.com)")).toBeInTheDocument();
     expect(screen.getByText("2 notes")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "read" })).toHaveAttribute("href", "/item/entry-1/read");
+    expect(screen.queryByRole("link", { name: "read" })).not.toBeInTheDocument();
 
     // Inline edit and actions row should be gone
     expect(screen.queryByRole("link", { name: "edit" })).not.toBeInTheDocument();
   });
 
-  it("renders a small desktop delete button that calls onDelete", () => {
+  it("renders an actions popover trigger and menu items", () => {
     const onDelete = vi.fn();
     renderPreview(onDelete);
 
-    const deleteButton = screen.getByRole("button", { name: "Delete entry" });
-    expect(deleteButton).toBeInTheDocument();
-    fireEvent.click(deleteButton);
+    const trigger = screen.getByRole("button", { name: "Actions for Test Bookmark" });
+    expect(trigger).toBeInTheDocument();
+
+    expect(screen.getByRole("button", { name: "[ copy link ]", hidden: true })).toBeInTheDocument();
+
+    const deleteItem = screen.getByRole("button", { name: "[ delete ]", hidden: true });
+    expect(deleteItem).toBeInTheDocument();
+    fireEvent.click(deleteItem);
     expect(onDelete).toHaveBeenCalledWith("entry-1");
-  });
-
-  it("animates on touch move and triggers onDelete when swiped past threshold", () => {
-    const onDelete = vi.fn();
-    renderPreview(onDelete);
-
-    const article = screen.getByRole("article");
-
-    // Touch down
-    fireEvent.pointerDown(article, { pointerType: "touch", clientX: 200, clientY: 100 });
-
-    // Touch move left by 40px
-    fireEvent.pointerMove(article, { pointerType: "touch", clientX: 160, clientY: 100 });
-    expect(article.style.transform).toBe("translateX(-40px)");
-
-    // Touch move further left past threshold (past -72px, e.g. dx = -80px)
-    fireEvent.pointerMove(article, { pointerType: "touch", clientX: 120, clientY: 100 });
-    expect(article.style.transform).toBe("translateX(-80px)");
-
-    // Touch release
-    fireEvent.pointerUp(article, { pointerType: "touch", clientX: 120, clientY: 100 });
-
-    expect(onDelete).toHaveBeenCalledWith("entry-1");
-    expect(article.style.transform).toBe("");
-  });
-
-  it("cancels swipe gesture if vertical scroll movement dominates", () => {
-    const onDelete = vi.fn();
-    renderPreview(onDelete);
-
-    const article = screen.getByRole("article");
-
-    fireEvent.pointerDown(article, { pointerType: "touch", clientX: 200, clientY: 100 });
-    // Vertical move is 30px, horizontal is 5px
-    fireEvent.pointerMove(article, { pointerType: "touch", clientX: 195, clientY: 130 });
-
-    // Transform should not be set because vertical dominance cancelled the gesture
-    expect(article.style.transform).toBe("");
-
-    fireEvent.pointerUp(article, { pointerType: "touch", clientX: 100, clientY: 130 });
-    expect(onDelete).not.toHaveBeenCalled();
-  });
-
-  it("does not trigger delete if swipe distance is below threshold", () => {
-    const onDelete = vi.fn();
-    renderPreview(onDelete);
-
-    const article = screen.getByRole("article");
-
-    fireEvent.pointerDown(article, { pointerType: "touch", clientX: 200, clientY: 100 });
-    fireEvent.pointerMove(article, { pointerType: "touch", clientX: 160, clientY: 100 });
-    expect(article.style.transform).toBe("translateX(-40px)");
-
-    // Released at -40px (threshold is -72px)
-    fireEvent.pointerUp(article, { pointerType: "touch", clientX: 160, clientY: 100 });
-
-    expect(onDelete).not.toHaveBeenCalled();
-    expect(article.style.transform).toBe("");
   });
 });

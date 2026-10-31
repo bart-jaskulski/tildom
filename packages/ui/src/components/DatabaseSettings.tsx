@@ -1,5 +1,6 @@
 import { JSX, Show, createSignal, splitProps } from "solid-js";
 import Button from "./Button";
+import ConfirmDialog from "./ConfirmDialog";
 import { SettingsSection, SettingsRow, SettingsActions } from "./Settings";
 import styles from "./DatabaseSettings.module.css";
 
@@ -34,6 +35,8 @@ export default function DatabaseSettings(props: DatabaseSettingsProps) {
   const [isExporting, setIsExporting] = createSignal(false);
   const [isImporting, setIsImporting] = createSignal(false);
   const [isDestroying, setIsDestroying] = createSignal(false);
+  const [showDestroyConfirm, setShowDestroyConfirm] = createSignal(false);
+  const [pendingImportFile, setPendingImportFile] = createSignal<File | null>(null);
   let fileInput!: HTMLInputElement;
 
   const isBusy = () => isExporting() || isImporting() || isDestroying();
@@ -69,13 +72,15 @@ export default function DatabaseSettings(props: DatabaseSettingsProps) {
     }
   };
 
-  const handleImport = async (event: Event) => {
+  const handleImport = (event: Event) => {
     const file = (event.currentTarget as HTMLInputElement).files?.[0];
     if (!file) return;
-    if (!window.confirm("Import this database backup? It will replace the current local database.")) {
-      fileInput.value = "";
-      return;
-    }
+    setPendingImportFile(file);
+  };
+
+  const confirmImport = async () => {
+    const file = pendingImportFile();
+    if (!file) return;
     setStatus(null);
     setError(null);
     setIsImporting(true);
@@ -88,19 +93,23 @@ export default function DatabaseSettings(props: DatabaseSettingsProps) {
       setError(err instanceof Error ? err.message : "Failed to import database");
     } finally {
       setIsImporting(false);
-      fileInput.value = "";
+      setPendingImportFile(null);
+      if (fileInput) fileInput.value = "";
     }
   };
 
-  const handleDestroy = async () => {
-    if (!window.confirm("Destroy this device's local database and disconnect sync? This cannot be undone.")) {
-      return;
-    }
+  const cancelImport = () => {
+    setPendingImportFile(null);
+    if (fileInput) fileInput.value = "";
+  };
+
+  const confirmDestroy = async () => {
     setStatus(null);
     setError(null);
     setIsDestroying(true);
     try {
       await local.client.deleteDatabaseFile?.();
+      setShowDestroyConfirm(false);
       if (local.onReset) {
         await local.onReset();
       } else {
@@ -109,6 +118,7 @@ export default function DatabaseSettings(props: DatabaseSettingsProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to destroy database");
       setIsDestroying(false);
+      setShowDestroyConfirm(false);
     }
   };
 
@@ -148,7 +158,7 @@ export default function DatabaseSettings(props: DatabaseSettingsProps) {
               danger
               bracket
               disabled={!isReady() || isBusy()}
-              onClick={handleDestroy}
+              onClick={() => setShowDestroyConfirm(true)}
             >
               {isDestroying() ? "erasing..." : "erase db"}
             </Button>
@@ -161,6 +171,30 @@ export default function DatabaseSettings(props: DatabaseSettingsProps) {
       <Show when={error()}>
         <p class={styles.error} role="alert">{error()}</p>
       </Show>
+
+      <ConfirmDialog
+        open={showDestroyConfirm()}
+        title="Destroy database?"
+        message="Destroy this device's local database and disconnect sync? This cannot be undone."
+        confirmText="erase"
+        danger
+        isBusy={isDestroying()}
+        onConfirm={confirmDestroy}
+        onCancel={() => {
+          if (!isDestroying()) setShowDestroyConfirm(false);
+        }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(pendingImportFile())}
+        title="Import database backup?"
+        message="Import this database backup? It will replace the current local database."
+        confirmText="import"
+        danger
+        isBusy={isImporting()}
+        onConfirm={confirmImport}
+        onCancel={cancelImport}
+      />
     </SettingsSection>
   );
 }

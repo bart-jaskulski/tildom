@@ -1,5 +1,5 @@
-import { Button, Editor, Input, Select, useVimKeymaps, type EditorHandle } from "@tildom/ui";
-import { For, Show, createEffect, createResource, createSignal } from "solid-js";
+import { Button, ConfirmDialog, Dialog, Editor, Input, Popover, PopoverItem, Select, useVimKeymaps, type EditorHandle } from "@tildom/ui";
+import { For, Show, createEffect, createResource, createSignal, onCleanup } from "solid-js";
 import { useNavigate, useParams } from "@solidjs/router";
 import {
   findMarkdownTaskIndex,
@@ -73,9 +73,32 @@ export default function PersonDetail() {
   const [noteDate, setNoteDate] = createSignal(dateInputValue());
   const [editingNoteId, setEditingNoteId] = createSignal<string | null>(null);
   const [editingNoteBody, setEditingNoteBody] = createSignal("");
-  const [editingDateNoteId, setEditingDateNoteId] = createSignal<string | null>(null);
   const [editingNoteDate, setEditingNoteDate] = createSignal("");
+  const [showDeletePersonConfirm, setShowDeletePersonConfirm] = createSignal(false);
+  const [relationshipToDelete, setRelationshipToDelete] = createSignal<SymmetricalRelationship | null>(null);
+  const [noteToDelete, setNoteToDelete] = createSignal<Note | null>(null);
+  const [alertMessage, setAlertMessage] = createSignal<string | null>(null);
   let noteInput: EditorHandle | undefined;
+  let composerForm: HTMLFormElement | undefined;
+
+  const scrollComposerIntoView = () => {
+    if (typeof window === "undefined") return;
+    setTimeout(() => {
+      composerForm?.scrollIntoView({ block: "end", behavior: "smooth" });
+    }, 150);
+  };
+
+  createEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return;
+    const vv = window.visualViewport;
+    const onResize = () => {
+      if (composerForm && composerForm.contains(document.activeElement)) {
+        composerForm.scrollIntoView({ block: "end", behavior: "smooth" });
+      }
+    };
+    vv.addEventListener("resize", onResize);
+    onCleanup(() => vv.removeEventListener("resize", onResize));
+  });
 
   const openPerson = async (id: string, replace = false) => navigate(await fetchContactPath(id), { replace });
   const [detail, { refetch }] = createResource(
@@ -112,9 +135,14 @@ export default function PersonDetail() {
     setRelationships(next.relationships);
   });
 
-  const removePerson = async () => {
+  const removePerson = () => {
+    setShowDeletePersonConfirm(true);
+  };
+
+  const confirmDeletePerson = async () => {
     const current = person();
-    if (!current || !window.confirm(`Delete ${current.name}? This also removes their notes and relationships.`)) return;
+    if (!current) return;
+    setShowDeletePersonConfirm(false);
     await deleteContact(current.id);
     navigate("/");
   };
@@ -135,7 +163,7 @@ export default function PersonDetail() {
       setIsEditing(false);
       await refetch();
       await openPerson(contactId(), true);
-    } catch { window.alert("Failed to update person."); }
+    } catch { setAlertMessage("Failed to update person."); }
     finally { setIsSaving(false); }
   };
 
@@ -154,35 +182,26 @@ export default function PersonDetail() {
       setNoteBody("");
       setNoteDate(dateInputValue());
       await refetch();
-    } catch { window.alert("Failed to save note."); }
+    } catch { setAlertMessage("Failed to save note."); }
   };
 
   const beginNoteEdit = (note: Note) => {
     setEditingNoteId(note.id);
     setEditingNoteBody(note.body);
+    setEditingNoteDate(dateInputValue(note.created_at));
   };
 
   const saveNote = async (event: SubmitEvent, note: Note) => {
     event.preventDefault();
     const body = editingNoteBody().trim();
     if (!body) return;
+    const createdAt = editingNoteDate() ? dateInputTimestamp(editingNoteDate(), note.created_at) : note.created_at;
     try {
-      await updateNote(note.id, body, note.is_pinned === 1);
+      await updateNote(note.id, body, note.is_pinned === 1, createdAt);
       setEditingNoteId(null);
       await refetch();
     } catch {
-      window.alert("Failed to update timeline entry.");
-    }
-  };
-
-  const saveNoteDate = async (note: Note, value: string) => {
-    const createdAt = dateInputTimestamp(value, note.created_at);
-    try {
-      await updateNote(note.id, note.body, note.is_pinned === 1, createdAt);
-      setEditingDateNoteId(null);
-      await refetch();
-    } catch {
-      window.alert("Failed to update timeline date.");
+      setAlertMessage("Failed to update timeline entry.");
     }
   };
 
@@ -196,13 +215,19 @@ export default function PersonDetail() {
       setIsAddingRelationship(false);
       await refetch();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Failed to add relationship.");
+      setAlertMessage(error instanceof Error ? error.message : "Failed to add relationship.");
     }
   };
 
-  const removeRelationship = async (relationship: SymmetricalRelationship) => {
-    if (!window.confirm("Remove this relationship?")) return;
-    await deleteRelationship(contactId(), relationship.contactId);
+  const removeRelationship = (relationship: SymmetricalRelationship) => {
+    setRelationshipToDelete(relationship);
+  };
+
+  const confirmDeleteRelationship = async () => {
+    const rel = relationshipToDelete();
+    if (!rel) return;
+    setRelationshipToDelete(null);
+    await deleteRelationship(contactId(), rel.contactId);
     await refetch();
   };
 
@@ -211,8 +236,14 @@ export default function PersonDetail() {
     await refetch();
   };
 
-  const removeNote = async (note: Note) => {
-    if (!window.confirm("Delete this timeline entry?")) return;
+  const removeNote = (note: Note) => {
+    setNoteToDelete(note);
+  };
+
+  const confirmDeleteNote = async () => {
+    const note = noteToDelete();
+    if (!note) return;
+    setNoteToDelete(null);
     await deleteNote(note.id);
     await refetch();
   };
@@ -225,7 +256,7 @@ export default function PersonDetail() {
         await updateNote(note.id, body, note.is_pinned === 1);
         await refetch();
       } catch {
-        window.alert("Failed to update task.");
+        setAlertMessage("Failed to update task.");
       }
       return;
     }
@@ -364,7 +395,12 @@ export default function PersonDetail() {
           </aside>
 
           <section class={styles.log} aria-label={`${person()!.name} timeline`}>
-            <form class={styles.composer} onSubmit={addNote}>
+            <form
+              ref={composerForm}
+              class={styles.composer}
+              onSubmit={addNote}
+              onFocusIn={scrollComposerIntoView}
+            >
               <label class="visually-hidden" for="new-note">Add timeline note</label>
               <Editor
                 id="new-note"
@@ -393,41 +429,38 @@ export default function PersonDetail() {
                   <article class={styles.timelineItem} classList={{ [styles.pinned]: note.is_pinned === 1 }}>
                     <span class={styles.marker} aria-hidden="true" />
                     <div class={styles.timelineMeta}>
-                      <div>
-                        <Show when={editingDateNoteId() === note.id} fallback={(
-                          <Button variant="text"
-                            type="button"
-                            class={styles.timelineDate}
-                            title="Edit date"
-                            aria-label={`Edit date: ${formatDate(note.created_at)}`}
-                            onClick={() => {
-                              setEditingDateNoteId(note.id);
-                              setEditingNoteDate(dateInputValue(note.created_at));
-                            }}
-                          >{formatDate(note.created_at)}</Button>
-                        )}>
-                          <Input
-                            class={styles.timelineDateInput}
-                            type="date"
-                            value={editingNoteDate()}
-                            aria-label="Timeline entry date"
-                            autofocus
-                            onInput={(event) => {
-                              setEditingNoteDate(event.currentTarget.value);
-                              if (event.currentTarget.value) void saveNoteDate(note, event.currentTarget.value);
-                            }}
-                            onKeyDown={(event) => {
-                              if (event.key === "Escape") setEditingDateNoteId(null);
-                            }}
-                          />
+                      <div class={styles.metaLead}>
+                        <time class={styles.timelineDate}>{formatDate(note.created_at)}</time>
+                        <Show when={note.is_pinned === 1}>
+                          <span class={styles.pinnedLabel}>[ pinned ]</span>
                         </Show>
-                        <Button variant="text" type="button" class="kin-link-button" onClick={() => void pinNote(note)}>
-                          {note.is_pinned === 1 ? "[ unpin ]" : "[ pin ]"}
-                        </Button>
                       </div>
-                      <div>
-                        <Button variant="text" type="button" class="kin-link-button" onClick={() => beginNoteEdit(note)}>[ edit ]</Button>
-                        <Button danger variant="text" type="button" class="kin-link-button kin-danger-link" onClick={() => void removeNote(note)}>[ delete ]</Button>
+                      <div class={styles.menuAnchor}>
+                        <Button
+                          variant="text"
+                          type="button"
+                          class={styles.menuTrigger}
+                          aria-label={`Actions for note from ${formatDate(note.created_at)}`}
+                          popovertarget={`note-actions-${note.id}`}
+                          style={{ "anchor-name": `--note-anchor-${note.id}` }}
+                        >
+                          [ ··· ]
+                        </Button>
+                        <Popover
+                          id={`note-actions-${note.id}`}
+                          anchorName={`--note-anchor-${note.id}`}
+                          positionArea="bottom span-left"
+                        >
+                          <PopoverItem onClick={() => void pinNote(note)}>
+                            {note.is_pinned === 1 ? "[ unpin ]" : "[ pin ]"}
+                          </PopoverItem>
+                          <PopoverItem onClick={() => beginNoteEdit(note)}>
+                            [ edit ]
+                          </PopoverItem>
+                          <PopoverItem danger onClick={() => void removeNote(note)}>
+                            [ delete ]
+                          </PopoverItem>
+                        </Popover>
                       </div>
                     </div>
                     <Show when={editingNoteId() === note.id} fallback={(
@@ -447,8 +480,20 @@ export default function PersonDetail() {
                           onSubmit={() => void saveNote(new Event("submit") as SubmitEvent, note)}
                         />
                         <div class={styles.noteEditActions}>
-                          <Button type="submit" class="kin-primary-button">save</Button>
-                          <Button variant="text" type="button" class="kin-link-button" onClick={() => setEditingNoteId(null)}>[ cancel ]</Button>
+                          <label class={styles.dateField}>
+                            <span>on</span>
+                            <Input
+                              type="date"
+                              value={editingNoteDate()}
+                              aria-label="Timeline entry date"
+                              onInput={(event) => setEditingNoteDate(event.currentTarget.value)}
+                              required
+                            />
+                          </label>
+                          <div class={styles.noteEditButtons}>
+                            <Button type="submit" class="kin-primary-button">save</Button>
+                            <Button variant="text" type="button" class="kin-link-button" onClick={() => setEditingNoteId(null)}>[ cancel ]</Button>
+                          </div>
                         </div>
                       </form>
                     </Show>
@@ -460,6 +505,49 @@ export default function PersonDetail() {
           </section>
         </Show>
       </section>
+
+      <ConfirmDialog
+        open={showDeletePersonConfirm()}
+        title={`Delete ${person()?.name ?? "person"}?`}
+        message={`Delete ${person()?.name ?? "this person"}? This also removes their notes and relationships.`}
+        confirmText="delete"
+        danger
+        onConfirm={confirmDeletePerson}
+        onCancel={() => setShowDeletePersonConfirm(false)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(relationshipToDelete())}
+        title="Remove relationship?"
+        message="Remove this relationship?"
+        confirmText="remove"
+        danger
+        onConfirm={confirmDeleteRelationship}
+        onCancel={() => setRelationshipToDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(noteToDelete())}
+        title="Delete timeline entry?"
+        message="Delete this timeline entry?"
+        confirmText="delete"
+        danger
+        onConfirm={confirmDeleteNote}
+        onCancel={() => setNoteToDelete(null)}
+      />
+
+      <Dialog
+        open={Boolean(alertMessage())}
+        onClose={() => setAlertMessage(null)}
+        title="Notice"
+      >
+        <div style={{ display: "flex", "flex-direction": "column", gap: "1rem", padding: "0.5rem 0" }}>
+          <p>{alertMessage()}</p>
+          <div style={{ display: "flex", "justify-content": "flex-end" }}>
+            <Button onClick={() => setAlertMessage(null)}>[ ok ]</Button>
+          </div>
+        </div>
+      </Dialog>
     </main>
   );
 }

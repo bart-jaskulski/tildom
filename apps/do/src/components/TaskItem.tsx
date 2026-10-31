@@ -1,6 +1,6 @@
 import { Show, createEffect, createSignal, on, onCleanup } from "solid-js";
 import { Portal } from "solid-js/web";
-import { Button, Checkbox, Input, Textarea } from "@tildom/ui";
+import { Button, Checkbox, Input, Popover, PopoverItem, Textarea } from "@tildom/ui";
 import { formatDateInputValue, formatDueDateLabel, normalizeDateOnlyInput } from "~/lib/dates";
 import { deleteTask, updateTask, addTask, setTaskExpanded, isTaskExpanded } from "~/stores/taskStore";
 import type { Task, TreeNode } from "~/stores/taskStore";
@@ -207,16 +207,35 @@ export default function TaskItem(props: TaskItemProps) {
               </div>
             </Show>
 
-            {/* Quick Actions (Delete) */}
-            <div class="flex items-start shrink-0 opacity-100 sm:opacity-0 sm:group-hover/item:opacity-100 transition-opacity">
+            {/* Quick Actions Menu */}
+            <div class="flex items-start shrink-0">
               <Button
-                onClick={(e) => { e.stopPropagation(); deleteTask(props.id); }}
-                variant="text" danger
-                title="Delete"
-                aria-label="Delete task"
+                variant="text"
+                aria-label={`Actions for task: ${props.text}`}
+                popovertarget={`task-actions-${props.id}`}
+                style={{ "anchor-name": `--task-anchor-${props.id}` }}
+                class="text-muted hover:text-fg"
               >
-                [ DELETE ]
+                [ ··· ]
               </Button>
+              <Popover
+                id={`task-actions-${props.id}`}
+                anchorName={`--task-anchor-${props.id}`}
+                positionArea="bottom span-left"
+              >
+                <PopoverItem onClick={() => setIsEditing(true)}>
+                  [ edit ]
+                </PopoverItem>
+                <PopoverItem onClick={() => setIsEditingDueDate(true)}>
+                  {props.dueAt === null ? "[ set due date ]" : "[ edit due date ]"}
+                </PopoverItem>
+                <PopoverItem onClick={handleAddSubtaskTrigger}>
+                  [ add subtask ]
+                </PopoverItem>
+                <PopoverItem danger onClick={(e) => { e.stopPropagation(); deleteTask(props.id); }}>
+                  [ delete ]
+                </PopoverItem>
+              </Popover>
             </div>
           </div>
 

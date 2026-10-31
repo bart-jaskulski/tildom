@@ -55,4 +55,38 @@ describe("SyncSettings", () => {
     fireEvent.click(screen.getByRole("button", { name: "[ pair device ]" }));
     expect(await screen.findByRole("button", { name: "[ copy link ]" })).toBeInTheDocument();
   });
+
+  it("confirms disconnect with ConfirmDialog", async () => {
+    const handleDisconnect = vi.fn().mockResolvedValue(undefined);
+    const signals = {
+      isReady: () => true,
+      isPaired: () => true,
+      statusText: () => "synced",
+    };
+
+    render(() => (
+      <SyncSettings
+        signals={signals}
+        onSyncNow={vi.fn()}
+        onDisconnect={handleDisconnect}
+      />
+    ));
+
+    fireEvent.click(screen.getByRole("button", { name: "[ disconnect ]" }));
+    expect(screen.getByText("Disconnect sync?")).toBeInTheDocument();
+    expect(screen.getByText("Disconnect sync? Local data will remain on this device.")).toBeInTheDocument();
+
+    // Cancel
+    fireEvent.click(screen.getByRole("button", { name: "[ cancel ]" }));
+    expect(screen.queryByText("Disconnect sync?")).not.toBeInTheDocument();
+    expect(handleDisconnect).not.toHaveBeenCalled();
+
+    // Confirm
+    fireEvent.click(screen.getByRole("button", { name: "[ disconnect ]" }));
+    // In dialog, confirm button is [ disconnect ]
+    const confirmButtons = screen.getAllByRole("button", { name: "[ disconnect ]" });
+    fireEvent.click(confirmButtons[confirmButtons.length - 1]);
+
+    await vi.waitFor(() => expect(handleDisconnect).toHaveBeenCalledTimes(1));
+  });
 });

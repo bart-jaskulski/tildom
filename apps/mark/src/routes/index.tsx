@@ -2,7 +2,7 @@ import { Title } from "@solidjs/meta";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { For, Show, createEffect, createMemo, createResource, createSignal, onMount, onCleanup } from "solid-js";
 import { isServer } from "solid-js/web";
-import { Button, useVimKeymaps, type EditorHandle } from "@tildom/ui";
+import { Button, ConfirmDialog, useVimKeymaps, type EditorHandle } from "@tildom/ui";
 import ClipboardPaste from "lucide-solid/icons/clipboard-paste";
 import EntryComposer from "~/components/EntryComposer";
 import MobileEntryDialog from "~/components/MobileEntryDialog";
@@ -67,6 +67,8 @@ export default function Home() {
   let mobileComposer: HTMLDialogElement | undefined;
   const [error, setError] = createSignal<string | null>(null);
   const [isSaving, setIsSaving] = createSignal(false);
+  const [pendingDeleteEntryId, setPendingDeleteEntryId] = createSignal<string | null>(null);
+  const [isDeleting, setIsDeleting] = createSignal(false);
   const searchQuery = createMemo(() => String(params.q ?? "").trim());
   const domainFilter = createMemo(() => String(params.domain ?? "").trim().toLowerCase());
   const [results, { refetch }] = createResource(
@@ -229,17 +231,30 @@ export default function Home() {
     focusEntryComposer();
   };
 
-  const handleDelete = async (entryId: string) => {
-    if (!window.confirm("Delete this entry?")) {
-      return;
-    }
+  const handleDelete = (entryId: string) => {
+    setPendingDeleteEntryId(entryId);
+  };
 
+  const confirmDelete = async () => {
+    const entryId = pendingDeleteEntryId();
+    if (!entryId) return;
+
+    setIsDeleting(true);
     setError(null);
 
     try {
       await deleteEntry(entryId);
+      setPendingDeleteEntryId(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete entry");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    if (!isDeleting()) {
+      setPendingDeleteEntryId(null);
     }
   };
 
@@ -348,6 +363,17 @@ export default function Home() {
             </Show>
           </div>
         </Show>
+
+        <ConfirmDialog
+          open={Boolean(pendingDeleteEntryId())}
+          title="Delete entry?"
+          message="Delete this entry? This action cannot be undone."
+          confirmText="delete"
+          danger
+          isBusy={isDeleting()}
+          onConfirm={confirmDelete}
+          onCancel={cancelDelete}
+        />
       </>
   );
 }

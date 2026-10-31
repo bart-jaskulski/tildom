@@ -35,15 +35,19 @@
 }
 
 .editor :global(.cm-content) {
-  padding: 10px 1.5ch;
+  padding: 10px 1ch;
   min-height: 6rem;
   caret-color: var(--fg-default);
   font-family: inherit;
 }
 
+.editor :global(.cm-line) {
+  padding: 0;
+}
+
 /* Adjust padding on focus to avoid jump when border becomes 2px */
 .editor:focus-within :global(.cm-content) {
-  padding: 9px calc(1.5ch - 1px);
+  padding: 9px calc(1ch - 1px);
 }
 
 .editor :global(.cm-placeholder) {
@@ -58,11 +62,11 @@
 /* Compact variant */
 .compact :global(.cm-content) {
   min-height: 4.5rem;
-  padding: 8px 1.2ch;
+  padding: 8px 0.75ch;
 }
 
 .compact:focus-within :global(.cm-content) {
-  padding: 7px calc(1.2ch - 1px);
+  padding: 7px calc(0.75ch - 1px);
 }
 
 /* Borderless variant (e.g. for seamless inline editing) */

@@ -21,36 +21,38 @@ export default function ConfirmDialog(props: ConfirmDialogProps) {
   const cancelLabel = () => props.cancelText ?? "cancel";
 
   return (
-    <Dialog
-      open={props.open}
-      onClose={props.onCancel}
-      title={props.title}
-      class={props.class}
-    >
-      <div class={styles.container}>
-        <Show when={props.message}>
-          <div class={styles.message}>
-            {typeof props.message === "string" ? <p>{props.message}</p> : props.message}
-          </div>
-        </Show>
+    <Show when={props.open}>
+      <Dialog
+        open={props.open}
+        onClose={props.onCancel}
+        title={props.title}
+        class={props.class}
+      >
+        <div class={styles.container}>
+          <Show when={props.message}>
+            <div class={styles.message}>
+              {typeof props.message === "string" ? <p>{props.message}</p> : props.message}
+            </div>
+          </Show>
 
-        <div class={styles.actions}>
-          <Button
-            variant="text"
-            onClick={props.onCancel}
-            disabled={props.isBusy}
-          >
-            [ {cancelLabel()} ]
-          </Button>
-          <Button
-            danger={props.danger}
-            onClick={() => void props.onConfirm()}
-            disabled={props.isBusy}
-          >
-            {props.isBusy ? "[ processing... ]" : `[ ${confirmLabel()} ]`}
-          </Button>
+          <div class={styles.actions}>
+            <Button
+              variant="text"
+              onClick={props.onCancel}
+              disabled={props.isBusy}
+            >
+              [ {cancelLabel()} ]
+            </Button>
+            <Button
+              danger={props.danger}
+              onClick={() => void props.onConfirm()}
+              disabled={props.isBusy}
+            >
+              {props.isBusy ? "[ processing... ]" : `[ ${confirmLabel()} ]`}
+            </Button>
+          </div>
         </div>
-      </div>
-    </Dialog>
+      </Dialog>
+    </Show>
   );
 }

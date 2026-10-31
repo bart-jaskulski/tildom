@@ -7,7 +7,7 @@ import {
   renderMarkdownishToHtml,
   toggleMarkdownTask,
 } from "@tildom/markdownish";
-import { Button, Editor, TextButton, useVimKeymaps } from "@tildom/ui";
+import { Button, ConfirmDialog, Editor, Popover, PopoverItem, TextButton, useVimKeymaps } from "@tildom/ui";
 import ItemLoading from "~/components/ItemLoading";
 import { formatRelativeTimestamp, splitNoteIntoTitleAndBody } from "~/lib/entries";
 import { parseHashTags } from "~/lib/tags";
@@ -54,8 +54,30 @@ export default function ItemPage() {
   const [editingCommentBody, setEditingCommentBody] = createSignal("");
   const [commentSavingId, setCommentSavingId] = createSignal<string | null>(null);
   const [commentDeletingId, setCommentDeletingId] = createSignal<string | null>(null);
+  const [commentToDelete, setCommentToDelete] = createSignal<string | null>(null);
+  const [showDeleteEntryConfirm, setShowDeleteEntryConfirm] = createSignal(false);
   const [isEditing, setIsEditing] = createSignal(false);
   const [isDeleting, setIsDeleting] = createSignal(false);
+  let commentForm: HTMLFormElement | undefined;
+
+  const scrollCommentFormIntoView = () => {
+    if (typeof window === "undefined") return;
+    setTimeout(() => {
+      commentForm?.scrollIntoView({ block: "end", behavior: "smooth" });
+    }, 150);
+  };
+
+  createEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return;
+    const vv = window.visualViewport;
+    const onResize = () => {
+      if (commentForm && commentForm.contains(document.activeElement)) {
+        commentForm.scrollIntoView({ block: "end", behavior: "smooth" });
+      }
+    };
+    vv.addEventListener("resize", onResize);
+    onCleanup(() => vv.removeEventListener("resize", onResize));
+  });
   const [detail, { mutate }] = createResource(
     () => (!isServer && isEntryStoreReady() ? params.id ?? null : null),
     (entryId) => fetchEntryDetail(entryId),
@@ -155,9 +177,13 @@ export default function ItemPage() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
+    setShowDeleteEntryConfirm(true);
+  };
+
+  const confirmDeleteEntry = async () => {
     const currentEntry = entry();
-    if (!currentEntry || !window.confirm("Delete this entry?")) {
+    if (!currentEntry) {
       return;
     }
 
@@ -166,9 +192,11 @@ export default function ItemPage() {
 
     try {
       await deleteEntry(currentEntry.id);
+      setShowDeleteEntryConfirm(false);
       navigate("/", { replace: true });
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Failed to delete entry");
+      setShowDeleteEntryConfirm(false);
     } finally {
       setIsDeleting(false);
     }
@@ -238,10 +266,13 @@ export default function ItemPage() {
     }
   };
 
-  const handleCommentDelete = async (commentId: string) => {
-    if (!window.confirm("Delete this note?")) {
-      return;
-    }
+  const handleCommentDelete = (commentId: string) => {
+    setCommentToDelete(commentId);
+  };
+
+  const confirmDeleteComment = async () => {
+    const commentId = commentToDelete();
+    if (!commentId) return;
 
     setCommentDeletingId(commentId);
     setCommentActionError(null);
@@ -251,6 +282,7 @@ export default function ItemPage() {
       if (editingCommentId() === commentId) {
         cancelCommentEditing();
       }
+      setCommentToDelete(null);
       mutate((current) => current?.entry ? {
         ...current,
         entry: {
@@ -455,27 +487,31 @@ export default function ItemPage() {
                               innerHTML={renderMarkdownishToHtml(comment.body, { tasks: true })}
                               onClick={(event) => void handleCommentTaskClick(event, comment.id, comment.body)}
                             />
-                            <p class={styles.subtext}>
-                              {formatRelativeTimestamp(comment.createdAt)}
-                              <span> | </span>
-                              <TextButton
+                            <div class={styles.commentSubtext}>
+                              <time>{formatRelativeTimestamp(comment.createdAt)}</time>
+                              <Button
+                                variant="text"
                                 type="button"
-                                inline
-                                onClick={() => startCommentEditing(comment.id, comment.body)}
-                                disabled={commentDeletingId() === comment.id}
+                                class={styles.commentMenuTrigger}
+                                aria-label={`Actions for note from ${formatRelativeTimestamp(comment.createdAt)}`}
+                                popovertarget={`comment-actions-${comment.id}`}
+                                style={{ "anchor-name": `--comment-anchor-${comment.id}` }}
                               >
-                                edit
-                              </TextButton>
-                              <span> | </span>
-                              <TextButton
-                                type="button"
-                                inline
-                                onClick={() => handleCommentDelete(comment.id)}
-                                disabled={commentDeletingId() === comment.id}
+                                [ ··· ]
+                              </Button>
+                              <Popover
+                                id={`comment-actions-${comment.id}`}
+                                anchorName={`--comment-anchor-${comment.id}`}
+                                positionArea="bottom span-left"
                               >
-                                {commentDeletingId() === comment.id ? "deleting..." : "delete"}
-                              </TextButton>
-                            </p>
+                                <PopoverItem onClick={() => startCommentEditing(comment.id, comment.body)}>
+                                  [ edit ]
+                                </PopoverItem>
+                                <PopoverItem danger onClick={() => handleCommentDelete(comment.id)}>
+                                  {commentDeletingId() === comment.id ? "[ deleting... ]" : "[ delete ]"}
+                                </PopoverItem>
+                              </Popover>
+                            </div>
                           </>
                         }
                       >
@@ -514,7 +550,12 @@ export default function ItemPage() {
                   <p class="hn-error">{commentActionError()}</p>
                 </Show>
 
-                <form class="hn-form" onSubmit={submitComment}>
+                <form
+                  ref={commentForm}
+                  class="hn-form"
+                  onSubmit={submitComment}
+                  onFocusIn={scrollCommentFormIntoView}
+                >
                   <span id="comment-body-label" class="hn-label">add note</span>
                   <Editor
                     id="comment-body"
@@ -539,6 +580,32 @@ export default function ItemPage() {
             </>
           )}
         </Show>
+
+        <ConfirmDialog
+          open={showDeleteEntryConfirm()}
+          title="Delete entry?"
+          message="Delete this entry? This action cannot be undone."
+          confirmText="delete"
+          danger
+          isBusy={isDeleting()}
+          onConfirm={confirmDeleteEntry}
+          onCancel={() => {
+            if (!isDeleting()) setShowDeleteEntryConfirm(false);
+          }}
+        />
+
+        <ConfirmDialog
+          open={Boolean(commentToDelete())}
+          title="Delete note?"
+          message="Delete this note? This action cannot be undone."
+          confirmText="delete"
+          danger
+          isBusy={Boolean(commentDeletingId())}
+          onConfirm={confirmDeleteComment}
+          onCancel={() => {
+            if (!commentDeletingId()) setCommentToDelete(null);
+          }}
+        />
     </>
   );
 }

@@ -323,16 +323,18 @@
 }
 
 .timeline {
+  --timeline-rail-left: 1ch;
+  --timeline-indent: 3.25ch;
   position: relative;
   display: grid;
   gap: var(--space-6);
-  padding-left: 3.25ch;
+  padding-left: var(--timeline-indent);
 
   &::before {
     position: absolute;
-    top: var(--space-1);
+    top: 22px;
     bottom: var(--space-6);
-    left: var(--space-x-1);
+    left: var(--timeline-rail-left);
     width: 2px;
     background: var(--border-color);
     content: "";
@@ -361,10 +363,11 @@
 
 .marker {
   position: absolute;
-  top: var(--space-1);
-  left: -2.75ch;
+  top: 22px;
+  left: calc(var(--timeline-rail-left) - var(--timeline-indent) - 3px);
   width: 8px;
   height: 8px;
+  transform: translateY(-50%);
   background: var(--fg-muted);
 }
 
@@ -379,33 +382,43 @@
   gap: var(--space-x-1);
   color: var(--fg-muted);
   font-size: 11px;
+}
 
-  & > div {
-    display: flex;
-    align-items: center;
-    gap: var(--space-x-1);
-  }
+.metaLead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-x-1);
+  min-width: 0;
 }
 
 .timelineDate {
-  min-height: 44px;
-  padding: 0;
-  border: 0;
-  border-bottom: 1px dashed transparent;
-  background: transparent;
   color: var(--fg-muted);
-  cursor: pointer;
-  font: inherit;
+  font-size: 11px;
+}
+
+.pinnedLabel {
+  color: var(--syntax-keyword);
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.menuAnchor {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.menuTrigger {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 0.5ch;
+  color: var(--fg-muted);
+  font-size: 12px;
 
   &:hover,
   &:focus-visible {
-    border-bottom-color: var(--fg-muted);
     color: var(--fg-default);
   }
-}
-
-.timelineDateInput {
-  width: 18ch;
 }
 
 .noteEditForm {
@@ -422,8 +435,16 @@
 .noteEditActions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: var(--space-x-1);
+  flex-wrap: wrap;
+}
+
+.noteEditButtons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-x-1);
+  margin-left: auto;
 }
 
 :global(.markdownish-tag) {
@@ -493,20 +514,21 @@
     flex-direction: column;
     width: 100%;
     min-height: calc(100vh - 160px);
+    min-height: calc(100dvh - 160px);
   }
 
   .timeline,
   .logEmpty {
     order: 1;
-    margin-bottom: 112px;
+    margin-bottom: 140px;
   }
 
   .composer {
-    position: sticky;
-    bottom: 0;
-    z-index: 1;
     order: 2;
     margin: auto 0 0;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
     padding: var(--space-3) 0 max(var(--space-3), env(safe-area-inset-bottom));
     border-top: 1px solid var(--border-color);
     background: var(--bg-canvas);

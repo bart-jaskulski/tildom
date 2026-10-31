@@ -1,6 +1,6 @@
 import { For, Show, createEffect, createMemo, createResource, createSignal, onCleanup, onMount } from "solid-js";
 import { useNavigate, useSearchParams } from "@solidjs/router";
-import { Search, useVimKeymaps } from "@tildom/ui";
+import { ConfirmDialog, Search, useVimKeymaps } from "@tildom/ui";
 import AddPerson, { type AddPersonHandle } from "~/components/AddPerson";
 import AppNav from "~/components/AppNav";
 import PeopleLoading from "~/components/PeopleLoading";
@@ -26,6 +26,8 @@ export default function Home() {
 
   onMount(() => onCleanup(db.subscribe(() => void refetch())));
   const [activeIndex, setActiveIndex] = createSignal(0);
+  const [personToDelete, setPersonToDelete] = createSignal<(Contact | ContactSearchResult) | null>(null);
+  const [isDeleting, setIsDeleting] = createSignal(false);
   let addPerson: AddPersonHandle | undefined;
 
   const openPerson = async (id: string) => navigate(await fetchContactPath(id));
@@ -49,8 +51,20 @@ export default function Home() {
     { lhs: "G", callback: () => { setActiveIndex(Math.max(0, visiblePeople().length - 1)); scrollActiveIntoView(); }, help: "last person" },
     { lhs: ["e", "Enter"], callback: () => { const person = visiblePeople()[activeIndex()]; if (person) void openPerson(person.id); }, help: "open person" },
     { lhs: "i", callback: () => addPerson?.open(), help: "add person" },
-    { lhs: "d", callback: () => { const person = visiblePeople()[activeIndex()]; if (person && window.confirm(`Delete ${person.name}?`)) void deleteContact(person.id); }, help: "delete person" },
+    { lhs: "d", callback: () => { const person = visiblePeople()[activeIndex()]; if (person) setPersonToDelete(person); }, help: "delete person" },
   ]);
+
+  const confirmDeletePerson = async () => {
+    const person = personToDelete();
+    if (!person) return;
+    setIsDeleting(true);
+    try {
+      await deleteContact(person.id);
+      setPersonToDelete(null);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <main class="kin-page">
@@ -108,6 +122,18 @@ export default function Home() {
         </Show>
       </section>
 
+      <ConfirmDialog
+        open={Boolean(personToDelete())}
+        title={`Delete ${personToDelete()?.name ?? "person"}?`}
+        message={`Delete ${personToDelete()?.name ?? "this person"}? This also removes their notes and relationships.`}
+        confirmText="delete"
+        danger
+        isBusy={isDeleting()}
+        onConfirm={confirmDeletePerson}
+        onCancel={() => {
+          if (!isDeleting()) setPersonToDelete(null);
+        }}
+      />
     </main>
   );
 }

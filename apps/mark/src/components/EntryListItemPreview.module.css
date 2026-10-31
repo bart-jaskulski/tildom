@@ -1,8 +1,7 @@
 .row {
   position: relative;
-  touch-action: pan-y;
   border-left: 2px solid var(--border-color);
-  transition: background-color 0.15s ease-out, border-color 0.15s ease-out, transform 0.2s ease-out;
+  transition: background-color 0.15s ease-out, border-color 0.15s ease-out;
   padding-inline: var(--space-x-1-5);
   padding-block: var(--space-1);
 
@@ -15,14 +14,6 @@
     border-left-color: var(--syntax-keyword);
     background: var(--syntax-bg-active);
   }
-}
-
-.swiping {
-  transition: none !important;
-}
-
-.swipeDelete {
-  border-left-color: var(--syntax-error) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -88,55 +79,55 @@
 
 .meta {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-x-1);
   margin-top: var(--space-1);
   color: var(--fg-muted);
   font-size: 12px;
 }
 
-.readLink {
-  color: var(--fg-default);
-  font-weight: bold;
-
-  &:hover {
-    color: var(--syntax-keyword);
-  }
+.metaLead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-x-1);
+  min-width: 0;
 }
 
-.deleteButton {
-  display: none;
+.menuAnchor {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.menuTrigger {
+  min-height: 44px;
+  min-width: 44px;
+  margin: -10px 0;
+  padding: 0 0.5ch;
+  color: var(--fg-muted);
+  font-size: 12px;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--fg-default);
+  }
 }
 
 @media (min-width: 769px) {
-  .deleteButton {
-    display: inline-flex;
-    align-items: center;
-    padding: 0;
-    border: none;
-    background: transparent;
-    font-family: inherit;
-    font-size: 12px;
-    line-height: 1.4;
-    color: var(--fg-muted);
-    cursor: pointer;
-    flex-shrink: 0;
+  .menuTrigger {
+    min-height: 24px;
+    min-width: auto;
+    margin: 0;
     opacity: 0;
     transition: opacity 0.15s ease-out, color 0.15s ease-out;
-
-    &:hover {
-      color: var(--syntax-error);
-    }
-
-    &:focus-visible {
-      opacity: 1;
-      outline: 1px solid var(--border-focus);
-    }
   }
 
-  .row:hover .deleteButton,
-  .row.activeRow .deleteButton {
+  .row:hover .menuTrigger,
+  .row.activeRow .menuTrigger,
+  .menuTrigger:focus-visible {
     opacity: 1;
   }
 }
