@@ -1,60 +1,56 @@
-@import "tailwindcss";
 @import "@tildom/ui/base.css";
 
-@theme {
-  --color-canvas: var(--bg-canvas);
-  --color-surface: var(--bg-surface);
-  --color-fg: var(--fg-default);
-  --color-muted: var(--fg-muted);
-  --color-keyword: var(--syntax-keyword);
-  --color-string: var(--syntax-string);
-  --color-comment: var(--syntax-comment);
-  --color-error: var(--syntax-error);
-  --color-active: var(--syntax-bg-active);
-  --color-border: var(--border-color);
-  --color-highlight-blue: var(--highlight-blue);
-
-  --spacing-ch-half: var(--space-x-half);
-  --spacing-ch-1: var(--space-x-1);
-  --spacing-ch-1-5: var(--space-x-1-5);
-  --spacing-ch-2: var(--space-x-2);
-  --spacing-ch-3: var(--space-x-3);
-  --spacing-ch-4: calc(var(--space-ch) * 4);
-}
-
-/* Layout Rails & Guides */
-.tui-container {
-  max-width: 120ch;
-  width: 100%;
-  margin: 0 auto;
-  padding: var(--space-10) var(--space-x-3);
+/* App Shell & Layout */
+.do-page {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: var(--bg-canvas);
+  color: var(--fg-default);
 }
 
-/* Custom utility for monospace gutters & numbering */
-.tui-gutter {
-  width: var(--space-x-3);
-  text-align: right;
-  color: var(--fg-muted);
-  user-select: none;
+.tui-container {
+  width: 100%;
+  max-width: 80ch;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-x-3) var(--space-16);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.do-section {
+  margin-bottom: var(--space-6);
+}
+
+.do-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-2);
+}
+
+/* Monospace Buffer Header */
+.buffer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-bottom: 1px solid var(--fg-default);
+  padding-bottom: var(--space-1);
+  margin-bottom: var(--space-4);
   font-size: 12px;
+  font-weight: bold;
+  color: var(--fg-muted);
+  letter-spacing: 0.05em;
 }
 
-/* Custom list items with guide rails */
-.tui-item-row {
-  border-left: 2px solid var(--border-color);
-  padding: var(--space-3) 0 var(--space-3) calc(var(--space-x-2) + var(--space-x-half));
-  position: relative;
-  transition: all 0.1s ease-out;
+.task-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 300px;
 }
 
-.tui-item-row:hover,
-.tui-item-row.active-row {
-  border-left-color: var(--syntax-keyword);
-  background: var(--syntax-bg-active);
-}
-
+/* Headings */
 .tui-heading {
   margin: 0 0 var(--space-4);
   font-size: 16px;
@@ -71,6 +67,356 @@
   content: "■";
   color: var(--syntax-keyword);
   font-size: 10px;
+}
+
+/* Tasks Tree & Nodes */
+.task-tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.task-node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.task-row-container {
+  position: relative;
+  width: 100%;
+}
+
+.subtask-toggle-bar {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-canvas);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.subtask-toggle-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--highlight-blue);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.subtask-toggle-btn:hover {
+  text-decoration: underline;
+  color: var(--syntax-keyword);
+}
+
+.subtask-branch {
+  position: relative;
+  padding-left: var(--space-6);
+  margin-left: calc(var(--space-x-2) - 1px);
+  border-left: 2px solid var(--border-color);
+  padding-bottom: var(--space-3);
+  padding-top: var(--space-2);
+}
+
+/* Task Item Row with Guide Rail */
+.task-item-wrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.task-item-row {
+  border-left: 2px solid var(--border-color);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-color);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  transition: background-color 0.1s ease, border-color 0.1s ease;
+}
+
+.task-item-row:hover,
+.task-item-row.is-editing {
+  border-left-color: var(--syntax-keyword);
+  background: var(--syntax-bg-active);
+}
+
+.task-controls {
+  padding-top: 2px;
+  flex-shrink: 0;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.task-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.task-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.task-text {
+  width: 100%;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--fg-default);
+  cursor: text;
+  word-break: break-word;
+}
+
+.task-text.is-completed {
+  text-decoration: line-through;
+  color: var(--fg-muted);
+}
+
+.task-actions {
+  display: flex;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+
+.task-action-btn {
+  color: var(--fg-muted);
+}
+
+.task-action-btn:hover {
+  color: var(--fg-default);
+}
+
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.inline-subtask-form {
+  padding: var(--space-2) var(--space-4) var(--space-3) calc(var(--space-x-3) + var(--space-x-1));
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-canvas);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.inline-subtask-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.inline-subtask-input {
+  flex: 1;
+}
+
+.inline-subtask-label {
+  font-size: 12px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.inline-subtask-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.date-picker-hidden {
+  position: fixed;
+  z-index: 90;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Quick Composer / Prompt */
+.task-prompt-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--bg-canvas);
+  border-top: 2px solid var(--border-color);
+  transition: transform 0.2s ease-out;
+}
+
+.task-prompt-inner {
+  max-width: 80ch;
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+
+.btn-full {
+  width: 100%;
+}
+
+.prompt-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.prompt-actions-right {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.prompt-row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.prompt-due-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.prompt-due-label {
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+
+.clarification-callout {
+  border-left: 3px solid var(--highlight-blue);
+  background: var(--bg-canvas);
+  padding: var(--space-3);
+  font-size: 13px;
+  color: var(--syntax-string);
+}
+
+.prompt-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  border-top: 1px solid var(--border-color);
+  padding-top: var(--space-3);
+}
+
+.prompt-error {
+  font-size: 12px;
+  color: var(--syntax-error);
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+/* Settings Views */
+.workspace-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-2);
+}
+
+.workspace-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  padding: var(--space-2) var(--space-3);
+}
+
+.workspace-info {
+  min-width: 0;
+}
+
+.workspace-name {
+  font-size: 14px;
+  font-weight: bold;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-active-badge {
+  color: var(--fg-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.workspace-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.storage-badge {
+  font-size: 12px;
+  font-weight: bold;
+  border: 1px solid var(--border-color);
+  padding: 2px var(--space-2);
+  background: var(--bg-canvas);
+}
+
+.settings-radio-group {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.settings-status-text {
+  font-size: 14px;
+}
+
+/* Pair View */
+.pair-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* 404 View */
+.not-found-container {
+  justify-content: center;
+  padding-top: var(--space-16);
+  padding-bottom: var(--space-16);
+}
+
+.not-found-card {
+  border: 2px solid var(--fg-default);
+  background: var(--bg-surface);
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.not-found-label {
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+.not-found-title {
+  font-size: 20px;
+  font-weight: bold;
+  text-transform: uppercase;
+  color: var(--fg-default);
+  margin: 0;
+}
+
+.not-found-desc {
+  font-size: 14px;
+  color: var(--fg-muted);
+  margin: 0;
 }
 
 /* Offline Banner */

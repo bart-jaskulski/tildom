@@ -7,8 +7,8 @@ import Home from "./routes/index";
 import PersonLoading from "./routes/person/PersonLoading";
 import LockScreen from "./components/LockScreen";
 import { initializeSync } from "./lib/syncClient";
-import { initializeContactStore, isContactStoreReady } from "./stores/contactStore";
-import { initBiometrics, isBiometricEnabled, isUnlocked } from "./lib/biometrics";
+import { initializeContactStore, isContactStoreReady, clearContactStore } from "./stores/contactStore";
+import { initBiometrics, isBiometricEnabled, isUnlocked, setOnBiometricLock } from "./lib/biometrics";
 import { pwaInstall } from "./lib/pwaInstall";
 import "./app.css";
 
@@ -64,6 +64,7 @@ function RouteLoading() {
 export default function App() {
   onMount(() => {
     pwaInstall.initialize();
+    setOnBiometricLock(clearContactStore);
     initBiometrics();
   });
 

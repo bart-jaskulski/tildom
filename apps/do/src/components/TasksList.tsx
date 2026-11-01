@@ -37,7 +37,7 @@ type TaskBranchProps = TasksListProps & { expansion: ExpansionState };
 function TaskBranch(props: TaskBranchProps) {
   const level = props.level ?? 0;
   return (
-    <ol class="flex flex-col">
+    <ol class="task-tree">
       <For each={props.tasks} fallback={props.emptyState}>
         {(task => (
           <TaskNode
@@ -74,16 +74,16 @@ function TaskNode(props: TaskNodeProps) {
   const collapse = () => props.expansion.setExpanded(props.node.id, false);
 
   return (
-    <li class="relative flex flex-col" data-task-id={props.node.id}>
-      <div class="relative w-full">
+    <li class="task-node" data-task-id={props.node.id}>
+      <div class="task-row-container">
         <TaskItem {...props.node}/>
 
         {/* Flat TUI Subtask Indicator/Button */}
         <Show when={hasChildren() && !isExpanded()}>
-          <div class="px-4 py-2 bg-canvas border-b border-border flex items-center">
+          <div class="subtask-toggle-bar">
             <button
               type="button"
-              class="text-xs font-mono text-highlight-blue hover:underline cursor-pointer"
+              class="subtask-toggle-btn"
               onClick={expand}
               aria-label={`Show ${props.node.children.length} subtasks`}
             >
@@ -94,16 +94,14 @@ function TaskNode(props: TaskNodeProps) {
       </div>
 
       <Show when={hasChildren() && isExpanded()}>
-        <div class="relative pl-6 ml-3.5 border-l-2 border-border pb-3">
-          <div class="pt-2">
-            <TaskBranch
-              tasks={props.node.children}
-              level={(props.level ?? 0) + 1}
-              defaultExpanded={props.defaultExpanded}
-              expansion={props.expansion}
-              emptyState={props.emptyState}
-            />
-          </div>
+        <div class="subtask-branch">
+          <TaskBranch
+            tasks={props.node.children}
+            level={(props.level ?? 0) + 1}
+            defaultExpanded={props.defaultExpanded}
+            expansion={props.expansion}
+            emptyState={props.emptyState}
+          />
         </div>
       </Show>
     </li>

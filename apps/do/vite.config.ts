@@ -1,4 +1,3 @@
-import tailwindcss from "@tailwindcss/vite";
 import solid from "vite-plugin-solid";
 import { defineConfig } from "vite";
 import { tildomPwa } from "@tildom/config/pwa";
@@ -8,7 +7,6 @@ export default defineConfig(() => {
   return tildomAppConfig(import.meta.url, {
     plugins: [
       solid(),
-      tailwindcss(),
       tildomPwa({
         name: "do.tildom",
         short_name: "do",

@@ -14,6 +14,7 @@ import {
   reportUserActivity,
   STORAGE_CRED_ID,
   STORAGE_ENABLED,
+  setOnBiometricLock,
   unlockWithBiometrics,
 } from "../lib/biometrics";
 
@@ -21,6 +22,7 @@ describe("Biometrics lock logic", () => {
   beforeEach(() => {
     localStorage.clear();
     refreshBiometricState();
+    setOnBiometricLock(null);
     vi.restoreAllMocks();
   });
 
@@ -89,12 +91,15 @@ describe("Biometrics lock logic", () => {
   });
 
   it("locks the app and clears memory on lockBiometrics", () => {
+    const onLock = vi.fn();
+    setOnBiometricLock(onLock);
     localStorage.setItem(STORAGE_ENABLED, "true");
     localStorage.setItem(STORAGE_CRED_ID, "test-cred-id");
     refreshBiometricState();
 
     lockBiometrics();
     expect(isUnlocked()).toBe(false);
+    expect(onLock).toHaveBeenCalled();
   });
 
   it("unlocks when biometric assertion succeeds", async () => {

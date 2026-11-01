@@ -232,13 +232,13 @@ export default function TaskPrompt(props: TaskPromptProps) {
     <>
       {/* TUI FIXED BOTTOM BAR BUTTON */}
       <div
-        class="fixed bottom-0 left-0 right-0 z-50 bg-canvas border-t-2 border-border transition-transform duration-200"
-        style={{ transform: props.visible && !isOpen() ? 'translateY(0)' : 'translateY(100%)' }}
+        class="task-prompt-bar"
+        style={{ transform: props.visible && !isOpen() ? "translateY(0)" : "translateY(100%)" }}
       >
-        <div class="max-w-xl mx-auto p-4">
+        <div class="task-prompt-inner">
           <Button
             onClick={handleOpen}
-            class="w-full"
+            class="btn-full"
           >
             <span>[ ADD NEW TASK ]</span>
           </Button>
@@ -247,16 +247,16 @@ export default function TaskPrompt(props: TaskPromptProps) {
 
       <Show when={isOpen()}>
         <Dialog open={isOpen()} onClose={handleClose} title={mode() === "clarify" ? "Clarify task" : "Add task"} hideCloseButton>
-          <div class="flex justify-end">
+          <div class="prompt-actions-right">
             <Button variant="text" onClick={handleClose} aria-label="Close task composer">[ CLOSE ]</Button>
           </div>
             <Show when={error()}><StatusBanner type="error">{error()}</StatusBanner></Show>
             <form
               onSubmit={(event) => void handleSubmit(event)}
-              class="flex flex-col gap-4"
+              class="prompt-form"
             >
               <Show when={mode() === "default"}>
-                <div class="w-full">
+                <div>
                   <Textarea
                     ref={textareaRef}
                     placeholder="What needs to be done?"
@@ -271,10 +271,10 @@ export default function TaskPrompt(props: TaskPromptProps) {
                   />
                 </div>
 
-                <div class="flex flex-col gap-3 pt-2">
+                <div class="prompt-form">
                   {/* Bracket-styled due date button */}
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs font-mono text-muted">DUE DATE:</span>
+                  <div class="prompt-due-row">
+                    <span class="prompt-due-label">DUE DATE:</span>
                     <Input
                       type="date"
                       aria-label="Choose due date"
@@ -284,7 +284,7 @@ export default function TaskPrompt(props: TaskPromptProps) {
                   </div>
 
                   {/* AI Breakdown checkbox */}
-                  <div class="flex items-center justify-between">
+                  <div class="prompt-row-between">
                     <Checkbox
                       checked={isAiEnabled()}
                       onChange={setIsAiEnabled}
@@ -303,15 +303,15 @@ export default function TaskPrompt(props: TaskPromptProps) {
                 </div>
 
                 <Show when={isAiEnabled() && !isOnline()}>
-                  <p class="text-xs text-error font-bold uppercase pt-1">
+                  <p class="prompt-error">
                     ! AI breakdown needs network. Saving as local-only task.
                   </p>
                 </Show>
               </Show>
 
               <Show when={mode() === "clarify"}>
-                <div class="flex flex-col gap-4">
-                  <div class="border-l-4 border-highlight-blue bg-canvas p-3 text-xs font-mono text-string">
+                <div class="prompt-form">
+                  <div class="clarification-callout">
                     {clarification()}
                   </div>
 
@@ -327,7 +327,7 @@ export default function TaskPrompt(props: TaskPromptProps) {
                     />
                   </div>
 
-                  <div class="flex justify-end gap-2 border-t border-border pt-3">
+                  <div class="prompt-footer">
                     <Button
                       type="button"
                       onClick={() => { setMode("default"); setClarification(""); }}
@@ -343,7 +343,7 @@ export default function TaskPrompt(props: TaskPromptProps) {
                     </Button>
                   </div>
                   <Show when={!isOnline()}>
-                    <p class="text-xs text-error font-bold uppercase">
+                    <p class="prompt-error">
                       ! Reconnect to continue AI clarification flow.
                     </p>
                   </Show>

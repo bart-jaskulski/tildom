@@ -109,18 +109,18 @@ export default function Home() {
   };
 
   return (
-    <div class="min-h-screen flex flex-col font-mono text-fg bg-canvas">
+    <div class="do-page">
       <Title>do.tildom</Title>
 
       <AppNav active="tasks" />
 
       {/* Main Container */}
-      <div class="tui-container max-w-xl mx-auto flex-1 pb-40">
+      <div class="tui-container">
         
         {/* Workspace Switcher in TUI Style */}
-        <section class="mb-6">
+        <section class="do-section">
           <h2 class="tui-heading">Workspaces</h2>
-          <div class="flex flex-wrap gap-x-4 gap-y-2 mt-2">
+          <div class="do-radio-group">
             <For each={workspaces()}>
               {(workspace) => {
                 const isSelected = () => selectedWorkspaceId() === workspace.id;
@@ -138,9 +138,9 @@ export default function Home() {
         </section>
 
         {/* List Filters in Bracket-TUI Style */}
-        <section class="mb-6">
+        <section class="do-section">
           <h2 class="tui-heading">Filter</h2>
-          <div class="flex flex-wrap gap-x-4 mt-2">
+          <div class="do-radio-group">
             <For each={LIST_FILTER_OPTIONS}>
               {(option) => {
                 const isSelected = () => listFilter() === option;
@@ -158,18 +158,18 @@ export default function Home() {
         </section>
 
         {/* Task List Header */}
-        <div class="border-b border-fg pb-1 mb-4 flex justify-between items-end">
-          <span class="text-xs font-bold text-muted tracking-wider">
+        <div class="buffer-header">
+          <span>
             {`BUFFER: tasks.db (${visibleTasks().length} items)`}
           </span>
-          <span class="text-xs font-bold text-muted">
+          <span>
             ORDER: URGENCY_RANKING
           </span>
         </div>
 
         {/* Tasks List */}
         <main 
-          class="flex-1 overflow-y-auto min-h-[300px]"
+          class="task-scroll-area"
           onScroll={handleScroll}
         >
           <TasksList

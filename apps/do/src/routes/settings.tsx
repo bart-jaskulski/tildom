@@ -133,7 +133,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div class="min-h-screen flex flex-col font-mono text-fg bg-canvas">
+    <div class="do-page">
       <Title>settings · do.tildom</Title>
       <AppNav active="settings" />
 
@@ -147,7 +147,7 @@ export default function SettingsPage() {
                 </Button>
               </Show>
               <Show when={!pwaInstall.available() && pwaInstall.needsSafariInstructions()}>
-                <span class="text-muted text-sm">In Safari, use Share → Add to Home Screen.</span>
+                <span class="settings-status-text">In Safari, use Share → Add to Home Screen.</span>
               </Show>
             </SettingsRow>
           </SettingsSection>
@@ -165,20 +165,20 @@ export default function SettingsPage() {
             </Button>
           </SettingsRow>
 
-          <div class="flex flex-col gap-2 w-full mt-2">
+          <div class="workspace-list">
             <For each={workspaces()}>
               {(workspace) => {
                 const isSelected = () => selectedWorkspaceId() === workspace.id;
                 return (
-                  <div class="flex items-center justify-between border border-border bg-surface p-2">
-                    <div class="min-w-0 font-mono">
-                      <span class="text-sm font-bold block truncate">{workspace.name}</span>
+                  <div class="workspace-item">
+                    <div class="workspace-info">
+                      <span class="workspace-name">{workspace.name}</span>
                       <Show when={isSelected()}>
-                        <span class="text-muted text-xs uppercase">[ ACTIVE ]</span>
+                        <span class="workspace-active-badge">[ ACTIVE ]</span>
                       </Show>
                     </div>
 
-                    <div class="flex items-center gap-2">
+                    <div class="workspace-actions">
                       <Button
                         type="button"
                         bracket
@@ -205,7 +205,7 @@ export default function SettingsPage() {
         {/* Task Breakdown AI Preference */}
         <SettingsSection title="task breakdown">
           <SettingsRow label="granularity" hint="AI subtask detail">
-            <div class="flex gap-4">
+            <div class="settings-radio-group">
               <For each={BREAKDOWN_GRANULARITY_OPTIONS}>
                 {(level) => (
                   <RadioButton
@@ -223,7 +223,7 @@ export default function SettingsPage() {
         {/* Sync & Encryption Section */}
         <SettingsSection title="sync">
           <SettingsRow label="status">
-            <span class="text-sm">
+            <span class="settings-status-text">
               {syncSignals.isPaired()
                 ? `${getSyncStatus()} · rev ${formatLastSync()}`
                 : "unpaired · local only"}
@@ -251,8 +251,8 @@ export default function SettingsPage() {
         {/* Persistent Storage Diagnostic */}
         <SettingsSection title="storage">
           <SettingsRow label="durability">
-            <div class="flex items-center gap-3">
-              <span class="text-xs font-bold border border-border px-2 py-0.5 bg-canvas">
+            <div class="workspace-actions">
+              <span class="storage-badge">
                 {storageLabel()}
               </span>
               <Show when={storageStatus() === "not-persisted"}>

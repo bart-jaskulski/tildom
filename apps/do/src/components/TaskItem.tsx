@@ -146,14 +146,14 @@ export default function TaskItem(props: TaskItemProps) {
   };
 
   return (
-    <div class="relative w-full group/item flex flex-col">
+    <div class="task-item-wrapper">
       <div
-        class={`tui-item-row flex items-start gap-4 bg-surface border-b border-border transition-colors hover:bg-active ${
-          isEditing() ? "bg-active border-l-keyword" : ""
+        class={`task-item-row ${
+          isEditing() ? "is-editing" : ""
         }`}
       >
         {/* Monospace Checkbox [ ] or [x] with collapse toggle [-] / [+] */}
-        <div class="pt-0.5 shrink-0 select-none flex items-center gap-1.5">
+        <div class="task-controls">
           <Checkbox
             aria-label={props.completed ? "Mark task incomplete" : "Complete task"}
             checked={props.completed}
@@ -173,8 +173,8 @@ export default function TaskItem(props: TaskItemProps) {
         </div>
 
         {/* Task Text Content */}
-        <div class="flex-1 min-w-0 flex flex-col gap-2">
-          <div class="flex items-start justify-between gap-3">
+        <div class="task-body">
+          <div class="task-main">
             <Show when={!isEditing()} fallback={
               <Textarea
                 ref={inputRef}
@@ -198,8 +198,8 @@ export default function TaskItem(props: TaskItemProps) {
               />
             }>
               <div
-                class={`w-full font-mono text-sm leading-normal text-fg cursor-text break-words ${
-                  props.completed ? 'line-through text-muted' : ''
+                class={`task-text ${
+                  props.completed ? "is-completed" : ""
                 }`}
                 onClick={() => setIsEditing(true)}
               >
@@ -208,13 +208,13 @@ export default function TaskItem(props: TaskItemProps) {
             </Show>
 
             {/* Quick Actions Menu */}
-            <div class="flex items-start shrink-0">
+            <div class="task-actions">
               <Button
                 variant="text"
                 aria-label={`Actions for task: ${props.text}`}
                 popovertarget={`task-actions-${props.id}`}
                 style={{ "anchor-name": `--task-anchor-${props.id}` }}
-                class="text-muted hover:text-fg"
+                class="task-action-btn"
               >
                 [ ··· ]
               </Button>
@@ -240,7 +240,7 @@ export default function TaskItem(props: TaskItemProps) {
           </div>
 
           {/* Date Selector Badge & Action Badges */}
-          <div class="flex items-center gap-2">
+          <div class="task-meta">
             <Button
               ref={dueDateButtonRef}
               type="button"
@@ -264,13 +264,13 @@ export default function TaskItem(props: TaskItemProps) {
 
       {/* Inline Subtask Input Form */}
       <Show when={isAddingSubtask()}>
-        <div class="pl-ch-4 pr-4 py-2 border-b border-border bg-canvas flex flex-col gap-2 font-mono">
-          <div class="flex items-center gap-2">
-            <span class="text-xs text-muted">❯ ADD STEP:</span>
+        <div class="inline-subtask-form">
+          <div class="inline-subtask-row">
+            <span class="inline-subtask-label">❯ ADD STEP:</span>
             <Input
               ref={subtaskInputRef}
               type="text"
-              class="flex-1"
+              class="inline-subtask-input"
               placeholder="What needs to be done?"
               value={subtaskDraft()}
               onInput={(e) => setSubtaskDraft(e.currentTarget.value)}
@@ -286,7 +286,7 @@ export default function TaskItem(props: TaskItemProps) {
               }}
             />
           </div>
-          <div class="flex justify-end gap-2">
+          <div class="inline-subtask-actions">
             <Button
               type="button"
               onClick={cancelSubtask}
@@ -312,7 +312,7 @@ export default function TaskItem(props: TaskItemProps) {
               ref={dueDateInputRef}
               type="date"
               aria-label="Choose due date"
-              class="fixed z-[90] opacity-0 pointer-events-none"
+              class="date-picker-hidden"
               style={{
                 top: `${anchor().top}px`,
                 left: `${anchor().left}px`,

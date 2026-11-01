@@ -161,7 +161,6 @@ const taskStore = createRoot(() => {
     expandedTaskIds: {} as Record<string, boolean>,
     workspaces: [] as Workspace[],
     selectedWorkspaceId: null as string | null,
-    isSynced: false,
   });
 
   const setSelectedWorkspace = (workspaceId: string | null) => {
@@ -222,7 +221,6 @@ const taskStore = createRoot(() => {
       try {
         await db.init();
         await refreshWorkspaceState(readSelectedWorkspacePreference());
-        setState("isSynced", true);
       } catch (err) {
         console.error("Failed to initialize task store:", err);
       }
@@ -288,7 +286,6 @@ export { initializeTaskStore, tasks };
 export const workspaces = () => state.workspaces;
 export const selectedWorkspaceId = () => state.selectedWorkspaceId;
 
-export const rawTasks = state.tasks;
 export const isTaskExpanded = (taskId: string) => Boolean(state.expandedTaskIds[taskId]);
 export const setTaskExpanded = (taskId: string, value: boolean) => {
   setState("expandedTaskIds", taskId, value);

@@ -4,7 +4,6 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 const joinSyncVault = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 vi.mock("~/components/AppNav", () => ({ default: () => <nav /> }));
 vi.mock("@solidjs/meta", () => ({ Title: () => null }));
-vi.mock("~/components/DevicePairing", () => ({ QRDisplay: () => null }));
 vi.mock("~/lib/sync", () => ({
   createSyncVault: vi.fn(), disconnectSync: vi.fn(), initializeSync: vi.fn().mockResolvedValue(undefined),
   joinSyncVault,

@@ -1,6 +1,9 @@
 import { createSignal } from "solid-js";
 import { base64UrlDecode, base64UrlEncode } from "@tildom/sync-client";
-import { clearContactStore } from "~/stores/contactStore";
+let onLockHandler: (() => void) | null = null;
+export const setOnBiometricLock = (handler: (() => void) | null) => {
+  onLockHandler = handler;
+};
 
 export const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 export const STORAGE_ENABLED = "kin:biometric_lock";
@@ -55,7 +58,7 @@ export const refreshBiometricState = () => {
 export const lockBiometrics = () => {
   if (!isBiometricEnabled()) return;
   setIsUnlocked(false);
-  clearContactStore();
+  onLockHandler?.();
 };
 
 export const checkIdleLock = () => {

@@ -1,9 +1,8 @@
 import AppNav from "~/components/AppNav";
 import { Show, createSignal, onMount } from "solid-js";
 import { Title } from "@solidjs/meta";
-import { Button, ConfirmDialog, Input } from "@tildom/ui";
+import { Button, ConfirmDialog, Input, QRDisplay } from "@tildom/ui";
 import { buildPairingUrl, clearPairingHash, parsePairingSecret } from "@tildom/sync-client";
-import { QRDisplay } from "~/components/DevicePairing";
 import { createSyncVault, disconnectSync, initializeSync, joinSyncVault, syncSignals } from "~/lib/sync";
 import { syncState } from "~/lib/syncState";
 
@@ -53,10 +52,10 @@ export default function PairPage() {
   };
 
   return (
-    <div class="min-h-screen flex flex-col">
+    <div class="do-page">
       <Title>pair · do.tildom</Title>
       <AppNav active="pair" />
-      <main class="tui-container max-w-xl mx-auto gap-6 pb-20">
+      <main class="tui-container pair-container">
         <h1 class="tui-heading">Sync & pairing</h1>
         <p>Your tasks stay on this device. Pairing adds encrypted snapshot sync.</p>
         <Show when={pendingSecret()}>
@@ -68,7 +67,7 @@ export default function PairPage() {
           <Button disabled={busy()} onClick={() => void run(createSyncVault)}>Create sync vault</Button>
         </Show>
         <Show when={joinUrl()}>
-          <QRDisplay joinUrl={joinUrl()} />
+          <QRDisplay value={joinUrl()} />
           <label for="pair-link">Pairing link</label>
           <Input id="pair-link" readOnly value={joinUrl()} />
           <Button disabled={busy()} onClick={() => void run(async () => {

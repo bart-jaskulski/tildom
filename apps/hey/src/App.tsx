@@ -42,7 +42,20 @@ import {
 } from "./lib/store";
 import type { Chat, MemoryFile, Message, SearchResult, Settings } from "./lib/types";
 import { pwaInstall } from "./lib/pwaInstall";
-import { Button, Checkbox, ConfirmDialog, Dialog, Input, Search, Select, Textarea } from "@tildom/ui";
+import {
+  Button,
+  Checkbox,
+  ConfirmDialog,
+  Dialog,
+  Input,
+  Search,
+  Select,
+  SettingsActions,
+  SettingsContainer,
+  SettingsRow,
+  SettingsSection,
+  Textarea,
+} from "@tildom/ui";
 import AppHeader from "./components/AppHeader";
 import ChatWorkspace from "./components/ChatWorkspace";
 import MemoryWorkspace from "./components/MemoryWorkspace";
@@ -424,11 +437,9 @@ function Workspace(props: RouteSectionProps) {
               />),
     memory: () => (<MemoryWorkspace groups={memoryGroups} active={activeMemory} activePath={activeMemoryPath} draft={memoryDraft} setDraft={setMemoryDraft} mobileOpen={mobileMemoryOpen} setMobileOpen={setMobileMemoryOpen} openFile={openMemory} save={saveMemory} />),
     settings: () => (<Show when={settings()}>
-              {(preferences) => <section class="settings">
-                <section class="settings-section">
-                  <h1>Agent</h1>
-                  <label class="setting-line">
-                    <span>tone</span>
+              {(preferences) => <SettingsContainer>
+                <SettingsSection title="Agent">
+                  <SettingsRow label="tone">
                     <Select
                       value={preferences().tone}
                       onChange={(event) => void savePreferences({ ...preferences(), tone: event.currentTarget.value as Settings["tone"] })}
@@ -437,9 +448,8 @@ function Workspace(props: RouteSectionProps) {
                       <option value="balanced">balanced</option>
                       <option value="direct">direct</option>
                     </Select>
-                  </label>
-                  <label class="setting-line">
-                    <span>response length</span>
+                  </SettingsRow>
+                  <SettingsRow label="response length">
                     <Select
                       value={preferences().responseLength}
                       onChange={(event) => void savePreferences({ ...preferences(), responseLength: event.currentTarget.value as Settings["responseLength"] })}
@@ -448,43 +458,44 @@ function Workspace(props: RouteSectionProps) {
                       <option value="balanced">balanced</option>
                       <option value="detailed">detailed</option>
                     </Select>
-                  </label>
-                  <label class="instructions">
-                    <span>instructions</span>
+                  </SettingsRow>
+                  <SettingsRow label="instructions" align="top">
                     <Textarea
                       rows="4"
                       value={preferences().instructions}
                       onChange={(event) => void savePreferences({ ...preferences(), instructions: event.currentTarget.value })}
                     />
-                  </label>
-                </section>
+                  </SettingsRow>
+                </SettingsSection>
 
-                <section class="settings-section">
-                  <h2>Memory</h2>
-                  <Checkbox checked={preferences().memoryEnabled} onChange={(checked) => void savePreferences({ ...preferences(), memoryEnabled: checked })} label="use memory" />
-                </section>
+                <SettingsSection title="Memory">
+                  <SettingsRow label="use memory">
+                    <Checkbox checked={preferences().memoryEnabled} onChange={(checked) => void savePreferences({ ...preferences(), memoryEnabled: checked })} />
+                  </SettingsRow>
+                </SettingsSection>
 
-                <section class="settings-section">
-                  <h2>Keyboard</h2>
-                  <Checkbox checked={preferences().vimEnabled} onChange={(checked) => void savePreferences({ ...preferences(), vimEnabled: checked })} label="enable Vim keys" />
-                </section>
+                <SettingsSection title="Keyboard">
+                  <SettingsRow label="enable Vim keys">
+                    <Checkbox checked={preferences().vimEnabled} onChange={(checked) => void savePreferences({ ...preferences(), vimEnabled: checked })} />
+                  </SettingsRow>
+                </SettingsSection>
 
                 <Show when={pwaInstall.available() || pwaInstall.needsSafariInstructions()}>
-                  <section class="settings-section">
-                    <h2>Install</h2>
+                  <SettingsSection title="Install">
                     <Show when={pwaInstall.available()}>
-                      <Button type="button" onClick={() => void pwaInstall.prompt()}>install hey</Button>
+                      <SettingsActions>
+                        <Button type="button" onClick={() => void pwaInstall.prompt()}>install hey</Button>
+                      </SettingsActions>
                     </Show>
                     <Show when={!pwaInstall.available() && pwaInstall.needsSafariInstructions()}>
                       <p>In Safari, use Share → Add to Home Screen.</p>
                     </Show>
-                  </section>
+                  </SettingsSection>
                 </Show>
 
-                <section class="settings-section">
-                  <h2>Sync</h2>
+                <SettingsSection title="Sync">
                   <p>{syncSignals.isPaired() ? syncSignals.statusText() : "Not connected. Data stays local."}</p>
-                  <div class="button-row">
+                  <SettingsActions>
                     <Show
                       when={syncSignals.isPaired()}
                       fallback={
@@ -498,10 +509,10 @@ function Workspace(props: RouteSectionProps) {
                       <Button type="button" disabled={syncBusy()} onClick={() => void runSync(syncNow)}>sync now</Button>
                       <Button type="button" disabled={syncBusy()} onClick={() => pairDialog?.showModal()}>pair another device</Button>
                     </Show>
-                  </div>
+                  </SettingsActions>
                   <Show when={syncError()}><p class="sync-error" role="alert">{syncError()}</p></Show>
-                </section>
-              </section>}
+                </SettingsSection>
+              </SettingsContainer>}
             </Show>),
   };
 

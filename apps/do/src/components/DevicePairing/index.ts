@@ -1,1 +1,0 @@
-export { QRDisplay } from "./QRDisplay";
