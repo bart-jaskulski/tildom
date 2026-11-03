@@ -1,42 +1,30 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:26-trixie-slim AS package-manifests
+FROM golang:1.27-alpine AS build
 
-WORKDIR /repo
+WORKDIR /src
 
-COPY packages packages
-RUN find packages -type f ! -name package.json -delete
+COPY services/sync/go.mod services/sync/go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 
-FROM node:26-trixie-slim AS build
+COPY services/sync/*.go ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /bin/tildom-sync .
 
-WORKDIR /repo
-
-ENV PNPM_HOME=/pnpm
-ENV PATH=$PNPM_HOME:$PATH
-
-RUN npm install --global pnpm@11.10.0 && pnpm config set store-dir /pnpm/store
-
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY services/sync/package.json services/sync/package.json
-COPY --from=package-manifests /repo/packages packages
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter @tildom/sync
-
-COPY packages packages
-COPY services/sync services/sync
-RUN pnpm --filter @tildom/sync build
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter @tildom/sync deploy --prod --legacy /app
 RUN mkdir -p /app/storage/vaults && chown -R 65532:65532 /app/storage
 
-FROM gcr.io/distroless/nodejs26-debian13:nonroot AS runtime
+FROM gcr.io/distroless/static-debian12:nonroot AS runtime
 
 WORKDIR /app
 
-ENV NODE_ENV=production
 ENV PORT=8787
 ENV SYNC_STORAGE_ROOT=/app/storage/vaults
 
-COPY --from=build --chown=65532:65532 /app ./
+COPY --from=build /bin/tildom-sync /bin/tildom-sync
+COPY --from=build --chown=65532:65532 /app/storage /app/storage
 
 EXPOSE 8787
 
-CMD ["dist/index.js"]
+USER nonroot:nonroot
+
+CMD ["/bin/tildom-sync"]

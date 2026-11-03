@@ -30,11 +30,9 @@ services:
     ports:
       - "${SYNC_PORT:-8787}:8787"
     environment:
-      NODE_ENV: production
       PORT: 8787
       SYNC_STORAGE_ROOT: /app/storage/vaults
-      SYNC_APP_IDS: ${SYNC_APP_IDS:-mark,do,kin,hey,suite}
-      SYNC_HOSTED_ORIGINS: ${SYNC_HOSTED_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002}
+      SYNC_TRUST_PROXY: ${SYNC_TRUST_PROXY:-true}
     volumes:
       - sync-storage:/app/storage
     restart: unless-stopped
@@ -60,9 +58,27 @@ services:
       dockerfile: apps/kin/Dockerfile
       args:
         VITE_SYNC_BASE_URL: ${KIN_SYNC_BASE_URL:-http://localhost:8787}
+        VITE_PUSH_BASE_URL: ${KIN_PUSH_BASE_URL:-http://localhost:8789}
     ports:
       - "${KIN_APP_PORT:-3002}:3000"
     restart: unless-stopped
 
+  push:
+    build:
+      context: .
+      dockerfile: services/push/Dockerfile
+    ports:
+      - "${PUSH_PORT:-8789}:8789"
+    environment:
+      PORT: 8789
+      PUSH_STORAGE_ROOT: /app/storage
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:push@tildom.app}
+    volumes:
+      - push-storage:/app/storage
+    restart: unless-stopped
+
 volumes:
   sync-storage:
+  push-storage:

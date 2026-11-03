@@ -1,6 +1,7 @@
 import { createRoot } from "solid-js";
 import { createStore } from "solid-js/store";
 import { db, type Contact, type Note } from "~/lib/db";
+import { syncPushReminders } from "~/lib/pushClient";
 
 export type ContactSearchMatch = {
   kind: "profile" | "timeline";
@@ -102,7 +103,11 @@ const appStore = createRoot(() => {
     searchQuery: "",
   });
 
-  const refreshContacts = async () => setState("contacts", await db.sql<Contact>`SELECT * FROM contacts ORDER BY name ASC`);
+  const refreshContacts = async () => {
+    const list = await db.sql<Contact>`SELECT * FROM contacts ORDER BY name ASC`;
+    setState("contacts", list);
+    void syncPushReminders(list).catch(() => undefined);
+  };
 
   db.subscribe(() => {
     void refreshContacts();

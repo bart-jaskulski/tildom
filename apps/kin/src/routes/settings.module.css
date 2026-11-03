@@ -3,3 +3,9 @@
   color: var(--syntax-error);
   padding: var(--space-1) 0;
 }
+
+.settingStatus {
+  font-size: 11px;
+  color: var(--fg-muted);
+  padding: var(--space-1) 0;
+}

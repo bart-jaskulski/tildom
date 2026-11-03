@@ -113,11 +113,7 @@ jobs:
               - '.github/workflows/container-images.yml'
             sync:
               - 'services/sync/**'
-              - 'packages/config/**'
               - 'services/sync/Dockerfile'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
               - '.github/workflows/container-images.yml'
 
       - name: Build matrix
