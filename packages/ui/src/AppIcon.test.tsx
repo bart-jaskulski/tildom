@@ -4,7 +4,7 @@ import { AppIcon, type AppIconName } from "./AppIcon";
 
 describe("AppIcon", () => {
   it("renders a distinct glyph for every app", () => {
-    const apps: AppIconName[] = ["home", "mark", "do", "kin", "hey"];
+    const apps: AppIconName[] = ["home", "mark", "do", "kin"];
     const glyphs = apps.map((app) => {
       const { container, unmount } = render(() => <AppIcon app={app} />);
       const glyph = container.querySelector("svg")?.innerHTML;

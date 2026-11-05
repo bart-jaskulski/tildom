@@ -1,40 +1,30 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:26-trixie-slim AS package-manifests
+FROM golang:1.27-alpine AS build
 
-WORKDIR /repo
+WORKDIR /src
 
-COPY packages packages
-RUN find packages -type f ! -name package.json -delete
+COPY services/api/go.mod services/api/go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 
-FROM node:26-trixie-slim AS build
+COPY services/api/ ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /bin/tildom-api .
 
-WORKDIR /repo
+RUN mkdir -p /app/storage/subscriptions && chown -R 65532:65532 /app/storage
 
-ENV PNPM_HOME=/pnpm
-ENV PATH=$PNPM_HOME:$PATH
-
-RUN npm install --global pnpm@11.10.0 && pnpm config set store-dir /pnpm/store
-
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY services/api/package.json services/api/package.json
-COPY --from=package-manifests /repo/packages packages
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter @tildom/api...
-
-COPY services/api services/api
-COPY packages packages
-RUN pnpm --filter @tildom/api build
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter @tildom/api deploy --prod --legacy /app
-
-FROM gcr.io/distroless/nodejs26-debian13:nonroot
+FROM gcr.io/distroless/static-debian12:nonroot AS runtime
 
 WORKDIR /app
 
-ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=8788
+ENV PUSH_STORAGE_ROOT=/app/storage
 
-COPY --from=build --chown=65532:65532 /app ./
+COPY --from=build /bin/tildom-api /bin/tildom-api
+COPY --from=build --chown=65532:65532 /app/storage /app/storage
 
-EXPOSE 3000
+EXPOSE 8788
 
-CMD ["dist/index.js"]
+USER nonroot:nonroot
+
+CMD ["/bin/tildom-api"]

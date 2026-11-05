@@ -59,8 +59,8 @@ export const isIosNonStandalone = (): boolean => {
   return isIos && !isStandalone;
 };
 
-export const getPushBaseUrl = (): string => {
-  return (import.meta.env.VITE_PUSH_BASE_URL as string | undefined) || "http://localhost:8789";
+export const getApiBaseUrl = (): string => {
+  return (import.meta.env.VITE_API_BASE_URL as string | undefined) || "http://localhost:8788";
 };
 
 // Converts URL-safe base64 string to Uint8Array for applicationServerKey
@@ -76,7 +76,7 @@ const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
 };
 
 export const fetchVapidPublicKey = async (): Promise<string> => {
-  const res = await fetch(`${getPushBaseUrl()}/v1/push/public-key`);
+  const res = await fetch(`${getApiBaseUrl()}/v1/push/public-key`);
   if (!res.ok) {
     throw new Error(`Failed to fetch VAPID public key (HTTP ${res.status})`);
   }
@@ -134,7 +134,7 @@ export const syncPushReminders = async (contacts: Contact[]): Promise<void> => {
     const subId = await hashOpaqueId(subscription.endpoint);
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
-    const res = await fetch(`${getPushBaseUrl()}/v1/push/subscriptions/${subId}`, {
+    const res = await fetch(`${getApiBaseUrl()}/v1/push/subscriptions/${subId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -189,7 +189,7 @@ export const disableReminders = async (): Promise<void> => {
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
         const subId = await hashOpaqueId(subscription.endpoint);
-        await fetch(`${getPushBaseUrl()}/v1/push/subscriptions/${subId}`, {
+        await fetch(`${getApiBaseUrl()}/v1/push/subscriptions/${subId}`, {
           method: "DELETE",
         }).catch(() => undefined);
         await subscription.unsubscribe().catch(() => undefined);

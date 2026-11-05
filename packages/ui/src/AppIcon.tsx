@@ -1,6 +1,6 @@
 import { Match, Switch } from "solid-js";
 
-export type AppIconName = "home" | "mark" | "do" | "kin" | "hey";
+export type AppIconName = "home" | "mark" | "do" | "kin";
 
 type AppIconProps = {
   app: AppIconName;
@@ -27,9 +27,6 @@ export function AppIcon(props: AppIconProps) {
         <Match when={props.app === "kin"}>
           <path d="m22 22 10 20 10-20M22 22h20" fill="none" stroke="#fff" stroke-width="5" />
           <path fill="#fff" d="M17 17h10v10H17zm20 0h10v10H37zM27 37h10v10H27z" />
-        </Match>
-        <Match when={props.app === "hey"}>
-          <path fill="#fff" d="m17 20 14 12-14 12v-8l5-4-5-4zm17 18h13v6H34z" />
         </Match>
       </Switch>
     </svg>

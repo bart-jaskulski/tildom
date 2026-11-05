@@ -44,15 +44,15 @@ describe("TUI Tabline Component", () => {
 
     render(() => (
       <Tabline>
-        <Tabline.Brand app="hey" onClick={() => { brandClicked = true; }} />
+        <Tabline.Brand app="mark" onClick={() => { brandClicked = true; }} />
         <Tabline.Nav>
-          <Tabline.Tab active={true} onClick={() => { tabClicked = true; }}>chats.db</Tabline.Tab>
+          <Tabline.Tab active={true} onClick={() => { tabClicked = true; }}>bookmarks.db</Tabline.Tab>
         </Tabline.Nav>
       </Tabline>
     ));
 
-    const brandBtn = screen.getByRole("button", { name: "hey home" });
-    const tabBtn = screen.getByRole("button", { name: "[ chats.db ]" });
+    const brandBtn = screen.getByRole("button", { name: "mark home" });
+    const tabBtn = screen.getByRole("button", { name: "[ bookmarks.db ]" });
     expect(brandBtn).toBeInTheDocument();
     expect(tabBtn).toBeInTheDocument();
     expect(tabBtn).toHaveAttribute("aria-current", "page");

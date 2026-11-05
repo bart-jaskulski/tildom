@@ -3,7 +3,7 @@
 ## Document Status
 
 This document records the current long-term direction for Tildom after reviewing the implemented
-applications, local storage model, PWA behavior, encrypted sync, Hey's memory architecture, and the
+applications, local storage model, PWA behavior, encrypted sync, and the
 desired relationship between the applications.
 
 It is a roadmap, not a claim that the target architecture already exists. `PRODUCT.md`,
@@ -19,7 +19,7 @@ implementation is not itself a product goal.
 ## Executive Summary
 
 Tildom should evolve from a collection of related applications on separate subdomains into one
-trusted, local-first suite on a shared origin. Mark, Do, Kin, and Hey should remain focused,
+trusted, local-first suite on a shared origin. Mark, Do, and Kin should remain focused,
 independently installable applications, but they should share suite navigation, an offline Home
 launcher, a device-level key hierarchy, and an intentional local data-access boundary.
 
@@ -29,7 +29,6 @@ The proposed hosted layout is:
 - `tildom.app/mark/` for bookmarks and notes;
 - `tildom.app/do/` for tasks;
 - `tildom.app/kin/` for people and relationships;
-- `tildom.app/hey/` for conversations and personal AI;
 - `tildom.app/` as a stable entry point that redirects or routes to Home;
 - `sync.tildom.app` for opaque encrypted storage;
 - `api.tildom.app` for network-required features and AI inference.
@@ -38,11 +37,6 @@ Each product application should keep its own manifest identity, service-worker s
 database, domain schema, product behavior, and deployment artifact. The shared origin is a
 deliberate declaration that the applications form one trusted personal suite rather than separate
 security principals.
-
-Hey should eventually be able to explore suite data through a browser-executed virtual filesystem.
-The model runs remotely by default, requests shell-like local operations, and receives only the
-results of those operations. Canonical product data remains in browser SQLite/OPFS. The virtual
-filesystem is an interface over domain data, not a replacement for structured storage.
 
 Sync should remain encrypted and app-scoped, but all application keys should be derived from one
 suite root key so a device is paired once. Hosted entitlements may later be capability-based and
@@ -54,7 +48,7 @@ concepts.
 ### One suite, several focused tools
 
 Tildom should feel like one product family without turning every workflow into one large
-application. Mark, Do, Kin, and Hey have different jobs and should preserve their focused
+application. Mark, Do, and Kin have different jobs and should preserve their focused
 interfaces. The suite should unify what benefits from being shared:
 
 - identity and naming;
@@ -94,7 +88,7 @@ Home experience should:
 
 ### Product names and navigation
 
-The short names Mark, Do, Kin, and Hey should remain primary. Shared Tildom identity should make the
+The short names Mark, Do, and Kin should remain primary. Shared Tildom identity should make the
 applications easier to recognize and find rather than replacing their names.
 
 Each application should expose a quiet, consistent suite switcher. It should support touch and
@@ -111,7 +105,7 @@ The following principles govern the roadmap:
 2. **Offline behavior is product behavior.** Network availability may extend an application but
    must not gate its local core.
 3. **The suite is one trusted browser boundary.** A shared origin is intentional because the
-   products are expected to cooperate and Hey may access their data.
+   products are expected to cooperate seamlessly.
 4. **Application ownership remains explicit.** Each app owns its schema, validation, migrations,
    and domain behavior.
 5. **Structured data remains structured.** SQLite remains the canonical representation for
@@ -135,10 +129,10 @@ The following principles govern the roadmap:
 
 ### Applications
 
-The repository contains runnable Home, Mark, Do, Kin, and Hey applications. All use Solid and
+The repository contains runnable Home, Mark, Do, and Kin applications. All use Solid and
 Vite. Product data is stored in browser SQLite backed by OPFS; Home has no product database.
 
-Mark, Kin, and Hey use the shared encrypted snapshot sync client. Do has an older vault model and
+Mark and Kin use the shared encrypted snapshot sync client. Do has an older vault model and
 stubbed client synchronization and is not yet aligned with the shared sync foundation.
 
 Each product application currently assumes root-relative routes, assets, manifest scope, and
@@ -154,15 +148,6 @@ storage boundary.
 
 The applications currently use separate database filenames and schemas. This separation should
 remain. Shared origin storage should not lead to one omnibus suite database.
-
-### Hey
-
-Hey stores chats, messages, settings, drafts, and virtual memory files in `hey.sqlite3`. Memory
-files are represented as paths and content in SQLite.
-
-The current API request sends the active conversation and the complete memory-file collection to
-the feature service. That behavior does not yet meet the intended bounded-disclosure model and
-must be replaced before broad cross-application access is enabled.
 
 ### Sync
 
@@ -195,7 +180,6 @@ are:
 - one suite pairing flow can populate one origin-scoped key store;
 - applications can intentionally cooperate through shared browser facilities;
 - Home and suite navigation can work offline;
-- Hey can access local data without uploading whole databases or building cross-origin relays;
 - application installation can remain path-scoped;
 - browser behavior matches the product's intended trust model.
 
@@ -269,7 +253,7 @@ Each application continues to own a separate SQLite file. Application code remai
 - synchronization hooks;
 - destructive-operation semantics.
 
-Hey or shared infrastructure should not issue arbitrary SQL directly against another application's
+Shared infrastructure should not issue arbitrary SQL directly against an application's
 tables. That would couple agent behavior to schema details and bypass domain validation.
 
 ### Suite data catalog
@@ -284,7 +268,7 @@ generic repository abstraction.
 
 ### Default access policy
 
-For the current single-user product, Hey may receive broad suite access by default. This should
+For the current single-user product, assistant tools may receive broad suite access by default. This should
 still be visible and configurable:
 
 - the settings surface should state which applications are available;
@@ -374,9 +358,8 @@ outside the shell boundary.
 
 ### Memory
 
-Hey's current durable memory should become one mount in the same virtual filesystem rather than a
-separate family of model tools. Existing memory remains inspectable and editable in the Hey user
-interface.
+Durable memory should become one mount in the same virtual filesystem rather than a
+separate family of model tools. User memory remains inspectable and editable.
 
 The move to a general shell must preserve the product's memory principles:
 
@@ -424,7 +407,7 @@ browser and local data are unavailable.
 
 ### Disclosure correction
 
-Before cross-application tools ship, Hey must stop sending the complete memory collection on every
+Before cross-application tools ship, the assistant client must avoid sending large memory collections on every
 turn. The active context sent before a tool request should be bounded. Additional memory or suite
 data should be acquired through explicit local tool results.
 
@@ -445,7 +428,7 @@ The request and response protocol must set limits for:
 Tildom should make a precise promise:
 
 > Canonical application data lives on the user's device. Sync stores only client-encrypted data.
-> When Hey or another network-assisted feature is used, the prompt and the parts of local data
+> When a network-assisted feature is used, the prompt and the parts of local data
 > needed for that request are temporarily processed by Tildom's feature service and its configured
 > model provider. Tildom does not retain that plaintext as product data or use it for training.
 
@@ -635,7 +618,7 @@ only that the holder of a valid credential is entitled to particular capabilitie
 Possible capabilities include:
 
 - hosted encrypted sync;
-- Hey inference;
+- AI assistant inference;
 - future network-required features.
 
 Pairing should transfer the entitlement credential with the suite configuration so a second device
@@ -651,7 +634,7 @@ Billing and entitlement checks belong in hosted infrastructure. Local applicatio
 usable without payment, and self-hosted services may define their own access policy.
 
 Pricing, payment integration, renewals, taxes, refunds, abuse prevention, and credential recovery
-are deferred until hosted sync and Hey have reliable operating costs and demonstrated value.
+are deferred until hosted sync and network features have reliable operating costs and demonstrated value.
 
 The current price ideas are hypotheses, not commitments.
 
@@ -843,11 +826,11 @@ Exit criteria:
 
 - dirty local state is never silently discarded;
 - conflict artifacts can be inspected or exported;
-- Mark, Do, Kin, and Hey use one maintained client foundation;
+- Mark, Do, and Kin use one maintained client foundation;
 - automated tests cover initial upload, join, offline changes, conflicts, retries, and import
   failure.
 
-### Phase 6: Correct Hey disclosure
+### Phase 6: Correct assistant disclosure
 
 Objectives:
 
@@ -870,14 +853,14 @@ Exit criteria:
 Objectives:
 
 - define the suite data catalog;
-- implement read adapters for Mark, Do, Kin, and Hey;
+- implement read adapters for Mark, Do, and Kin;
 - evaluate `just-bash` or a deliberately smaller interpreter;
 - expose listing, reading, finding, and searching;
 - make broad read access configurable.
 
 Exit criteria:
 
-- Hey can answer cross-app questions without pre-uploading databases;
+- assistant features can answer cross-app questions without pre-uploading databases;
 - the model can identify and read relevant people, bookmarks, tasks, and memories;
 - paths are stable and human-readable;
 - traversal and output limits are tested;
@@ -1041,8 +1024,8 @@ The roadmap succeeds when:
 - Home and installed applications work offline;
 - one device pairing enables encrypted sync across selected apps;
 - sync cannot silently destroy a dirty local database;
-- Hey can answer useful cross-app questions without uploading entire databases;
-- Hey can make useful, reversible changes through application-owned validation;
+- cross-app assistant queries answer useful questions without uploading entire databases;
+- assistant features can make useful, reversible changes through application-owned validation;
 - the sync server stores no plaintext product data;
 - AI plaintext is transient and disclosed accurately;
 - local-only and self-hosted use remain viable;

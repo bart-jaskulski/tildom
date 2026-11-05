@@ -32,6 +32,11 @@ gitignore
 test-results/
 playwright-report/
 
+# Build binaries
+bin/
+services/*/bin/
+services/*/storage/
+
 # System Files
 .DS_Store
 Thumbs.db

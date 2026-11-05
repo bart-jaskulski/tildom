@@ -33,7 +33,6 @@ Tildom is managed via a standard **pnpm workspace**.
   - `apps/mark/` — Bookmark & note manager.
   - `apps/do/` — Task manager.
   - `apps/kin/` — Personal relationship manager.
-  - `apps/hey/` — Personal conversation app.
 - `services/` — Optional backend services.
   - `services/sync/` — Dumb, encrypted snapshot sync service (`sync.tildom.app`).
 - `packages/` — Shared libraries, extracted **only under reuse pressure**.
@@ -51,7 +50,6 @@ Always run these scripts from the **repository root**:
   - `pnpm dev:mark` — Runs Mark (defaults to `http://localhost:5173`)
   - `pnpm dev:do` — Runs Do
   - `pnpm dev:kin` — Runs Kin
-  - `pnpm dev:hey` — Runs Hey
 - **Typecheck & Tests**:
   - `pnpm typecheck` / `pnpm typecheck:mark`
   - `pnpm test` / `pnpm test:do`

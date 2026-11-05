@@ -23,6 +23,8 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 ARG VITE_SYNC_BASE_URL=https://sync.tildom.app
 ENV VITE_SYNC_BASE_URL=$VITE_SYNC_BASE_URL
+ARG VITE_API_BASE_URL=https://api.tildom.app
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 COPY apps/kin apps/kin
 COPY packages packages

@@ -6,8 +6,8 @@ import {
   startSuiteSession, syncBaseUrl, unlockWithPasskey,
 } from "./suite";
 
-const APPS = ["mark", "kin", "hey", "do"] as const;
-const DEV_PORTS: Record<string, number> = { mark: 5173, kin: 5174, hey: 5175, do: 5176 };
+const APPS = ["mark", "kin", "do"] as const;
+const DEV_PORTS: Record<string, number> = { mark: 5173, kin: 5174, do: 5176 };
 const TX_KEY = "tildom-suite-transaction";
 const appOrigin = (app: string) => import.meta.env.DEV
   ? `http://localhost:${DEV_PORTS[app]}`

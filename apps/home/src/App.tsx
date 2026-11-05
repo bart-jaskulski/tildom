@@ -57,15 +57,6 @@ export default function App() {
                   <span class="arrow" aria-hidden="true">→</span>
                 </a>
               </li>
-              <li>
-                <a class="app-link" href="https://hey.tildom.app">
-                  <span class="index" aria-hidden="true">4</span>
-                  <AppIcon app="hey" class="app-icon" />
-                  <span class="app-name">hey</span>
-                  <span class="app-desc">private AI conversations</span>
-                  <span class="arrow" aria-hidden="true">→</span>
-                </a>
-              </li>
             </ul>
           </nav>
         </section>

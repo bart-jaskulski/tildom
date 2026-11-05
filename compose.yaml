@@ -4,12 +4,18 @@ services:
       context: .
       dockerfile: services/api/Dockerfile
     ports:
-      - "${API_PORT:-8788}:3000"
+      - "${API_PORT:-8788}:8788"
     environment:
-      NODE_ENV: production
-      PORT: 3000
+      PORT: 8788
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
-      API_ALLOWED_ORIGINS: ${API_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      API_ALLOWED_ORIGINS: ${API_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002}
+      PUSH_STORAGE_ROOT: /app/storage
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:push@tildom.app}
+    volumes:
+      - push-storage:/app/storage
     restart: unless-stopped
 
   mark:
@@ -58,25 +64,9 @@ services:
       dockerfile: apps/kin/Dockerfile
       args:
         VITE_SYNC_BASE_URL: ${KIN_SYNC_BASE_URL:-http://localhost:8787}
-        VITE_PUSH_BASE_URL: ${KIN_PUSH_BASE_URL:-http://localhost:8789}
+        VITE_API_BASE_URL: ${KIN_API_BASE_URL:-http://localhost:8788}
     ports:
       - "${KIN_APP_PORT:-3002}:3000"
-    restart: unless-stopped
-
-  push:
-    build:
-      context: .
-      dockerfile: services/push/Dockerfile
-    ports:
-      - "${PUSH_PORT:-8789}:8789"
-    environment:
-      PORT: 8789
-      PUSH_STORAGE_ROOT: /app/storage
-      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
-      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
-      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:push@tildom.app}
-    volumes:
-      - push-storage:/app/storage
     restart: unless-stopped
 
 volumes:

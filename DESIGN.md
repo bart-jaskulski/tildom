@@ -73,8 +73,8 @@ Color variables are mapped to syntax-highlighting terms rather than layout descr
 
 Tildom icons use the interface's block-cursor language rather than letter tiles. Every icon has a
 full-bleed `--fg-default` field, one square `--syntax-keyword` red block, and a white geometry-only app glyph.
-Home uses a four-cell launcher grid, Mark a bookmark ribbon, Do a checked square, Kin a three-node
-relationship graph, and Hey a prompt chevron with block cursor. Glyphs stay inside the central 50% safe zone, use fills or strokes
+Home uses a four-cell launcher grid, Mark a bookmark ribbon, Do a checked square, and Kin a three-node
+relationship graph. Glyphs stay inside the central 50% safe zone, use fills or strokes
 at least 4/64 units wide, and never depend on fonts, gradients, rounded corners, or color alone.
 
 `@tildom/ui`'s `AppIcon` is the canonical in-app icon set. Each app keeps a matching
@@ -184,8 +184,3 @@ Most apps in this suite share three main layout structures:
    * Simple inputs and toggle switches using brackets `[x]` / `[ ]` for checkboxes.
    * Vim keybindings, when supported, are exposed as an explicit option rather than assumed.
    * Sync status and device pairing live here when an app supports remote sync.
-4. **The Conversation View (e.g., Hey):**
-   * A chat list and transcript may use a split layout on desktop and a single focused surface on mobile.
-   * Messages use vertical guide rails and open whitespace rather than bubbles or enclosing cards.
-   * A small, consistent role color may distinguish participants when it improves scanning. Keep color localized to role labels and guide rails; the rest of the surface uses shared semantic tokens.
-   * Routine system activity, internal context attribution, and implementation detail stay out of the transcript. Put inspectable supporting information in a dedicated surface.

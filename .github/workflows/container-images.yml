@@ -24,7 +24,6 @@ jobs:
       home: ${{ steps.filter.outputs.home }}
       mark: ${{ steps.filter.outputs.mark }}
       kin: ${{ steps.filter.outputs.kin }}
-      hey: ${{ steps.filter.outputs.hey }}
       do: ${{ steps.filter.outputs.do }}
       api: ${{ steps.filter.outputs.api }}
       sync: ${{ steps.filter.outputs.sync }}
@@ -78,19 +77,6 @@ jobs:
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - '.github/workflows/container-images.yml'
-            hey:
-              - 'apps/hey/**'
-              - 'packages/browser-db/**'
-              - 'packages/config/**'
-              - 'packages/markdownish/**'
-              - 'packages/sync-client/**'
-              - 'packages/ui/**'
-              - 'apps/hey/Dockerfile'
-              - 'docker/static-spa.conf'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
-              - '.github/workflows/container-images.yml'
             do:
               - 'apps/do/**'
               - 'packages/sync-client/**'
@@ -125,19 +111,17 @@ jobs:
           IMAGE_HOME: ${{ steps.filter.outputs.home }}
           IMAGE_MARK: ${{ steps.filter.outputs.mark }}
           IMAGE_KIN: ${{ steps.filter.outputs.kin }}
-          IMAGE_HEY: ${{ steps.filter.outputs.hey }}
           IMAGE_DO: ${{ steps.filter.outputs.do }}
           IMAGE_API: ${{ steps.filter.outputs.api }}
           IMAGE_SYNC: ${{ steps.filter.outputs.sync }}
         run: |
           if [ "$EVENT_NAME" = workflow_dispatch ] || [ "$REF_TYPE" = tag ]; then
-            images='["home", "mark", "kin", "hey", "do", "api", "sync"]'
+            images='["home", "mark", "kin", "do", "api", "sync"]'
           else
             images="$(jq -cn \
               --arg home "$IMAGE_HOME" \
               --arg mark "$IMAGE_MARK" \
               --arg kin "$IMAGE_KIN" \
-              --arg hey "$IMAGE_HEY" \
               --arg do "$IMAGE_DO" \
               --arg api "$IMAGE_API" \
               --arg sync "$IMAGE_SYNC" \
@@ -207,12 +191,6 @@ jobs:
             {
               echo "args<<EOF"
               echo "VITE_SYNC_BASE_URL=${DO_SYNC_BASE_URL:-https://sync.tildom.app}"
-              echo "VITE_API_BASE_URL=${API_BASE_URL:-https://api.tildom.app}"
-              echo "EOF"
-            } >> "$GITHUB_OUTPUT"
-          elif [ "${{ matrix.image }}" = "hey" ]; then
-            {
-              echo "args<<EOF"
               echo "VITE_API_BASE_URL=${API_BASE_URL:-https://api.tildom.app}"
               echo "EOF"
             } >> "$GITHUB_OUTPUT"

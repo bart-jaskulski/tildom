@@ -27,7 +27,7 @@ export interface TablineBrandProps {
 
 export function TablineBrand(props: TablineBrandProps) {
   const isKnownApp = () =>
-    ["home", "mark", "do", "kin", "hey", "list", "post", "loop"].includes(props.app ?? "");
+    ["home", "mark", "do", "kin", "list", "post", "loop"].includes(props.app ?? "");
 
   const content = (
     <>

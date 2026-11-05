@@ -1,5 +1,10 @@
 # Tildom Project Architecture
 
+> Backend rewrite direction: [SERVER_REWRITE.md](./SERVER_REWRITE.md) supersedes
+> the separate sync/feature service target and Node server runtime guidance below.
+> The hosted target is one Go backend, with a standalone sync distribution path;
+> the sections below otherwise describe existing architecture and earlier plans.
+
 Tildom is a family of local-first personal web applications. The first apps are:
 
 - `mark`: bookmark and note manager, currently migrated from `hn-links`.
@@ -29,7 +34,6 @@ tildom/
     mark/      # mark.tildom.app
     do/        # do.tildom.app
     kin/       # kin.tildom.app
-    hey/       # hey.tildom.app
   services/
     sync/      # sync.tildom.app
     api/       # shared network feature API
@@ -47,7 +51,6 @@ Current foundation:
 tildom/
   apps/
     do/
-    hey/
     home/
     kin/
     mark/
@@ -160,10 +163,9 @@ Change-based sync can come later. Snapshot sync is easier to reason about, easie
 `services/api` is the shared server for network-required product features:
 
 - bookmark title and metadata fetching;
-- AI task breakdown;
-- personal AI chat.
+- AI task breakdown.
 
-Its routes remain product-owned under `/v1/mark/*`, `/v1/do/*`, and `/v1/hey/*`; it is not a
+Its routes remain product-owned under `/v1/mark/*` and `/v1/do/*`; it is not a
 generic LLM endpoint. Static apps call `api.tildom.app` directly. Their local-first cores remain
 available offline, while full network-assisted feature parity requires this service.
 

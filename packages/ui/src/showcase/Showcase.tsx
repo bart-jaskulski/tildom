@@ -122,7 +122,7 @@ function ShowcaseContent(props: ShowcaseProps) {
     { token: "--highlight-orange", hex: "#e36209", role: "Orange highlights" },
   ];
 
-  const appIcons: AppIconName[] = ["mark", "kin", "do", "hey", "home"];
+  const appIcons: AppIconName[] = ["mark", "kin", "do", "home"];
 
   // Generate live JSX snippet for button playground
   const generatedButtonCode = () => {

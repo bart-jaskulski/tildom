@@ -15,7 +15,7 @@ high information density, and interfaces that remain practical on touch devices.
 ## Product Purpose
 
 Tildom is a family of personal web applications: Mark for saved reading and notes, Do for tasks,
-Kin for relationships, and Hey for conversations with durable memory. Success means each app is
+and Kin for relationships. Success means each app is
 useful on its own, keeps its canonical product data under the user's control, and remains available
 offline wherever the feature itself does not require a network.
 
@@ -38,7 +38,6 @@ self-hosted as separate applications and services.
 - Mark saves bookmarks, notes, discussions, and offline reading captures.
 - Do captures, structures, and completes tasks, with optional AI-assisted breakdown.
 - Kin stores people, profile details, notes, and relationships.
-- Hey stores conversations and inspectable memory, with network-required model responses.
 - Product data is canonical in browser SQLite/OPFS. Offline-capable behavior must not depend on a
   configured server.
 - Sync is optional and encrypts snapshots in the browser before upload.
@@ -49,13 +48,13 @@ self-hosted as separate applications and services.
 
 ## Brand Commitments
 
-The product family is named Tildom, with short application names Mark, Do, Kin, and Hey. Its voice
+The product family is named Tildom, with short application names Mark, Do, and Kin. Its voice
 is calm, direct, personal without being intrusive, and free of unnecessary urgency. The established
 identity and interaction language are recorded in `DESIGN.md`.
 
 ## Evidence on Hand
 
-Runnable implementations exist in `apps/mark`, `apps/do`, `apps/kin`, and `apps/hey`. Architecture,
+Runnable implementations exist in `apps/mark`, `apps/do`, and `apps/kin`. Architecture,
 privacy boundaries, deployment direction, and self-hosting commitments are documented in
 `PROJECT.md`, `README.md`, and the application documentation. The repository contains no customer
 testimonials, adoption benchmarks, case studies, press claims, or pricing evidence; future work
