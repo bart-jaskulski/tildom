@@ -8,7 +8,7 @@ import {
   toggleMarkdownTask,
 } from "@tildom/markdownish";
 import AppNav from "~/components/AppNav";
-import { birthdayParts, birthdayValue, daysInBirthdayMonth, formatBirthday } from "~/lib/birthday";
+import { birthdayParts, birthdayValue, daysInBirthdayMonth, formatBirthday, type BirthdayParts } from "~/lib/birthday";
 import PersonLoading from "./PersonLoading";
 import {
   contacts,
@@ -64,7 +64,7 @@ export default function PersonDetail() {
   const [editName, setEditName] = createSignal("");
   const [editRelationship, setEditRelationship] = createSignal("");
   const [editLocation, setEditLocation] = createSignal("");
-  const [editBirthday, setEditBirthday] = createSignal("");
+  const [editBirthdayParts, setEditBirthdayParts] = createSignal<BirthdayParts>({ day: "", month: "", year: "" });
   const [editPhone, setEditPhone] = createSignal("");
   const [editEmail, setEditEmail] = createSignal("");
   const [relationshipRole, setRelationshipRole] = createSignal("");
@@ -128,7 +128,7 @@ export default function PersonDetail() {
     setEditName(next.person.name);
     setEditRelationship(next.person.relationship);
     setEditLocation(next.person.location);
-    setEditBirthday(next.person.birthday);
+    setEditBirthdayParts(birthdayParts(next.person.birthday));
     setEditPhone(next.person.phone);
     setEditEmail(next.person.email);
     setNotes(next.notes);
@@ -158,7 +158,12 @@ export default function PersonDetail() {
     setIsSaving(true);
     try {
       await updateContact(contactId(), {
-        name: editName(), relationship: editRelationship(), location: editLocation(), birthday: editBirthday(), phone: editPhone(), email: editEmail(),
+        name: editName(),
+        relationship: editRelationship(),
+        location: editLocation(),
+        birthday: birthdayValue(editBirthdayParts()),
+        phone: editPhone(),
+        email: editEmail(),
       });
       setIsEditing(false);
       await refetch();
@@ -167,10 +172,25 @@ export default function PersonDetail() {
     finally { setIsSaving(false); }
   };
 
-  const updateBirthday = (part: "day" | "month" | "year", value: string) => {
-    const next = { ...birthdayParts(editBirthday()), [part]: value };
-    if (Number(next.day) > daysInBirthdayMonth(next.month, next.year)) next.day = "";
-    setEditBirthday(birthdayValue(next));
+  const cancelEdit = () => {
+    const current = person();
+    if (current) {
+      setEditName(current.name);
+      setEditRelationship(current.relationship);
+      setEditLocation(current.location);
+      setEditBirthdayParts(birthdayParts(current.birthday));
+      setEditPhone(current.phone);
+      setEditEmail(current.email);
+    }
+    setIsEditing(false);
+  };
+
+  const updateBirthday = (part: keyof BirthdayParts, value: string) => {
+    setEditBirthdayParts((prev) => {
+      const next = { ...prev, [part]: value };
+      if (Number(next.day) > daysInBirthdayMonth(next.month, next.year)) next.day = "";
+      return next;
+    });
   };
 
   const addNote = async (event: SubmitEvent) => {
@@ -314,20 +334,43 @@ export default function PersonDetail() {
                   <label>
                     <span>Birthday</span>
                     <div class={styles.birthdayPicker}>
-                      <Select class="kin-select" aria-label="Birthday day" value={birthdayParts(editBirthday()).day} onChange={(event) => updateBirthday("day", event.currentTarget.value)}>
+                      <Select
+                        class="kin-select"
+                        aria-label="Birthday day"
+                        value={editBirthdayParts().day}
+                        onChange={(event) => updateBirthday("day", event.currentTarget.value)}
+                      >
                         <option value="">day</option>
-                        <For each={Array.from({ length: daysInBirthdayMonth(birthdayParts(editBirthday()).month, birthdayParts(editBirthday()).year) }, (_, index) => String(index + 1))}>{(day) => <option value={day}>{day}</option>}</For>
+                        <For each={Array.from({ length: daysInBirthdayMonth(editBirthdayParts().month, editBirthdayParts().year) }, (_, index) => String(index + 1))}>
+                          {(day) => <option value={day} selected={editBirthdayParts().day === day}>{day}</option>}
+                        </For>
                       </Select>
-                      <Select class="kin-select" aria-label="Birthday month" value={birthdayParts(editBirthday()).month} onChange={(event) => updateBirthday("month", event.currentTarget.value)}>
+                      <Select
+                        class="kin-select"
+                        aria-label="Birthday month"
+                        value={editBirthdayParts().month}
+                        onChange={(event) => updateBirthday("month", event.currentTarget.value)}
+                      >
                         <option value="">month</option>
-                        <For each={months}>{(month, index) => <option value={String(index() + 1)}>{month}</option>}</For>
+                        <For each={months}>
+                          {(month, index) => <option value={String(index() + 1)} selected={editBirthdayParts().month === String(index() + 1)}>{month}</option>}
+                        </For>
                       </Select>
-                      <Input class="kin-input" aria-label="Birthday year" inputMode="numeric" maxLength="4" pattern="[0-9]{4}" value={birthdayParts(editBirthday()).year} placeholder="year" onInput={(event) => updateBirthday("year", event.currentTarget.value.replace(/\D/g, "").slice(0, 4))} />
+                      <Input
+                        class="kin-input"
+                        aria-label="Birthday year"
+                        inputMode="numeric"
+                        maxLength="4"
+                        pattern="[0-9]{4}"
+                        value={editBirthdayParts().year}
+                        placeholder="year"
+                        onInput={(event) => updateBirthday("year", event.currentTarget.value.replace(/\D/g, "").slice(0, 4))}
+                      />
                     </div>
                   </label>
                   <div class={styles.formActions}>
                     <Button type="submit" class="kin-primary-button" disabled={isSaving()}>{isSaving() ? "saving…" : "save"}</Button>
-                    <Button type="button" class="kin-button" onClick={() => setIsEditing(false)}>cancel</Button>
+                    <Button type="button" class="kin-button" onClick={cancelEdit}>cancel</Button>
                   </div>
                 </form>
               </Show>

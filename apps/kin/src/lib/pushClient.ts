@@ -60,7 +60,8 @@ export const isIosNonStandalone = (): boolean => {
 };
 
 export const getApiBaseUrl = (): string => {
-  return (import.meta.env.VITE_API_BASE_URL as string | undefined) || "http://localhost:8788";
+  return (import.meta.env.VITE_API_BASE_URL as string | undefined)
+    || (import.meta.env.DEV ? "/api" : "http://localhost:8788");
 };
 
 // Converts URL-safe base64 string to Uint8Array for applicationServerKey
