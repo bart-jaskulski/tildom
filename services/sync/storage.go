@@ -273,6 +273,10 @@ func (s *SyncServer) handleUploadSnapshot(w http.ResponseWriter, r *http.Request
 	}
 
 	hasAuth := authorizeExistingVault(vaultDir, token)
+	if _, err := os.Stat(authPath(vaultDir)); err == nil && !hasAuth {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
+		return
+	}
 	revs, err := listSnapshots(vaultDir)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to inspect vault storage"})
@@ -336,4 +340,33 @@ func (s *SyncServer) handleUploadSnapshot(w http.ResponseWriter, r *http.Request
 	w.Header().Set("X-Tildom-Revision", revision)
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(map[string]string{"revision": revision})
+}
+
+func (s *SyncServer) handleDeleteSnapshots(w http.ResponseWriter, r *http.Request) {
+	appID, vaultID := r.PathValue("appId"), r.PathValue("vaultId")
+	vaultDir := s.resolveVaultDir(appID, vaultID)
+	if vaultDir == "" {
+		http.NotFound(w, r)
+		return
+	}
+	unlock := s.lockVault(appID + "/" + vaultID)
+	defer unlock()
+	if !authorizeExistingVault(vaultDir, parseBearer(r.Header.Get("Authorization"))) {
+		http.NotFound(w, r)
+		return
+	}
+	revisions, err := listSnapshots(vaultDir)
+	if err == nil {
+		for _, revision := range revisions {
+			if err = os.Remove(filepath.Join(vaultDir, revision+".bin")); err != nil {
+				break
+			}
+		}
+	}
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to delete snapshots"})
+		return
+	}
+	// Keep ownership after deleting the payloads so another token cannot claim this vault.
+	w.WriteHeader(http.StatusNoContent)
 }

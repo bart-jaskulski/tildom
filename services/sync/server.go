@@ -178,7 +178,7 @@ func (s *SyncServer) corsMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, If-Match, If-None-Match")
 		w.Header().Set("Access-Control-Expose-Headers", "ETag, X-Tildom-Revision")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
@@ -197,7 +197,7 @@ func (s *SyncServer) rateLimitMiddleware(next http.Handler) http.Handler {
 		}
 
 		ip := s.getClientIP(r)
-		isWrite := r.Method == http.MethodPost
+		isWrite := r.Method == http.MethodPost || r.Method == http.MethodDelete
 		allowed, retryAfter := s.rateLimiter.allow(ip, isWrite)
 		if !allowed {
 			w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
@@ -215,6 +215,7 @@ func (s *SyncServer) registerRoutes() {
 	s.mux.HandleFunc("GET /v1/apps/{appId}/vaults/{vaultId}/snapshots/latest", s.handleDownloadLatest)
 	s.mux.HandleFunc("GET /v1/apps/{appId}/vaults/{vaultId}/snapshots/{revision}", s.handleDownloadRevision)
 	s.mux.HandleFunc("POST /v1/apps/{appId}/vaults/{vaultId}/snapshots", s.handleUploadSnapshot)
+	s.mux.HandleFunc("DELETE /v1/apps/{appId}/vaults/{vaultId}/snapshots", s.handleDeleteSnapshots)
 }
 
 func (s *SyncServer) handleHealth(w http.ResponseWriter, r *http.Request) {

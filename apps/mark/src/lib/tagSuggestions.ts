@@ -6,7 +6,7 @@ export type TagSuggestionInput = {
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-  || (import.meta.env.DEV ? "http://localhost:8788" : "https://api.tildom.app");
+  || (import.meta.env.DEV ? "/api" : "https://api.tildom.app");
 
 export const fetchSuggestedTags = async (input: TagSuggestionInput) => {
   try {

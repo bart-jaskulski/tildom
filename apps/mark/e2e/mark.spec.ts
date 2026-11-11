@@ -91,4 +91,98 @@ test.describe("Mark Acceptance Tests (Local-First & Behavioral)", () => {
     const activeRows = page.locator("[data-entry-row][data-active]");
     await expect(activeRows).toHaveCount(0);
   });
+
+  test("shows button loading state and contextual error on fresh article when capture unavailable", async ({ page }) => {
+    await page.route("**/v1/mark/metadata", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          title: "Sample Article",
+          excerpt: null,
+          capture: null,
+        }),
+      });
+    });
+
+    const editor = page.locator("#entry-body-cm");
+    await editor.click();
+    await editor.fill("https://example.org/unavailable-reader");
+
+    const saveButton = page.getByRole("button", { name: "save", exact: true });
+    await expect(saveButton).toBeEnabled();
+    await saveButton.click();
+
+    const entryRow = page.locator("[data-entry-row]").filter({ hasText: "Sample Article" });
+    await expect(entryRow).toBeVisible();
+
+    await entryRow.getByRole("link", { name: /Sample Article/ }).click();
+    await expect(page).toHaveURL(/\/item\/.+/);
+
+    const readButton = page.getByRole("button", { name: /read/i });
+    await expect(readButton).toBeVisible();
+
+    await readButton.click();
+
+    await expect(page).toHaveURL(/\/item\/[^\/]+$/);
+    await expect(page.getByRole("alert")).toHaveText("reader view unavailable");
+    await expect(page.getByRole("button", { name: /read/i })).toBeVisible();
+  });
+
+  test("captures and redirects to reader view when reader content succeeds", async ({ page }) => {
+    let metadataRequests = 0;
+    await page.route("**/v1/mark/metadata", async (route) => {
+      metadataRequests++;
+      if (metadataRequests === 1) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            title: "Successful Article",
+            excerpt: "Short intro",
+            capture: null,
+          }),
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            title: "Successful Article",
+            excerpt: "Short intro",
+            capture: {
+              markdown: "Full reader article content here.",
+              textContent: "Full reader article content here.",
+              byline: "Test Author",
+              siteName: "Test Site",
+              publishedAt: "2026-01-01",
+              language: "en",
+              sourceUrl: "https://example.org/successful-reader",
+            },
+          }),
+        });
+      }
+    });
+
+    const editor = page.locator("#entry-body-cm");
+    await editor.click();
+    await editor.fill("https://example.org/successful-reader");
+
+    const saveButton = page.getByRole("button", { name: "save", exact: true });
+    await expect(saveButton).toBeEnabled();
+    await saveButton.click();
+
+    const entryRow = page.locator("[data-entry-row]").filter({ hasText: "Successful Article" });
+    await expect(entryRow).toBeVisible();
+
+    await entryRow.getByRole("link", { name: /Successful Article/ }).click();
+    await expect(page).toHaveURL(/\/item\/.+/);
+
+    const readButton = page.getByRole("button", { name: /read/i });
+    await expect(readButton).toBeVisible();
+    await readButton.click();
+
+    await expect(page).toHaveURL(/\/item\/.+\/read/);
+    await expect(page.getByText("Full reader article content here.")).toBeVisible();
+  });
 });

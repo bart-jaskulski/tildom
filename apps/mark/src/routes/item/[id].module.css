@@ -46,6 +46,20 @@
   }
 }
 
+.primaryActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-x-1-5);
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.captureError {
+  color: var(--syntax-error);
+  font-size: 12px;
+}
+
 .commentSubtext {
   display: flex;
   align-items: center;
@@ -74,7 +88,8 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-x-1);
-  margin-top: var(--space-1);
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-4);
   color: var(--fg-muted);
   font-size: 12px;
 }

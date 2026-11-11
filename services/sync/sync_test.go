@@ -461,3 +461,41 @@ func TestDefaultOptions(t *testing.T) {
 		t.Fatalf("expected non-empty storage root")
 	}
 }
+
+func TestDeleteSnapshotsPreservesOwnership(t *testing.T) {
+	server, root := createTestServer(t)
+	url := "/v1/apps/mark-audio/vaults/recording/snapshots"
+	request := func(method, token string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(method, url, bytes.NewReader([]byte{1, 2, 3}))
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("If-None-Match", "*")
+		w := httptest.NewRecorder()
+		server.ServeHTTP(w, req)
+		return w
+	}
+	if w := request(http.MethodPost, "owner"); w.Code != http.StatusCreated {
+		t.Fatal(w.Code, w.Body.String())
+	}
+	if w := request(http.MethodDelete, "stranger"); w.Code != http.StatusNotFound {
+		t.Fatal(w.Code)
+	}
+	revisions, _ := listSnapshots(filepath.Join(root, "mark-audio", "recording"))
+	if len(revisions) != 1 {
+		t.Fatal("unauthorized deletion removed audio")
+	}
+	for range 2 {
+		if w := request(http.MethodDelete, "owner"); w.Code != http.StatusNoContent {
+			t.Fatal(w.Code, w.Body.String())
+		}
+	}
+	revisions, _ = listSnapshots(filepath.Join(root, "mark-audio", "recording"))
+	if len(revisions) != 0 {
+		t.Fatal("audio payload was retained")
+	}
+	if w := request(http.MethodPost, "stranger"); w.Code < 400 {
+		t.Fatal("deleted vault ownership was stolen")
+	}
+	if w := request(http.MethodPost, "owner"); w.Code != http.StatusCreated {
+		t.Fatal(w.Code, w.Body.String())
+	}
+}

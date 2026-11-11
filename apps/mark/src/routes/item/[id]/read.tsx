@@ -2,15 +2,12 @@ import { Title } from "@solidjs/meta";
 import { A, useParams } from "@solidjs/router";
 import { createEffect, createResource, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { isServer } from "solid-js/web";
-import { renderMarkdownishToHtml } from "@tildom/markdownish";
+import { createReaderListening } from "~/lib/createReaderListening";
+import ArticleListen from "~/components/ArticleListen";
 import ItemLoading from "~/components/ItemLoading";
 import { TextButton } from "@tildom/ui";
 import { captureEntry, fetchEntryDetail, isEntryStoreReady, recordEntryOpen } from "~/stores/entryStore";
 import styles from "./read.module.css";
-
-const stripReaderMedia = (markdown: string) => markdown
-  .replace(/!\[[^\]]*]\([^\n)]*\)/g, "")
-  .replace(/\[\s*]\([^\n)]*\)/g, "");
 
 export default function ItemReaderPage() {
   const params = useParams();
@@ -22,6 +19,12 @@ export default function ItemReaderPage() {
     () => (!isServer && isEntryStoreReady() ? params.id ?? null : null),
     (entryId) => fetchEntryDetail(entryId),
   );
+  const listening = createReaderListening(() => {
+    const data = detail();
+    return data?.entry && data.capture?.status === "ready"
+      ? { title: data.entry.title, markdown: data.capture.markdown }
+      : null;
+  });
   let attemptedEntryId: string | undefined;
   let updateReadingProgress = () => {};
 
@@ -93,7 +96,7 @@ export default function ItemReaderPage() {
       !isEntryStoreReady() || detail.loading ? <ItemLoading /> : <p class="hn-status">Item not found</p>
     }>
       {(entry) => (
-        <article class={styles.reader} lang={detail()?.capture?.language ?? undefined}>
+        <article ref={listening.setReader} class={styles.reader} onClick={listening.playPassage} onKeyDown={listening.playPassage} lang={detail()?.capture?.language ?? undefined}>
           <Title>{`${entry().title} | reader | mark.tildom`}</Title>
           <header class={styles.header}>
             <p class={styles.actions}>
@@ -103,7 +106,7 @@ export default function ItemReaderPage() {
                 <a href={entry().canonicalUrl!} target="_blank" rel="noreferrer">original</a>
               </Show>
             </p>
-            <h1>{entry().title}</h1>
+            <h1><span data-listen-sentence="0" role="button" tabIndex={0} aria-label={`Play from: ${entry().title}`}>{entry().title}</span></h1>
             <Show when={detail()?.capture?.byline || detail()?.capture?.siteName || detail()?.capture?.publishedAt}>
               <p class={styles.meta}>
                 {[detail()?.capture?.byline, detail()?.capture?.siteName, detail()?.capture?.publishedAt].filter(Boolean).join(" · ")}
@@ -125,9 +128,10 @@ export default function ItemReaderPage() {
               </Show>
             </section>
           }>
+            <ArticleListen sentences={listening.article()!.sentences} language={detail()?.capture?.language} onSentence={listening.highlightSentence} onSeekReady={listening.setSeek} onRestoreScroll={listening.restoreScroll} />
             <div
               class={`${styles.content} markdownish`}
-              innerHTML={renderMarkdownishToHtml(stripReaderMedia(detail()!.capture!.markdown), { compactLinks: true })}
+              innerHTML={listening.article()!.html}
             />
           </Show>
         </article>

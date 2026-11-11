@@ -1,6 +1,6 @@
 .reader {
-  max-width: 75ch;
-  margin: 0 auto;
+  margin: 0;
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
 }
 
 .header {
@@ -23,7 +23,6 @@
 }
 
 .header h1 {
-  max-width: 32ch;
   margin: 0;
   color: var(--fg-default);
   font-size: 24px;
@@ -31,7 +30,6 @@
 }
 
 .content {
-  max-width: 72ch;
   color: var(--fg-default);
   font-size: 15px;
   line-height: 1.75;
@@ -97,4 +95,36 @@
 .progress > div {
   height: 100%;
   background: var(--syntax-error);
+}
+
+.reader :global([data-listen-sentence]) {
+  cursor: pointer;
+}
+
+.reader :global([data-listen-sentence]),
+.content :global(:is(strong, em, del)::before),
+.content :global(:is(strong, em, del)::after) {
+  background-image: linear-gradient(var(--syntax-bg-active), var(--syntax-bg-active));
+  background-repeat: no-repeat;
+  background-size: 0% 100%;
+  transition: background-size 220ms ease-out;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.reader :global([data-listen-active]),
+.content :global([data-listen-start-active]::before),
+.content :global([data-listen-end-active]::after) {
+  background-size: 100% 100%;
+}
+
+.reader :global([role="button"][data-listen-sentence]:focus-visible) {
+  outline: 2px solid var(--syntax-string);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader :global([data-listen-sentence]),
+  .content :global(:is(strong, em, del)::before),
+  .content :global(:is(strong, em, del)::after) { transition: none; }
 }

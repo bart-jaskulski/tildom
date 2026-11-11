@@ -17,6 +17,11 @@ export const tildomAppConfig = <T extends UserConfig>(configUrl: string, overrid
       allowedHosts: ALLOWED_HOSTS,
       headers: isolationHeaders,
       proxy: {
+        "/api": {
+          target: "http://127.0.0.1:8788",
+          changeOrigin: true,
+          rewrite: (path: string) => path.replace(/^\/api/, ""),
+        },
         "/sync": {
           target: process.env.SYNC_PROXY_TARGET ?? "http://127.0.0.1:8787",
           changeOrigin: true,

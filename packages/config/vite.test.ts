@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { tildomAppConfig } from "./vite.ts";
 
-test("app overrides retain SQLite isolation and sync defaults", () => {
+test("app overrides retain SQLite isolation and API/sync defaults", () => {
   const config = tildomAppConfig("file:///repo/apps/example/vite.config.ts", {
     server: { port: 5176 },
     build: { modulePreload: { polyfill: false } },
@@ -15,6 +15,10 @@ test("app overrides retain SQLite isolation and sync defaults", () => {
   const proxy = config.server?.proxy?.["/sync"];
   assert.ok(proxy && typeof proxy !== "string");
   assert.equal(proxy.rewrite?.("/sync/v1/apps/do"), "/v1/apps/do");
+  const apiProxy = config.server?.proxy?.["/api"];
+  assert.ok(apiProxy && typeof apiProxy !== "string");
+  assert.equal(apiProxy.target, "http://127.0.0.1:8788");
+  assert.equal(apiProxy.rewrite?.("/api/v1/mark/metadata"), "/v1/mark/metadata");
   assert.ok(config.optimizeDeps?.exclude?.includes("@sqlite.org/sqlite-wasm"));
   assert.deepEqual(config.build?.modulePreload, { polyfill: false });
 });

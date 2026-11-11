@@ -11,7 +11,7 @@ import { Button, ConfirmDialog, Editor, Popover, PopoverItem, TextButton, useVim
 import ItemLoading from "~/components/ItemLoading";
 import { formatRelativeTimestamp, splitNoteIntoTitleAndBody } from "~/lib/entries";
 import { parseHashTags } from "~/lib/tags";
-import { addCommentToEntry, deleteComment, deleteEntry, fetchEntryDetail, isEntryStoreReady, recordEntryOpen, updateComment, updateEntry } from "~/stores/entryStore";
+import { addCommentToEntry, captureEntry, deleteComment, deleteEntry, fetchEntryDetail, isEntryStoreReady, recordEntryOpen, updateComment, updateEntry } from "~/stores/entryStore";
 import styles from "./[id].module.css";
 
 const bodyWithMissingTags = (entry: { body: string; tags: string[] }) => {
@@ -58,7 +58,15 @@ export default function ItemPage() {
   const [showDeleteEntryConfirm, setShowDeleteEntryConfirm] = createSignal(false);
   const [isEditing, setIsEditing] = createSignal(false);
   const [isDeleting, setIsDeleting] = createSignal(false);
+  const [isCapturing, setIsCapturing] = createSignal(false);
+  const [captureError, setCaptureError] = createSignal<string | null>(null);
   let commentForm: HTMLFormElement | undefined;
+
+  createEffect(() => {
+    params.id;
+    setCaptureError(null);
+    setIsCapturing(false);
+  });
 
   const scrollCommentFormIntoView = () => {
     if (typeof window === "undefined") return;
@@ -98,6 +106,12 @@ export default function ItemPage() {
   });
   useVimKeymaps([
     { lhs: "i", callback: () => startEditing(), help: "edit entry" },
+    { lhs: "r", callback: () => {
+      const currentEntry = entry();
+      if (currentEntry?.canonicalUrl) {
+        void handleRead();
+      }
+    }, help: "read entry" },
     { lhs: ["o", "gx"], callback: () => {
       const currentEntry = entry();
       if (currentEntry?.canonicalUrl) {
@@ -107,6 +121,55 @@ export default function ItemPage() {
     }, help: "open original URL" },
     { lhs: "d", callback: () => void handleDelete(), help: "delete entry" },
   ]);
+
+  const handleRead = async (event?: MouseEvent) => {
+    const currentEntry = entry();
+    if (!currentEntry?.canonicalUrl || isCapturing()) return;
+
+    if (detail()?.capture?.status === "ready") {
+      if (!event) {
+        navigate(`/item/${currentEntry.id}/read`);
+      }
+      return;
+    }
+
+    event?.preventDefault();
+    setIsCapturing(true);
+    setCaptureError(null);
+
+    try {
+      const captureResult = await captureEntry(currentEntry.id, currentEntry.canonicalUrl);
+      if (captureResult) {
+        mutate((current) => current ? {
+          ...current,
+          entry: current.entry ? {
+            ...current.entry,
+            readerTextLength: captureResult.textContent.length,
+          } : null,
+          capture: {
+            entryId: currentEntry.id,
+            status: "ready",
+            markdown: captureResult.markdown,
+            textContent: captureResult.textContent,
+            byline: captureResult.byline ?? null,
+            siteName: captureResult.siteName ?? null,
+            publishedAt: captureResult.publishedAt ?? null,
+            language: captureResult.language ?? null,
+            capturedAt: Date.now(),
+            sourceUrl: captureResult.sourceUrl ?? null,
+            error: null,
+          },
+        } : current);
+        navigate(`/item/${currentEntry.id}/read`);
+      } else {
+        setCaptureError("reader view unavailable");
+      }
+    } catch {
+      setCaptureError("reader view unavailable");
+    } finally {
+      setIsCapturing(false);
+    }
+  };
 
   const startEditing = () => {
     const currentEntry = entry();
@@ -370,41 +433,6 @@ export default function ItemPage() {
                     <span>≈{readingTime()}m</span>
                   </Show>
                 </div>
-                <div class={styles.entryActions}>
-                  <Show when={!isEditing()} fallback={
-                    <>
-                      <TextButton
-                        type="button"
-                        inline
-                        onClick={() => void submitEdit(new Event("submit") as SubmitEvent)}
-                        disabled={isEditSaving()}
-                      >
-                        {isEditSaving() ? "saving..." : "save"}
-                      </TextButton>
-                      <span aria-hidden="true">|</span>
-                      <TextButton type="button" inline onClick={cancelEditing}>
-                        cancel
-                      </TextButton>
-                    </>
-                  }>
-                    <TextButton type="button" inline onClick={startEditing}>
-                      edit
-                    </TextButton>
-                    <Show when={currentEntry().canonicalUrl}>
-                      <span aria-hidden="true">|</span>
-                      <A href={`/item/${currentEntry().id}/read`}>read</A>
-                    </Show>
-                    <span aria-hidden="true">|</span>
-                    <TextButton
-                      type="button"
-                      inline
-                      onClick={handleDelete}
-                      disabled={isDeleting()}
-                    >
-                      {isDeleting() ? "deleting..." : "delete"}
-                    </TextButton>
-                  </Show>
-                </div>
 
                 <Show when={currentEntry().canonicalUrl}>
                   <h1 class={styles.title}>{currentEntry().title}</h1>
@@ -422,6 +450,24 @@ export default function ItemPage() {
                   <Show when={currentEntry().excerpt}>
                     <p class={styles.preview}>{currentEntry().excerpt}</p>
                   </Show>
+
+                  <div class={styles.primaryActions}>
+                    <Button
+                      as={detail()?.capture?.status === "ready" ? "a" : "button"}
+                      href={detail()?.capture?.status === "ready" ? `/item/${currentEntry().id}/read` : undefined}
+                      bracket
+                      onClick={(event) => void handleRead(event)}
+                      disabled={isCapturing()}
+                      aria-busy={isCapturing()}
+                    >
+                      {isCapturing() ? "loading..." : "read"}
+                    </Button>
+                    <Show when={captureError()}>
+                      <span class={styles.captureError} role="alert">
+                        {captureError()}
+                      </span>
+                    </Show>
+                  </div>
                 </Show>
 
                 <Show when={!isEditing()} fallback={
@@ -438,6 +484,21 @@ export default function ItemPage() {
                       variant="borderless"
                       autofocus
                     />
+
+                    <div class={styles.entryActions}>
+                      <TextButton
+                        type="button"
+                        inline
+                        onClick={() => void submitEdit(new Event("submit") as SubmitEvent)}
+                        disabled={isEditSaving()}
+                      >
+                        {isEditSaving() ? "saving..." : "save"}
+                      </TextButton>
+                      <span aria-hidden="true">|</span>
+                      <TextButton type="button" inline onClick={cancelEditing}>
+                        cancel
+                      </TextButton>
+                    </div>
 
                     <Show when={actionError()}>
                       <p class="hn-error">{actionError()}</p>
@@ -463,6 +524,21 @@ export default function ItemPage() {
                       }}
                     />
                   </Show>
+
+                  <div class={styles.entryActions}>
+                    <TextButton type="button" inline onClick={startEditing}>
+                      edit
+                    </TextButton>
+                    <span aria-hidden="true">|</span>
+                    <TextButton
+                      type="button"
+                      inline
+                      onClick={handleDelete}
+                      disabled={isDeleting()}
+                    >
+                      {isDeleting() ? "deleting..." : "delete"}
+                    </TextButton>
+                  </div>
 
                   <Show when={actionError()}>
                     <p class="hn-error">{actionError()}</p>

@@ -15,7 +15,7 @@ export type ExtractedCapture = {
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-  || (import.meta.env.DEV ? "http://localhost:8788" : "https://api.tildom.app");
+  || (import.meta.env.DEV ? "/api" : "https://api.tildom.app");
 
 const normalizeMetadataValue = (value: unknown) => {
   if (typeof value !== "string") {

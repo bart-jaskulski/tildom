@@ -5,16 +5,16 @@ export const syncEndpoint = (config: SyncConfig, suffix = "") =>
 
 export const syncHeaders = (config: SyncConfig) => ({ Authorization: `Bearer ${config.bearerToken}` });
 
-export const listRevisions = async (config: SyncConfig) => {
-  const response = await fetch(syncEndpoint(config), { headers: syncHeaders(config) });
+export const listRevisions = async (config: SyncConfig, signal?: AbortSignal) => {
+  const response = await fetch(syncEndpoint(config), { headers: syncHeaders(config), ...(signal ? { signal } : {}) });
   if (response.status === 404) return [];
   if (!response.ok) throw new Error(`Sync list failed (${response.status})`);
   const body = await response.json() as { revisions?: unknown };
   return Array.isArray(body.revisions) ? body.revisions.filter((item): item is string => typeof item === "string") : [];
 };
 
-export const downloadLatest = async (config: SyncConfig) => {
-  const response = await fetch(syncEndpoint(config, "/latest"), { headers: syncHeaders(config) });
+export const downloadLatest = async (config: SyncConfig, signal?: AbortSignal) => {
+  const response = await fetch(syncEndpoint(config, "/latest"), { headers: syncHeaders(config), ...(signal ? { signal } : {}) });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`Sync download failed (${response.status})`);
   const revision = response.headers.get("x-tildom-revision") || response.headers.get("etag");
@@ -22,7 +22,7 @@ export const downloadLatest = async (config: SyncConfig) => {
   return { revision, body: new Uint8Array(await response.arrayBuffer()) };
 };
 
-export const uploadSnapshot = async (config: SyncConfig, body: ArrayBuffer, expectedRevision: string | null) => {
+export const uploadSnapshot = async (config: SyncConfig, body: ArrayBuffer, expectedRevision: string | null, signal?: AbortSignal) => {
   const response = await fetch(syncEndpoint(config), {
     method: "POST",
     headers: {
@@ -31,6 +31,7 @@ export const uploadSnapshot = async (config: SyncConfig, body: ArrayBuffer, expe
       ...(expectedRevision ? { "If-Match": expectedRevision } : { "If-None-Match": "*" }),
     },
     body,
+    ...(signal ? { signal } : {}),
   });
   if (response.status === 409) return null;
   if (!response.ok) throw new Error(`Sync upload failed (${response.status})`);
@@ -43,4 +44,9 @@ export const toArrayBuffer = (bytes: Uint8Array) => {
   const copy = new Uint8Array(bytes.byteLength);
   copy.set(bytes);
   return copy.buffer;
+};
+
+export const deleteSnapshots = async (config: SyncConfig, signal?: AbortSignal) => {
+  const response = await fetch(syncEndpoint(config), { method: "DELETE", headers: syncHeaders(config), ...(signal ? { signal } : {}) });
+  if (!response.ok && response.status !== 404) throw new Error(`Sync deletion failed (${response.status})`);
 };

@@ -79,20 +79,12 @@
 
 .meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-x-1);
   margin-top: var(--space-1);
   color: var(--fg-muted);
   font-size: 12px;
-}
-
-.metaLead {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-x-1);
-  min-width: 0;
 }
 
 .menuAnchor {

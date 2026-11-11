@@ -17,8 +17,9 @@ export default defineConfig(() => {
           method: "GET",
           params: { title: "title", text: "text", url: "url" },
         },
-      }),
+      }, { globIgnores: ["**/listen.worker-*.js", "**/phonon_tts*"] }),
     ],
+    worker: { format: "es" },
     server: {
       port: 5173,
     },

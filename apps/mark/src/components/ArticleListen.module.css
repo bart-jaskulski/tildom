@@ -1,0 +1,129 @@
+.controls {
+  position: fixed;
+  left: max(var(--space-4), calc((100vw - 120ch) / 2 + var(--space-x-3)));
+  bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  max-width: calc(100vw - var(--space-4) * 2);
+}
+
+.play {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg-default);
+  cursor: pointer;
+}
+
+.play > svg:not(.ring),
+.dots {
+  z-index: 1;
+}
+
+.dots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 18px;
+  height: 18px;
+}
+
+.dot {
+  width: 3.5px;
+  height: 3.5px;
+  background: currentColor;
+  animation: jump 0.8s ease-in-out infinite;
+}
+
+.dot:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+.play:disabled {
+  color: var(--fg-muted);
+  cursor: wait;
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.surface {
+  fill: var(--bg-canvas);
+  stroke: var(--border-color);
+  stroke-width: 1;
+}
+
+.play:hover .surface,
+.play:focus-visible .surface {
+  fill: var(--syntax-bg-active);
+  stroke: var(--syntax-string);
+}
+
+.activity {
+  fill: none;
+  stroke: var(--syntax-string);
+  stroke-width: 2;
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
+.indeterminate {
+  animation: turn 1.4s linear infinite;
+}
+
+.error {
+  max-width: 42ch;
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--syntax-error);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes turn {
+  to { transform: rotate(270deg); }
+}
+
+@keyframes jump {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .indeterminate,
+  .dot {
+    animation: none;
+  }
+}

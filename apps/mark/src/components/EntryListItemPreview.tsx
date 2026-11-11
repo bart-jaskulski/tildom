@@ -87,22 +87,6 @@ export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
               >[<ExternalLink />]</a>
             </Show>
           </div>
-        </div>
-
-        <div class={styles.meta}>
-          <div class={styles.metaLead}>
-            <Show when={entry().domain}>
-              <A href={`/?q=${encodeURIComponent(entry().domain!)}&domain=${encodeURIComponent(entry().domain!)}`} class={styles.domain}>
-                ({entry().domain})
-              </A>
-            </Show>
-            <Show when={entry().readerTextLength > 0}>
-              <span>≈{readingTime()}m</span>
-            </Show>
-            <Show when={entry().commentCount > 0}>
-              <span>{entry().commentCount} {entry().commentCount === 1 ? "note" : "notes"}</span>
-            </Show>
-          </div>
 
           <div class={styles.menuAnchor}>
             <Button
@@ -133,6 +117,22 @@ export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
             </Popover>
           </div>
         </div>
+
+        <Show when={entry().domain || entry().readerTextLength > 0 || entry().commentCount > 0}>
+          <div class={styles.meta}>
+            <Show when={entry().domain}>
+              <A href={`/?q=${encodeURIComponent(entry().domain!)}&domain=${encodeURIComponent(entry().domain!)}`} class={styles.domain}>
+                ({entry().domain})
+              </A>
+            </Show>
+            <Show when={entry().readerTextLength > 0}>
+              <span>≈{readingTime()}m</span>
+            </Show>
+            <Show when={entry().commentCount > 0}>
+              <span>{entry().commentCount} {entry().commentCount === 1 ? "note" : "notes"}</span>
+            </Show>
+          </div>
+        </Show>
 
         <Show when={previewText(entry())}>
           <p class={styles.preview}><Search.Highlight>{previewText(entry())}</Search.Highlight></p>

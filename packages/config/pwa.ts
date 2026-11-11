@@ -1,4 +1,4 @@
-import { VitePWA, type ManifestOptions } from "vite-plugin-pwa";
+import { VitePWA, type VitePWAOptions, type ManifestOptions } from "vite-plugin-pwa";
 import { minimal2023Preset } from "@vite-pwa/assets-generator/config";
 
 type TildomPwaOptions = Pick<
@@ -26,7 +26,7 @@ const fullBleedIconPreset = {
   },
 };
 
-export const tildomPwa = (manifest: TildomPwaOptions) =>
+export const tildomPwa = (manifest: TildomPwaOptions, injectManifest: VitePWAOptions["injectManifest"] = {}) =>
   VitePWA({
     strategies: "injectManifest",
     srcDir: "src",
@@ -47,6 +47,7 @@ export const tildomPwa = (manifest: TildomPwaOptions) =>
     injectManifest: {
       globPatterns: ["**/*.{js,css,html,ico,png,svg,wasm}"],
       rollupFormat: "es",
+      ...injectManifest,
     },
     devOptions: {
       enabled: true,

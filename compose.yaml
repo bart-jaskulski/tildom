@@ -10,6 +10,7 @@ services:
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
       API_ALLOWED_ORIGINS: ${API_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002}
+      API_TRUSTED_PROXIES: ${API_TRUSTED_PROXIES:-}
       PUSH_STORAGE_ROOT: /app/storage
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}

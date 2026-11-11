@@ -55,6 +55,10 @@ pnpm dev:api
 
 Development ports: Home `5170`, Mark `5173`, Kin `5174`, Do `5176`.
 The feature API defaults to `http://localhost:8788`; sync uses `http://localhost:8787`.
+In development, apps send API requests through their own `/api` proxy to the local
+API. Run `pnpm dev:api` alongside the app; this works through localhost or a
+Tailscale reverse proxy pointing at the app, without exposing the API separately.
+No `VITE_API_BASE_URL` is needed; an explicit value overrides this default.
 Set `GOOGLE_API_KEY` for AI-backed requests.
 
 ## Verification

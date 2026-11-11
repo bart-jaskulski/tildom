@@ -687,10 +687,14 @@ export const updateEntry = async (
 };
 
 export const deleteEntry = async (entryId: string) => {
+  const recordings = await client.sql<{ title: string; markdown: string }>`SELECT e.title, c.markdown FROM entries e JOIN reader_captures c ON c.entry_id = e.id WHERE e.id = ${entryId} AND c.status = 'ready'`;
+  const { queueAudioDeletion, flushCompletedAudio } = await import("~/lib/listenSyncQueue");
+  for (const recording of recordings) await queueAudioDeletion(recording.title, recording.markdown);
   await client.sql`DELETE FROM comments WHERE entry_id = ${entryId}`;
   await client.sql`DELETE FROM entry_tags WHERE entry_id = ${entryId}`;
   await client.sql`DELETE FROM entries WHERE id = ${entryId}`;
   await pruneOrphanTags();
+  void flushCompletedAudio();
 };
 
 export const addCommentToEntry = async (entryId: string, bodyInput: string) => {

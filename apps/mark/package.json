@@ -20,9 +20,11 @@
     "@tildom/ui": "workspace:*",
     "lucide-solid": "^1.53.0",
     "nanoid": "^6.0.2",
+    "phonon-tts": "0.6.0",
     "qrcode": "^1.5.4",
     "solid-js": "^1.9.17",
     "vite": "^8.3.3",
+    "wasm-media-encoders": "^0.7.0",
     "zod": "^4.6.5"
   },
   "engines": {
