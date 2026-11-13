@@ -1,6 +1,7 @@
 import sqlite3InitModule from "@sqlite.org/sqlite-wasm";
 import type { DbMigration, DbRequest, DbResponse } from "./types";
 import { assertOpfsAvailable } from "./diagnostics";
+import { mergeAttachedRemoteDb } from "./merge";
 
 let db: any = null;
 let sqlite3Api: any = null;
@@ -65,10 +66,10 @@ const ensureParentDirectory = async (dbName: string) => {
   }
 };
 
-const applyMigrations = () => {
+const applyMigrations = (targetDb: any = db) => {
   if (!databaseMigrations.length) return;
 
-  const rows = db.exec({
+  const rows = targetDb.exec({
     sql: "PRAGMA user_version",
     rowMode: "array",
     returnValue: "resultRows",
@@ -82,14 +83,14 @@ const applyMigrations = () => {
       throw new Error(`Missing database migration from version ${currentVersion} to ${migration.version}`);
     }
 
-    execSql("BEGIN TRANSACTION;");
+    targetDb.exec("BEGIN TRANSACTION;");
     try {
-      execSql(migration.sql);
-      execSql(`PRAGMA user_version = ${migration.version}`);
-      execSql("COMMIT;");
+      targetDb.exec(migration.sql);
+      targetDb.exec(`PRAGMA user_version = ${migration.version}`);
+      targetDb.exec("COMMIT;");
       currentVersion = migration.version;
     } catch (error) {
-      execSql("ROLLBACK;");
+      targetDb.exec("ROLLBACK;");
       throw error;
     }
   }
@@ -120,6 +121,60 @@ const validateImportedDb = async (bytes: Uint8Array) => {
       await sqlite3Api.opfs?.unlink(tempFilename);
     } catch {
       // Validation may fail before the temporary file is created.
+    }
+  }
+};
+
+const mergeDb = async (dbName: string, bytes: Uint8Array) => {
+  if (!db || !sqlite3Api) {
+    throw new Error("Database is not initialized");
+  }
+
+  ensureSchema();
+  const tempFilename = `/browser-db-merge-${crypto.randomUUID()}.sqlite3`;
+
+  try {
+    await sqlite3Api.oo1.OpfsDb.importDb(tempFilename, bytes);
+
+    const tempDb = new sqlite3Api.oo1.OpfsDb(tempFilename, "c");
+    try {
+      const integrity = tempDb.exec({
+        sql: "PRAGMA integrity_check",
+        rowMode: "array",
+        returnValue: "resultRows",
+      });
+      if (integrity[0]?.[0] !== "ok") {
+        throw new Error("Imported database failed integrity check");
+      }
+      applyMigrations(tempDb);
+    } finally {
+      tempDb.close();
+    }
+
+    db.exec(`ATTACH DATABASE '${tempFilename}' AS remote;`);
+
+    try {
+      mergeAttachedRemoteDb({
+        exec: (sql) => execSql(sql),
+        query: <T>(sql: string) => querySql<T>(sql),
+      });
+    } finally {
+      try {
+        db.exec("ROLLBACK;");
+      } catch {
+        // Ignore rollback failure if transaction wasn't active
+      }
+      try {
+        db.exec("DETACH DATABASE remote;");
+      } catch (e) {
+        console.error("Failed to detach remote database:", e);
+      }
+    }
+  } finally {
+    try {
+      await sqlite3Api.opfs?.unlink(tempFilename);
+    } catch {
+      // Ignore cleanup failure
     }
   }
 };
@@ -196,9 +251,9 @@ const initDb = async (
   }
 };
 
-self.onmessage = async (event: MessageEvent<DbRequest>) => {
-  const msg = event.data;
+let messageChain = Promise.resolve();
 
+const handleWorkerMessage = async (msg: DbRequest) => {
   try {
     switch (msg.type) {
       case "init": {
@@ -248,8 +303,13 @@ self.onmessage = async (event: MessageEvent<DbRequest>) => {
       }
       case "tx:rollback": {
         if (activeTxId === msg.txId) {
-          execSql("ROLLBACK;");
-          activeTxId = null;
+          try {
+            execSql("ROLLBACK;");
+          } catch {
+            // Ignore rollback failure if transaction was already aborted by SQLite
+          } finally {
+            activeTxId = null;
+          }
         }
         self.postMessage({ id: msg.id, type: "success" } as DbResponse);
         break;
@@ -264,6 +324,13 @@ self.onmessage = async (event: MessageEvent<DbRequest>) => {
         await importDb(dbName, msg.bytes);
         self.postMessage({ id: msg.id, type: "success" } as DbResponse);
         self.postMessage({ type: "change", source: msg.source ?? "import" } as DbResponse);
+        break;
+      }
+      case "merge": {
+        const dbName = msg.dbName || "tildom.sqlite3";
+        await mergeDb(dbName, msg.bytes);
+        self.postMessage({ id: msg.id, type: "success" } as DbResponse);
+        self.postMessage({ type: "change", source: msg.source ?? "merge" } as DbResponse);
         break;
       }
       case "close": {
@@ -287,4 +354,12 @@ self.onmessage = async (event: MessageEvent<DbRequest>) => {
       } as DbResponse);
     }
   }
+};
+
+self.onmessage = (event: MessageEvent<DbRequest>) => {
+  messageChain = messageChain
+    .then(() => handleWorkerMessage(event.data))
+    .catch((err) => {
+      console.error("Worker unhandled message error:", err);
+    });
 };

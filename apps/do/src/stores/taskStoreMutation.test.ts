@@ -52,12 +52,12 @@ vi.mock("~/lib/syncState", () => ({
 
 import {
   addTask,
-  createWorkspace,
-  DEFAULT_WORKSPACE_ID,
+  createSpace,
+  DEFAULT_SPACE_ID,
   deleteTask,
   initializeTaskStore,
   moveTask,
-  renameWorkspace,
+  renameSpace,
   updateTask,
 } from "./taskStore";
 
@@ -85,7 +85,7 @@ describe("taskStore (Real SQLite Behavioral Integration)", () => {
     expect(rows[0].text).toBe("Prepare quarterly roadmap");
     expect(rows[0].parent_id).toBeNull();
     expect(rows[0].completed).toBe(0);
-    expect(rows[0].workspace_id).toBe(DEFAULT_WORKSPACE_ID);
+    expect(rows[0].workspace_id).toBe(DEFAULT_SPACE_ID);
     expect(rows[0].rank).toBeTruthy();
   });
 
@@ -94,7 +94,7 @@ describe("taskStore (Real SQLite Behavioral Integration)", () => {
     const subtask = await addTask({ content: "Collect W-2 forms" }, parent.id);
 
     expect(subtask.parentId).toBe(parent.id);
-    expect(subtask.workspaceId).toBe(DEFAULT_WORKSPACE_ID);
+    expect(subtask.spaceId).toBe(DEFAULT_SPACE_ID);
 
     const rows = queryTasks("parent_id = ?", [parent.id]);
     expect(rows).toHaveLength(1);
@@ -131,7 +131,7 @@ describe("taskStore (Real SQLite Behavioral Integration)", () => {
     expect(rows[0].rank).toBeTruthy();
   });
 
-  it("recursively deletes a task and all nested descendants", async () => {
+  it("recursively soft-deletes a task and all nested descendants", async () => {
     const root = await addTask({ content: "Epic: Authentication overhaul" });
     const child = await addTask({ content: "Feature: Passkeys support" }, root.id);
     const grandchild = await addTask({ content: "Task: Implement WebAuthn ceremony" }, child.id);
@@ -140,24 +140,25 @@ describe("taskStore (Real SQLite Behavioral Integration)", () => {
     // Delete the root epic
     await deleteTask(root.id);
 
-    // Root, child, and grandchild should all be deleted
-    expect(queryTasks("id = ?", [root.id])).toHaveLength(0);
-    expect(queryTasks("id = ?", [child.id])).toHaveLength(0);
-    expect(queryTasks("id = ?", [grandchild.id])).toHaveLength(0);
+    // Root, child, and grandchild should all be soft-deleted
+    expect(queryTasks("id = ? AND deleted_at IS NULL", [root.id])).toHaveLength(0);
+    expect(queryTasks("id = ? AND deleted_at IS NULL", [child.id])).toHaveLength(0);
+    expect(queryTasks("id = ? AND deleted_at IS NULL", [grandchild.id])).toHaveLength(0);
+    expect(queryTasks("id = ?", [root.id])[0].deleted_at).toBeGreaterThan(0);
 
     // Unrelated task must remain untouched
     expect(queryTasks("id = ?", [unrelated.id])).toHaveLength(1);
   });
 
-  it("creates and renames custom workspaces in SQLite", async () => {
-    const wsId = await createWorkspace("Client Work");
+  it("creates and renames custom spaces in SQLite", async () => {
+    const wsId = await createSpace("Client Work");
     expect(wsId).toBeTruthy();
 
     const createdRows = queryWorkspaces("id = ?", [wsId!]);
     expect(createdRows).toHaveLength(1);
     expect(createdRows[0].name).toBe("Client Work");
 
-    await renameWorkspace(wsId!, "Freelance Projects");
+    await renameSpace(wsId!, "Freelance Projects");
     const updatedRows = queryWorkspaces("id = ?", [wsId!]);
     expect(updatedRows[0].name).toBe("Freelance Projects");
   });

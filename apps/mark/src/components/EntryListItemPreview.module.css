@@ -4,6 +4,7 @@
   transition: background-color 0.15s ease-out, border-color 0.15s ease-out;
   padding-inline: var(--space-x-1-5);
   padding-block: var(--space-1);
+  cursor: pointer;
 
   @media (min-width: 769px) {
     padding-block: var(--space-3);
@@ -14,6 +15,10 @@
     border-left-color: var(--syntax-keyword);
     background: var(--syntax-bg-active);
   }
+}
+
+.loadingRow {
+  cursor: default;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 import { decryptSnapshot, deriveSyncConfig, encryptSnapshot, generateSyncSecret } from "./crypto";
-import { defaultRuntimeState, type SyncState } from "./state";
+import { defaultRuntimeState, type SyncRuntimeState, type SyncState } from "./state";
 import { downloadLatest, listRevisions, toArrayBuffer, uploadSnapshot } from "./transport";
 
 type Options = {
@@ -9,6 +9,7 @@ type Options = {
   state: SyncState;
   exportDatabase: () => Promise<ArrayBuffer | Uint8Array>;
   importDatabase: (bytes: Uint8Array) => Promise<void>;
+  mergeDatabase?: (bytes: Uint8Array) => Promise<void>;
   afterImport?: () => Promise<void>;
   queueBackgroundSync?: () => Promise<void>;
   requestPrefetch?: () => void;
@@ -23,6 +24,7 @@ export const createSyncClient = (options: Options) => {
   const [isReady, setIsReady] = createSignal(false);
   let timer: ReturnType<typeof setTimeout> | undefined;
   let inFlight: Promise<void> | null = null;
+  let hasPendingRun = false;
 
   const refreshSyncState = async () => {
     const config = await options.state.getSyncConfig();
@@ -44,6 +46,16 @@ export const createSyncClient = (options: Options) => {
     await options.afterImport?.();
   };
 
+  const mergeRemote = async (config: NonNullable<Awaited<ReturnType<SyncState["getSyncConfig"]>>>, revision: string, body: Uint8Array) => {
+    const decrypted = await decryptSnapshot(config, body);
+    if (options.mergeDatabase) {
+      await options.mergeDatabase(decrypted);
+    } else {
+      await options.importDatabase(decrypted);
+    }
+    await options.afterImport?.();
+  };
+
   const storePending = async (config: NonNullable<Awaited<ReturnType<SyncState["getSyncConfig"]>>>, revision: string | null) => {
     const runtime = await options.state.getSyncRuntime();
     const encrypted = await encryptSnapshot(config, new Uint8Array(await options.exportDatabase()));
@@ -51,41 +63,107 @@ export const createSyncClient = (options: Options) => {
     await options.queueBackgroundSync?.().catch(() => undefined);
   };
 
+  const finalizeUploadSuccess = async (newRevision: string, baseRuntime: SyncRuntimeState) => {
+    await options.state.clearPendingUpload();
+    const current = await options.state.getSyncRuntime();
+    const hasMoreLocalChanges = current.pendingGeneration !== baseRuntime.pendingGeneration;
+    await options.state.setSyncRuntime({
+      ...current,
+      lastSeenRevision: newRevision,
+      hasLocalChanges: hasMoreLocalChanges,
+      lastSyncedAt: Date.now(),
+      lastError: null,
+    });
+    if (hasMoreLocalChanges) {
+      scheduleSync();
+    }
+  };
+
   const syncNow = async () => {
-    if (inFlight) return inFlight;
+    if (inFlight) {
+      hasPendingRun = true;
+      return inFlight;
+    }
     inFlight = (async () => {
-      const config = await options.state.getSyncConfig();
-      if (!config) {
-        inFlight = null;
-        await refreshSyncState();
-        return;
-      }
-      setStatus("syncing"); setStatusText("syncing");
       try {
+        const config = await options.state.getSyncConfig();
+        if (!config) {
+          return;
+        }
+        setStatus("syncing"); setStatusText("syncing");
         const prefetched = await options.state.getPrefetchedSnapshot();
         if (prefetched) {
-          if ((await options.state.getSyncRuntime()).lastSeenRevision !== prefetched.revision) {
-            await importRemote(config, prefetched.revision, new Uint8Array(prefetched.body));
+          try {
+            const currentRuntime = await options.state.getSyncRuntime();
+            if (currentRuntime.lastSeenRevision !== prefetched.revision) {
+              if (currentRuntime.hasLocalChanges && options.mergeDatabase) {
+                await mergeRemote(config, prefetched.revision, new Uint8Array(prefetched.body));
+                const freshRuntime = await options.state.getSyncRuntime();
+                await options.state.setSyncRuntime({
+                  ...freshRuntime,
+                  lastSeenRevision: prefetched.revision,
+                  hasLocalChanges: true,
+                  lastSyncedAt: Date.now(),
+                  lastError: null,
+                });
+              } else if (!currentRuntime.hasLocalChanges) {
+                await importRemote(config, prefetched.revision, new Uint8Array(prefetched.body));
+              }
+            }
+          } finally {
+            await options.state.clearPrefetchedSnapshot();
           }
-          await options.state.clearPrefetchedSnapshot();
         }
+
         const runtime = await options.state.getSyncRuntime();
         const latest = (await listRevisions(config))[0] ?? null;
+
         if (runtime.hasLocalChanges) {
           if (latest && latest !== runtime.lastSeenRevision) {
             const remote = await downloadLatest(config);
-            if (remote) await importRemote(config, remote.revision, remote.body);
-            return;
+            if (remote) {
+              if (options.mergeDatabase) {
+                await mergeRemote(config, remote.revision, remote.body);
+                const encrypted = await encryptSnapshot(config, new Uint8Array(await options.exportDatabase()));
+                const mergedRevision = await uploadSnapshot(config, toArrayBuffer(encrypted), remote.revision);
+                if (mergedRevision) {
+                  await finalizeUploadSuccess(mergedRevision, runtime);
+                  return;
+                }
+                const current = await options.state.getSyncRuntime();
+                await options.state.setSyncRuntime({ ...current, lastSeenRevision: remote.revision });
+                scheduleSync();
+                return;
+              }
+              await importRemote(config, remote.revision, remote.body);
+              return;
+            }
           }
+
           const encrypted = await encryptSnapshot(config, new Uint8Array(await options.exportDatabase()));
           const revision = await uploadSnapshot(config, toArrayBuffer(encrypted), runtime.lastSeenRevision);
           if (!revision) {
             const remote = await downloadLatest(config);
-            if (remote) await importRemote(config, remote.revision, remote.body);
+            if (!remote) {
+              throw new Error("Sync upload conflict, but remote revision is unavailable");
+            }
+            if (options.mergeDatabase) {
+              await mergeRemote(config, remote.revision, remote.body);
+              const mergedEncrypted = await encryptSnapshot(config, new Uint8Array(await options.exportDatabase()));
+              const mergedRev = await uploadSnapshot(config, toArrayBuffer(mergedEncrypted), remote.revision);
+              if (mergedRev) {
+                await finalizeUploadSuccess(mergedRev, runtime);
+                return;
+              }
+              const current = await options.state.getSyncRuntime();
+              await options.state.setSyncRuntime({ ...current, lastSeenRevision: remote.revision });
+              scheduleSync();
+              return;
+            }
+            await importRemote(config, remote.revision, remote.body);
             return;
           }
-          await options.state.clearPendingUpload();
-          await options.state.setSyncRuntime({ ...runtime, lastSeenRevision: revision, hasLocalChanges: false, lastSyncedAt: Date.now(), lastError: null });
+          await finalizeUploadSuccess(revision, runtime);
         } else if (latest && latest !== runtime.lastSeenRevision) {
           const remote = await downloadLatest(config);
           if (remote) await importRemote(config, remote.revision, remote.body);
@@ -98,6 +176,10 @@ export const createSyncClient = (options: Options) => {
       } finally {
         inFlight = null;
         await refreshSyncState();
+        if (hasPendingRun) {
+          hasPendingRun = false;
+          void syncNow();
+        }
       }
     })();
     return inFlight;

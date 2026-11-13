@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Do Acceptance Tests (Local-First & Behavioral)", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
-    // Wait for the workspace radio to be active and ready
+    // Wait for the space radio to be active and ready
     await expect(page.getByRole("radio", { name: "Default" })).toBeChecked();
     await expect(page.getByText(/BUFFER: tasks\.db/i)).toBeVisible();
     await expect(page.getByRole("button", { name: "[ ADD NEW TASK ]" })).toBeVisible();
@@ -62,7 +62,7 @@ test.describe("Do Acceptance Tests (Local-First & Behavioral)", () => {
     await expect(page.getByText("Submit quarterly invoice")).not.toBeVisible();
 
     // 4. Switch filter to 'COMPLETED'
-    await page.getByText("COMPLETED").click();
+    await page.getByText("COMPLETED", { exact: true }).click();
     await expect(page.getByText("Submit quarterly invoice")).toBeVisible();
     const completedCheckbox = page.locator("li").filter({ hasText: "Submit quarterly invoice" }).getByRole("checkbox", { name: "Mark task incomplete" });
     await expect(completedCheckbox).toBeChecked();
@@ -70,7 +70,7 @@ test.describe("Do Acceptance Tests (Local-First & Behavioral)", () => {
     // 5. Local-First Invariant: reload and verify completion status persists in OPFS SQLite
     await page.reload();
     await expect(page.getByRole("radio", { name: "Default" })).toBeChecked();
-    await page.getByText("COMPLETED").click();
+    await page.getByText("COMPLETED", { exact: true }).click();
     await expect(page.getByText("Submit quarterly invoice")).toBeVisible();
     await expect(page.locator("li").filter({ hasText: "Submit quarterly invoice" }).getByRole("checkbox", { name: "Mark task incomplete" })).toBeChecked();
   });

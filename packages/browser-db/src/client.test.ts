@@ -98,8 +98,13 @@ class RealSqliteWorker implements Worker {
             }
             case "tx:rollback": {
               if (this.activeTxId === msg.txId) {
-                this.db?.exec("ROLLBACK;");
-                this.activeTxId = null;
+                try {
+                  this.db?.exec("ROLLBACK;");
+                } catch {
+                  // Ignore rollback failure if transaction already aborted
+                } finally {
+                  this.activeTxId = null;
+                }
               }
               this.onmessage({
                 data: { id: msg.id, type: "success" },
@@ -118,6 +123,15 @@ class RealSqliteWorker implements Worker {
               } as MessageEvent<DbResponse>);
               this.onmessage({
                 data: { type: "change", source: msg.source ?? "import" },
+              } as MessageEvent<DbResponse>);
+              break;
+            }
+            case "merge": {
+              this.onmessage({
+                data: { id: msg.id, type: "success" },
+              } as MessageEvent<DbResponse>);
+              this.onmessage({
+                data: { type: "change", source: msg.source ?? "merge" },
               } as MessageEvent<DbResponse>);
               break;
             }
@@ -225,6 +239,14 @@ describe("BrowserDbClient Suite (Real SQLite Behavioral Verification)", () => {
     // Staged change must NOT be in the real database
     const afterRollback = await client.sql<{ id: number; name: string }>`SELECT * FROM groceries ORDER BY id ASC`;
     expect(afterRollback.map((r) => r.name)).toEqual(["bread", "milk"]);
+
+    // Subsequent transaction must succeed cleanly without activeTxId deadlocks
+    const nextResult = await client.transaction(async (tx) => {
+      await tx.exec("INSERT INTO groceries (name) VALUES (?)", ["eggs"]);
+      return tx.sql<{ id: number; name: string }>`SELECT * FROM groceries WHERE name = ${"eggs"}`;
+    });
+    expect(nextResult).toEqual([{ id: 3, name: "eggs" }]);
+    expect(listener).toHaveBeenCalledTimes(2);
   });
 
   it("queues commands called before init() finishes", async () => {
@@ -302,5 +324,40 @@ describe("BrowserDbClient Suite (Real SQLite Behavioral Verification)", () => {
     await expect(
       client.exec("INSERT INTO nonexistent_table VALUES (1, 2, 3)")
     ).rejects.toThrow(/no such table/i);
+  });
+
+  it("merges database bytes and notifies subscribers with merge source", async () => {
+    await client.init();
+    const worker = mockWorkerConstructor.mock.results[0].value as RealSqliteWorker;
+
+    const changeCallback = vi.fn();
+    client.subscribe(changeCallback);
+
+    await client.mergeDatabase(new Uint8Array([7, 8, 9]));
+
+    expect(worker.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+      type: "merge",
+      bytes: new Uint8Array([7, 8, 9]),
+      dbName: "groceries.sqlite3",
+      source: "merge",
+    }));
+
+    expect(changeCallback).toHaveBeenCalledWith({ source: "merge" });
+  });
+
+  it("drains and rejects in-flight pending requests when worker is terminated", async () => {
+    await client.init();
+    const worker = mockWorkerConstructor.mock.results[0].value as RealSqliteWorker;
+
+    // Simulate an in-flight operation that does not complete before close
+    worker.postMessage.mockImplementationOnce(() => {
+      // Do not post message back, leaving query in pending state
+    });
+
+    const pendingQuery = client.query("SELECT * FROM groceries");
+
+    await client.close();
+
+    await expect(pendingQuery).rejects.toThrow(/Database worker terminated/i);
   });
 });

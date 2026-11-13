@@ -66,9 +66,10 @@ export class BrowserDbClient {
       });
       this.flushQueue();
     } catch (error) {
-      this.terminateWorker();
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.terminateWorker(err);
       for (const queued of this.queue.splice(0)) {
-        queued.reject(error instanceof Error ? error : new Error(String(error)));
+        queued.reject(err);
       }
       throw error;
     }
@@ -185,6 +186,15 @@ export class BrowserDbClient {
     } as any);
   };
 
+  mergeDatabaseFile = (bytes: Uint8Array, source: DbChangeSource = "merge"): Promise<void> => {
+    return this.postAndWait({
+      type: "merge",
+      bytes,
+      dbName: this.dbName,
+      source,
+    } as any);
+  };
+
   deleteDatabaseFile = async (): Promise<void> => {
     await this.init();
     await this.postAndWait({ type: "delete", dbName: this.dbName });
@@ -200,15 +210,25 @@ export class BrowserDbClient {
     return this.overwriteDatabaseFile(bytes, source);
   };
 
+  mergeDatabase = (bytes: Uint8Array, source: DbChangeSource = "merge"): Promise<void> => {
+    return this.mergeDatabaseFile(bytes, source);
+  };
+
   close = (): Promise<void> => {
     if (!this.worker) return Promise.resolve();
 
     return this.postAndWait({ type: "close" }).finally(this.terminateWorker);
   };
 
-  private terminateWorker = () => {
+  private terminateWorker = (error?: Error) => {
     this.worker?.terminate();
     this.worker = null;
     this.isReady = false;
+
+    const rejectionError = error ?? new Error("Database worker terminated");
+    for (const [, handler] of this.pending) {
+      handler.reject(rejectionError);
+    }
+    this.pending.clear();
   };
 }

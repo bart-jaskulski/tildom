@@ -30,4 +30,10 @@ VALUES ('default', 'Default', strftime('%s','now')*1000, strftime('%s','now')*10
 UPDATE tasks SET updated_at = created_at WHERE updated_at IS NULL;
 UPDATE tasks SET workspace_id = 'default' WHERE workspace_id IS NULL OR workspace_id = '';
 `,
+}, {
+  version: 2,
+  sql: `
+    ALTER TABLE tasks ADD COLUMN deleted_at INTEGER DEFAULT NULL;
+    CREATE INDEX IF NOT EXISTS tasks_deleted_at_idx ON tasks(deleted_at);
+  `,
 }];

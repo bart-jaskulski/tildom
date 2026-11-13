@@ -284,4 +284,102 @@ END;
 
     CREATE INDEX IF NOT EXISTS reader_captures_status_idx ON reader_captures(status);
   `,
+}, {
+  version: 4,
+  sql: `
+    ALTER TABLE entries ADD COLUMN deleted_at INTEGER DEFAULT NULL;
+    ALTER TABLE comments ADD COLUMN deleted_at INTEGER DEFAULT NULL;
+    CREATE INDEX IF NOT EXISTS entries_deleted_at_idx ON entries(deleted_at);
+    CREATE INDEX IF NOT EXISTS comments_deleted_at_idx ON comments(deleted_at);
+
+    DROP INDEX IF EXISTS entries_canonical_url_unique;
+    CREATE UNIQUE INDEX IF NOT EXISTS entries_canonical_url_unique
+    ON entries(canonical_url)
+    WHERE canonical_url IS NOT NULL AND deleted_at IS NULL;
+
+    CREATE TRIGGER IF NOT EXISTS entries_search_soft_delete
+    AFTER UPDATE OF deleted_at ON entries
+    WHEN NEW.deleted_at IS NOT NULL
+    BEGIN
+      DELETE FROM search_documents WHERE entry_id = NEW.id;
+      DELETE FROM search_documents_fts WHERE entry_id = NEW.id;
+    END;
+
+    DROP TRIGGER IF EXISTS entries_search_au;
+    CREATE TRIGGER IF NOT EXISTS entries_search_au
+    AFTER UPDATE ON entries
+    WHEN NEW.deleted_at IS NULL
+    BEGIN
+      DELETE FROM search_documents WHERE entry_id = NEW.id;
+      DELETE FROM search_documents_fts WHERE entry_id = NEW.id;
+
+      INSERT INTO search_documents (
+        entry_id,
+        title,
+        body,
+        url,
+        domain,
+        excerpt,
+        comments_text,
+        searchable_text,
+        comment_count,
+        updated_at
+      )
+      SELECT
+        e.id,
+        e.title,
+        e.body,
+        COALESCE(e.canonical_url, e.source_url, ''),
+        COALESCE(e.domain, ''),
+        COALESCE(e.excerpt, ''),
+        COALESCE(group_concat(c.body, ' '), ''),
+        lower(trim(
+          COALESCE(e.title, '') || ' ' ||
+          COALESCE(e.body, '') || ' ' ||
+          COALESCE(e.source_url, '') || ' ' ||
+          COALESCE(e.canonical_url, '') || ' ' ||
+          COALESCE(e.domain, '') || ' ' ||
+          COALESCE(e.excerpt, '') || ' ' ||
+          COALESCE(group_concat(c.body, ' '), '')
+        )),
+        COUNT(c.id),
+        e.updated_at
+      FROM entries e
+      LEFT JOIN comments c ON c.entry_id = e.id AND c.deleted_at IS NULL
+      WHERE e.id = NEW.id AND e.deleted_at IS NULL
+      GROUP BY
+        e.id,
+        e.title,
+        e.body,
+        e.source_url,
+        e.canonical_url,
+        e.domain,
+        e.excerpt,
+        e.updated_at;
+
+      INSERT INTO search_documents_fts (
+        entry_id,
+        title,
+        body,
+        url,
+        domain,
+        excerpt,
+        comments_text,
+        comment_count,
+        updated_at
+      )
+      SELECT
+        entry_id,
+        title,
+        body,
+        url,
+        domain,
+        excerpt,
+        comments_text,
+        comment_count,
+        updated_at
+      FROM search_documents
+      WHERE entry_id = NEW.id;
+    END;
+  `,
 }];

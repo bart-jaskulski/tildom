@@ -46,7 +46,7 @@ export const contactSlugs = (allContacts: Contact[]): Map<string, string> => {
 };
 
 const fetchContactRoutes = async (): Promise<{ contacts: Contact[]; slugs: Map<string, string> }> => {
-  const allContacts = await db.sql<Contact>`SELECT * FROM contacts ORDER BY created_at ASC, id ASC`;
+  const allContacts = await db.sql<Contact>`SELECT * FROM contacts WHERE deleted_at IS NULL ORDER BY created_at ASC, id ASC`;
   return { contacts: allContacts, slugs: contactSlugs(allContacts) };
 };
 
@@ -104,7 +104,7 @@ const appStore = createRoot(() => {
   });
 
   const refreshContacts = async () => {
-    const list = await db.sql<Contact>`SELECT * FROM contacts ORDER BY name ASC`;
+    const list = await db.sql<Contact>`SELECT * FROM contacts WHERE deleted_at IS NULL ORDER BY name ASC`;
     setState("contacts", list);
     void syncPushReminders(list).catch(() => undefined);
   };
@@ -161,7 +161,8 @@ export const searchContacts = async (rawQuery: string): Promise<ContactSearchRes
   const isTag = search.startsWith("#");
   const profileRows = isTag ? [] : await db.sql<Contact>`
     SELECT * FROM contacts
-    WHERE name LIKE ${pattern} OR relationship LIKE ${pattern} OR location LIKE ${pattern} OR email LIKE ${pattern} OR phone LIKE ${pattern} OR birthday LIKE ${pattern}
+    WHERE (name LIKE ${pattern} OR relationship LIKE ${pattern} OR location LIKE ${pattern} OR email LIKE ${pattern} OR phone LIKE ${pattern} OR birthday LIKE ${pattern})
+      AND deleted_at IS NULL
     ORDER BY name ASC
   `;
   const notePattern = isTag ? `% ${search.slice(1).toLowerCase()} %` : pattern;
@@ -169,13 +170,13 @@ export const searchContacts = async (rawQuery: string): Promise<ContactSearchRes
     ? await db.sql<Contact & { note_body: string; note_created_at: number }>`
         SELECT c.*, n.body AS note_body, n.created_at AS note_created_at
         FROM notes n JOIN contacts c ON c.id = n.contact_id
-        WHERE n.tags LIKE ${notePattern}
+        WHERE n.tags LIKE ${notePattern} AND n.deleted_at IS NULL AND c.deleted_at IS NULL
         ORDER BY c.name ASC, n.created_at DESC
       `
     : await db.sql<Contact & { note_body: string; note_created_at: number }>`
         SELECT c.*, n.body AS note_body, n.created_at AS note_created_at
         FROM notes n JOIN contacts c ON c.id = n.contact_id
-        WHERE n.body LIKE ${notePattern}
+        WHERE n.body LIKE ${notePattern} AND n.deleted_at IS NULL AND c.deleted_at IS NULL
         ORDER BY c.name ASC, n.created_at DESC
       `;
   const results = new Map<string, ContactSearchResult>();
@@ -221,12 +222,14 @@ export const updateContact = async (
 };
 
 export const deleteContact = async (id: string): Promise<void> => {
-  // Cascading deletes are configured via foreign keys for notes and relationships in db.worker
-  await db.sql`DELETE FROM contacts WHERE id = ${id}`;
+  const now = Date.now();
+  await db.sql`UPDATE contacts SET deleted_at = ${now}, updated_at = ${now} WHERE id = ${id}`;
+  await db.sql`UPDATE notes SET deleted_at = ${now}, updated_at = ${now} WHERE contact_id = ${id}`;
+  await db.sql`UPDATE relationships SET deleted_at = ${now}, updated_at = ${now} WHERE (contact_id_a = ${id} OR contact_id_b = ${id}) AND deleted_at IS NULL`;
 };
 
 export const fetchContact = async (id: string): Promise<Contact | null> => {
-  const rows = await db.sql<Contact>`SELECT * FROM contacts WHERE id = ${id} LIMIT 1`;
+  const rows = await db.sql<Contact>`SELECT * FROM contacts WHERE id = ${id} AND deleted_at IS NULL LIMIT 1`;
   return rows[0] ?? null;
 };
 
@@ -234,7 +237,7 @@ export const fetchContact = async (id: string): Promise<Contact | null> => {
 export const fetchNotes = async (contactId: string): Promise<Note[]> => {
   return db.sql<Note>`
     SELECT * FROM notes
-    WHERE contact_id = ${contactId}
+    WHERE contact_id = ${contactId} AND deleted_at IS NULL
     ORDER BY is_pinned DESC, created_at DESC
   `;
 };
@@ -261,7 +264,8 @@ export const updateNote = async (noteId: string, body: string, isPinned: boolean
 };
 
 export const deleteNote = async (noteId: string): Promise<void> => {
-  await db.sql`DELETE FROM notes WHERE id = ${noteId}`;
+  const now = Date.now();
+  await db.sql`UPDATE notes SET deleted_at = ${now}, updated_at = ${now} WHERE id = ${noteId}`;
 };
 
 // CRUD: Relationships & Symmetrical Resolver
@@ -278,7 +282,10 @@ export const fetchRelationships = async (contactId: string): Promise<Symmetrical
     FROM relationships r
     JOIN contacts c_a ON r.contact_id_a = c_a.id
     JOIN contacts c_b ON r.contact_id_b = c_b.id
-    WHERE r.contact_id_a = ${contactId} OR r.contact_id_b = ${contactId}
+    WHERE (r.contact_id_a = ${contactId} OR r.contact_id_b = ${contactId})
+      AND r.deleted_at IS NULL
+      AND c_a.deleted_at IS NULL
+      AND c_b.deleted_at IS NULL
   `;
 
   return rows.map((row) => {
@@ -316,25 +323,34 @@ export const createRelationship = async (
   // we check if a connection already exists in any direction.
   const existing = await db.sql`
     SELECT * FROM relationships
-    WHERE (contact_id_a = ${contactIdA} AND contact_id_b = ${contactIdB})
-       OR (contact_id_a = ${contactIdB} AND contact_id_b = ${contactIdA})
+    WHERE ((contact_id_a = ${contactIdA} AND contact_id_b = ${contactIdB})
+       OR (contact_id_a = ${contactIdB} AND contact_id_b = ${contactIdA}))
+      AND deleted_at IS NULL
   `;
 
   if (existing.length > 0) {
     throw new Error("A relationship already exists between these two contacts.");
   }
 
+  const now = Date.now();
   await db.sql`
-    INSERT INTO relationships (contact_id_a, contact_id_b, role)
-    VALUES (${contactIdA}, ${contactIdB}, ${role.trim().toLowerCase()})
+    INSERT INTO relationships (contact_id_a, contact_id_b, role, updated_at)
+    VALUES (${contactIdA}, ${contactIdB}, ${role.trim().toLowerCase()}, ${now})
+    ON CONFLICT(contact_id_a, contact_id_b) DO UPDATE SET
+      role = excluded.role,
+      updated_at = excluded.updated_at,
+      deleted_at = NULL
   `;
 };
 
 export const deleteRelationship = async (contactIdA: string, contactIdB: string): Promise<void> => {
+  const now = Date.now();
   await db.sql`
-    DELETE FROM relationships
-    WHERE (contact_id_a = ${contactIdA} AND contact_id_b = ${contactIdB})
-       OR (contact_id_a = ${contactIdB} AND contact_id_b = ${contactIdA})
+    UPDATE relationships
+    SET deleted_at = ${now}, updated_at = ${now}
+    WHERE ((contact_id_a = ${contactIdA} AND contact_id_b = ${contactIdB})
+       OR (contact_id_a = ${contactIdB} AND contact_id_b = ${contactIdA}))
+      AND deleted_at IS NULL
   `;
 };
 

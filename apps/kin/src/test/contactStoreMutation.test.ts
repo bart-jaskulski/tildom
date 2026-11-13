@@ -111,13 +111,17 @@ describe("contactStore (Real SQLite Behavioral Integration)", () => {
 
     await deleteContact(adaId);
 
-    expect(queryContacts("id = ?", [adaId])).toHaveLength(0);
-    const remainingNotes = memDb.prepare("SELECT * FROM notes WHERE contact_id = ?").all(adaId);
+    expect(queryContacts("id = ? AND deleted_at IS NULL", [adaId])).toHaveLength(0);
+    const adaRow = queryContacts("id = ?", [adaId])[0];
+    expect(adaRow.deleted_at).toBeGreaterThan(0);
+    const remainingNotes = memDb.prepare("SELECT * FROM notes WHERE contact_id = ? AND deleted_at IS NULL").all(adaId);
     expect(remainingNotes).toHaveLength(0);
-    const remainingRelations = memDb
-      .prepare("SELECT * FROM relationships WHERE contact_id_a = ? OR contact_id_b = ?")
-      .all(adaId, adaId);
+    const noteRow = memDb.prepare("SELECT * FROM notes WHERE contact_id = ?").all(adaId) as any[];
+    expect(noteRow[0].deleted_at).toBeGreaterThan(0);
+    const remainingRelations = await fetchRelationships(graceId);
     expect(remainingRelations).toHaveLength(0);
+    const relRow = memDb.prepare("SELECT * FROM relationships WHERE (contact_id_a = ? OR contact_id_b = ?) AND deleted_at IS NULL").all(adaId, adaId);
+    expect(relRow).toHaveLength(0);
   });
 
   it("creates and resolves symmetrical relationships with role inversion", async () => {

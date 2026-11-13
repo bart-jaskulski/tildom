@@ -20,7 +20,7 @@ describe("TaskItem due date editing", () => {
       <TaskItem
         id="task-1"
         parentId={null}
-        workspaceId="default"
+        spaceId="default"
         text="Test task"
         completed={false}
         createdAt={1}
@@ -41,7 +41,7 @@ describe("TaskItem due date editing", () => {
       <TaskItem
         id="task-1"
         parentId={null}
-        workspaceId="default"
+        spaceId="default"
         text="Test task"
         completed={false}
         createdAt={1}

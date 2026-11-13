@@ -154,9 +154,11 @@ const entryStore = createRoot(() => {
         LEFT JOIN (
           SELECT entry_id, COUNT(*) AS comment_count
           FROM comments
+          WHERE deleted_at IS NULL
           GROUP BY entry_id
         ) comment_totals ON comment_totals.entry_id = e.id
         ${tagSelectSql}
+        WHERE e.deleted_at IS NULL
         ORDER BY COALESCE(e.last_commented_at, e.created_at) DESC, e.created_at DESC
       `,
     );
@@ -201,10 +203,11 @@ const fetchEntryRow = async (entryId: string) => {
       LEFT JOIN (
         SELECT entry_id, COUNT(*) AS comment_count
         FROM comments
+        WHERE deleted_at IS NULL
         GROUP BY entry_id
       ) comment_totals ON comment_totals.entry_id = e.id
       ${tagSelectSql}
-      WHERE e.id = ?
+      WHERE e.id = ? AND e.deleted_at IS NULL
       LIMIT 1
     `,
     [entryId],
@@ -215,7 +218,7 @@ const fetchEntryRow = async (entryId: string) => {
 
 const findEntryIdByCanonicalUrl = async (canonicalUrl: string) => {
   const rows = await client.query<EntryIdRow>(
-    "SELECT id FROM entries WHERE canonical_url = ? LIMIT 1",
+    "SELECT id FROM entries WHERE canonical_url = ? AND deleted_at IS NULL LIMIT 1",
     [canonicalUrl],
   );
 
@@ -234,7 +237,8 @@ export const fetchTagVocabulary = async () => {
       FROM tags
       WHERE EXISTS (
         SELECT 1 FROM entry_tags
-        WHERE entry_tags.tag_id = tags.id
+        JOIN entries ON entries.id = entry_tags.entry_id
+        WHERE entry_tags.tag_id = tags.id AND entries.deleted_at IS NULL
       )
       ORDER BY tags.name ASC
     `,
@@ -249,7 +253,8 @@ const fetchUsedTagsOutsideEntry = async (entryId: string) => {
       SELECT DISTINCT tags.name
       FROM tags
       JOIN entry_tags ON entry_tags.tag_id = tags.id
-      WHERE entry_tags.entry_id <> ?
+      JOIN entries ON entries.id = entry_tags.entry_id
+      WHERE entry_tags.entry_id <> ? AND entries.deleted_at IS NULL
     `,
     [entryId],
   );
@@ -279,7 +284,8 @@ const pruneOrphanTags = async () => {
     DELETE FROM tags
     WHERE NOT EXISTS (
       SELECT 1 FROM entry_tags
-      WHERE entry_tags.tag_id = tags.id
+      JOIN entries ON entries.id = entry_tags.entry_id
+      WHERE entry_tags.tag_id = tags.id AND entries.deleted_at IS NULL
     )
   `;
 };
@@ -481,7 +487,7 @@ export const fetchEntryDetail = async (entryId: string): Promise<EntryDetail> =>
     `
       SELECT id, entry_id, body, created_at, updated_at
       FROM comments
-      WHERE entry_id = ?
+      WHERE entry_id = ? AND deleted_at IS NULL
       ORDER BY created_at ASC
     `,
     [entryId],
@@ -690,9 +696,11 @@ export const deleteEntry = async (entryId: string) => {
   const recordings = await client.sql<{ title: string; markdown: string }>`SELECT e.title, c.markdown FROM entries e JOIN reader_captures c ON c.entry_id = e.id WHERE e.id = ${entryId} AND c.status = 'ready'`;
   const { queueAudioDeletion, flushCompletedAudio } = await import("~/lib/listenSyncQueue");
   for (const recording of recordings) await queueAudioDeletion(recording.title, recording.markdown);
-  await client.sql`DELETE FROM comments WHERE entry_id = ${entryId}`;
+  const now = Date.now();
+  await client.sql`UPDATE comments SET deleted_at = ${now}, updated_at = ${now} WHERE entry_id = ${entryId}`;
+  await client.sql`DELETE FROM reader_captures WHERE entry_id = ${entryId}`;
   await client.sql`DELETE FROM entry_tags WHERE entry_id = ${entryId}`;
-  await client.sql`DELETE FROM entries WHERE id = ${entryId}`;
+  await client.sql`UPDATE entries SET deleted_at = ${now}, updated_at = ${now} WHERE id = ${entryId}`;
   await pruneOrphanTags();
   void flushCompletedAudio();
 };
@@ -743,5 +751,6 @@ export const updateComment = async (commentId: string, bodyInput: string) => {
 };
 
 export const deleteComment = async (commentId: string) => {
-  await client.sql`DELETE FROM comments WHERE id = ${commentId}`;
+  const now = Date.now();
+  await client.sql`UPDATE comments SET deleted_at = ${now}, updated_at = ${now} WHERE id = ${commentId}`;
 };

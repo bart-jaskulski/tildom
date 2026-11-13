@@ -315,7 +315,7 @@
 }
 
 /* Settings Views */
-.workspace-list {
+.space-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -323,7 +323,7 @@
   margin-top: var(--space-2);
 }
 
-.workspace-item {
+.space-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -332,11 +332,11 @@
   padding: var(--space-2) var(--space-3);
 }
 
-.workspace-info {
+.space-info {
   min-width: 0;
 }
 
-.workspace-name {
+.space-name {
   font-size: 14px;
   font-weight: bold;
   display: block;
@@ -345,13 +345,13 @@
   white-space: nowrap;
 }
 
-.workspace-active-badge {
+.space-active-badge {
   color: var(--fg-muted);
   font-size: 12px;
   text-transform: uppercase;
 }
 
-.workspace-actions {
+.space-actions {
   display: flex;
   align-items: center;
   gap: var(--space-2);

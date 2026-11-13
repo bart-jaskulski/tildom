@@ -19,11 +19,11 @@ import {
   setBreakdownGranularity,
 } from "~/stores/preferencesStore";
 import {
-  createWorkspace,
-  renameWorkspace,
-  selectedWorkspaceId,
-  selectWorkspace,
-  workspaces,
+  createSpace,
+  renameSpace,
+  selectedSpaceId,
+  selectSpace,
+  spaces,
 } from "~/stores/taskStore";
 import { pwaInstall } from "~/lib/pwaInstall";
 
@@ -53,32 +53,32 @@ export default function SettingsPage() {
     await refreshStorageStatus();
   });
 
-  const [workspaceEditor, setWorkspaceEditor] = createSignal<{ id: string | null } | null>(null);
-  const [workspaceName, setWorkspaceName] = createSignal("");
-  const [savingWorkspace, setSavingWorkspace] = createSignal(false);
-  const [workspaceError, setWorkspaceError] = createSignal("");
+  const [spaceEditor, setSpaceEditor] = createSignal<{ id: string | null } | null>(null);
+  const [spaceName, setSpaceName] = createSignal("");
+  const [savingSpace, setSavingSpace] = createSignal(false);
+  const [spaceError, setSpaceError] = createSignal("");
 
-  const openWorkspaceEditor = (id: string | null = null, name = "") => {
-    setWorkspaceName(name);
-    setWorkspaceError("");
-    setWorkspaceEditor({ id });
+  const openSpaceEditor = (id: string | null = null, name = "") => {
+    setSpaceName(name);
+    setSpaceError("");
+    setSpaceEditor({ id });
   };
 
-  const saveWorkspace = async (event: SubmitEvent) => {
+  const saveSpace = async (event: SubmitEvent) => {
     event.preventDefault();
-    const editor = workspaceEditor();
-    const name = workspaceName().trim();
-    if (!editor || !name || savingWorkspace()) return;
-    setSavingWorkspace(true);
-    setWorkspaceError("");
+    const editor = spaceEditor();
+    const name = spaceName().trim();
+    if (!editor || !name || savingSpace()) return;
+    setSavingSpace(true);
+    setSpaceError("");
     try {
-      if (editor.id) await renameWorkspace(editor.id, name);
-      else await createWorkspace(name);
-      setWorkspaceEditor(null);
+      if (editor.id) await renameSpace(editor.id, name);
+      else await createSpace(name);
+      setSpaceEditor(null);
     } catch (error) {
-      setWorkspaceError(error instanceof Error ? error.message : "Could not save workspace");
+      setSpaceError(error instanceof Error ? error.message : "Could not save space");
     } finally {
-      setSavingWorkspace(false);
+      setSavingSpace(false);
     }
   };
 
@@ -153,36 +153,36 @@ export default function SettingsPage() {
           </SettingsSection>
         </Show>
 
-        {/* Workspace Section */}
-        <SettingsSection title="workspaces">
+        {/* Space Section */}
+        <SettingsSection title="spaces">
           <SettingsRow label="actions">
             <Button
               type="button"
               bracket
-              onClick={() => openWorkspaceEditor()}
+              onClick={() => openSpaceEditor()}
             >
               + NEW
             </Button>
           </SettingsRow>
 
-          <div class="workspace-list">
-            <For each={workspaces()}>
-              {(workspace) => {
-                const isSelected = () => selectedWorkspaceId() === workspace.id;
+          <div class="space-list">
+            <For each={spaces()}>
+              {(space) => {
+                const isSelected = () => selectedSpaceId() === space.id;
                 return (
-                  <div class="workspace-item">
-                    <div class="workspace-info">
-                      <span class="workspace-name">{workspace.name}</span>
+                  <div class="space-item">
+                    <div class="space-info">
+                      <span class="space-name">{space.name}</span>
                       <Show when={isSelected()}>
-                        <span class="workspace-active-badge">[ ACTIVE ]</span>
+                        <span class="space-active-badge">[ ACTIVE ]</span>
                       </Show>
                     </div>
 
-                    <div class="workspace-actions">
+                    <div class="space-actions">
                       <Button
                         type="button"
                         bracket
-                        onClick={() => void selectWorkspace(workspace.id)}
+                        onClick={() => void selectSpace(space.id)}
                         disabled={isSelected()}
                       >
                         {isSelected() ? "active" : "use"}
@@ -190,7 +190,7 @@ export default function SettingsPage() {
                       <Button
                         type="button"
                         bracket
-                        onClick={() => openWorkspaceEditor(workspace.id, workspace.name)}
+                        onClick={() => openSpaceEditor(space.id, space.name)}
                       >
                         rename
                       </Button>
@@ -251,7 +251,7 @@ export default function SettingsPage() {
         {/* Persistent Storage Diagnostic */}
         <SettingsSection title="storage">
           <SettingsRow label="durability">
-            <div class="workspace-actions">
+            <div class="space-actions">
               <span class="storage-badge">
                 {storageLabel()}
               </span>
@@ -271,22 +271,22 @@ export default function SettingsPage() {
       </SettingsContainer>
 
       <Dialog
-        open={workspaceEditor() !== null}
-        title={workspaceEditor()?.id ? "Rename workspace" : "New workspace"}
-        onClose={() => { if (!savingWorkspace()) setWorkspaceEditor(null); }}
+        open={spaceEditor() !== null}
+        title={spaceEditor()?.id ? "Rename space" : "New space"}
+        onClose={() => { if (!savingSpace()) setSpaceEditor(null); }}
       >
-        <form onSubmit={saveWorkspace}>
-          <label for="workspace-name">Workspace name</label>
+        <form onSubmit={saveSpace}>
+          <label for="space-name">Space name</label>
           <Input
-            id="workspace-name"
+            id="space-name"
             required
             autofocus
-            value={workspaceName()}
-            onInput={(event) => setWorkspaceName(event.currentTarget.value)}
+            value={spaceName()}
+            onInput={(event) => setSpaceName(event.currentTarget.value)}
           />
-          <Show when={workspaceError()}><p role="alert">{workspaceError()}</p></Show>
-          <Button type="submit" disabled={savingWorkspace() || !workspaceName().trim()}>
-            {savingWorkspace() ? "Saving…" : "Save workspace"}
+          <Show when={spaceError()}><p role="alert">{spaceError()}</p></Show>
+          <Button type="submit" disabled={savingSpace() || !spaceName().trim()}>
+            {savingSpace() ? "Saving…" : "Save space"}
           </Button>
         </form>
       </Dialog>

@@ -11,6 +11,7 @@ export interface Contact {
   email: string;
   created_at: number;
   updated_at: number;
+  deleted_at?: number | null;
 }
 
 export interface Note {
@@ -21,6 +22,15 @@ export interface Note {
   is_pinned: number;
   created_at: number;
   updated_at: number;
+  deleted_at?: number | null;
+}
+
+export interface Relationship {
+  contact_id_a: string;
+  contact_id_b: string;
+  role: string;
+  updated_at?: number;
+  deleted_at?: number | null;
 }
 
 export const migrations: DbMigration[] = [
@@ -62,6 +72,18 @@ export const migrations: DbMigration[] = [
   {
     version: 2,
     sql: "ALTER TABLE contacts ADD COLUMN relationship TEXT DEFAULT '';",
+  },
+  {
+    version: 3,
+    sql: `
+      ALTER TABLE contacts ADD COLUMN deleted_at INTEGER DEFAULT NULL;
+      ALTER TABLE notes ADD COLUMN deleted_at INTEGER DEFAULT NULL;
+      ALTER TABLE relationships ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE relationships ADD COLUMN deleted_at INTEGER DEFAULT NULL;
+      CREATE INDEX IF NOT EXISTS contacts_deleted_at_idx ON contacts(deleted_at);
+      CREATE INDEX IF NOT EXISTS notes_deleted_at_idx ON notes(deleted_at);
+      CREATE INDEX IF NOT EXISTS relationships_deleted_at_idx ON relationships(deleted_at);
+    `,
   },
 ];
 

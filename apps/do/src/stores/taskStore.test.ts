@@ -1,17 +1,17 @@
 import { describe, it, expect } from "vitest";
 import {
-  DEFAULT_WORKSPACE_ID,
+  DEFAULT_SPACE_ID,
   isStalled,
-  resolveSelectedWorkspaceId,
+  resolveSelectedSpaceId,
   STALE_THRESHOLD_MS,
   type Task,
-  type Workspace,
+  type Space,
 } from "./taskStore";
 
 const makeTask = (overrides: Partial<Task> = {}): Task => ({
   id: "test-id",
   parentId: null,
-  workspaceId: DEFAULT_WORKSPACE_ID,
+  spaceId: DEFAULT_SPACE_ID,
   text: "Test task",
   completed: false,
   createdAt: Date.now(),
@@ -51,18 +51,18 @@ describe("Task updatedAt", () => {
   });
 });
 
-describe("resolveSelectedWorkspaceId", () => {
-  const workspaces: Workspace[] = [
-    { id: DEFAULT_WORKSPACE_ID, name: "Default", createdAt: 1, updatedAt: 1 },
+describe("resolveSelectedSpaceId", () => {
+  const spaces: Space[] = [
+    { id: DEFAULT_SPACE_ID, name: "Default", createdAt: 1, updatedAt: 1 },
     { id: "work", name: "Work", createdAt: 2, updatedAt: 2 },
   ];
 
-  it("prefers a persisted workspace when it still exists", () => {
-    expect(resolveSelectedWorkspaceId(workspaces, "work")).toBe("work");
+  it("prefers a persisted space when it still exists", () => {
+    expect(resolveSelectedSpaceId(spaces, "work")).toBe("work");
   });
 
-  it("falls back to the default workspace when the preference is missing", () => {
-    expect(resolveSelectedWorkspaceId(workspaces, "missing")).toBe(DEFAULT_WORKSPACE_ID);
+  it("falls back to the default space when the preference is missing", () => {
+    expect(resolveSelectedSpaceId(spaces, "missing")).toBe(DEFAULT_SPACE_ID);
   });
 });
 

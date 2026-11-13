@@ -27,11 +27,9 @@ export default function App() {
     void requestPersistentStorage();
     await initializeEntryStore();
 
-    window.setTimeout(() => {
-      void import("~/lib/syncClient")
-        .then(({ initializeSync }) => initializeSync())
-        .catch(console.error);
-    }, 1_000);
+    void import("~/lib/syncClient")
+      .then(({ initializeSync }) => initializeSync())
+      .catch(console.error);
   });
 
   return (

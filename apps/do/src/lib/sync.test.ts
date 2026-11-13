@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   createSyncClient: vi.fn(),
   exportDatabase: vi.fn(),
   importDatabase: vi.fn(),
+  mergeDatabase: vi.fn(),
   initializeTaskStore: vi.fn(),
   markSyncDirty: vi.fn(),
   subscribe: vi.fn(),
@@ -23,6 +24,7 @@ vi.mock("@tildom/browser-db", () => ({
     subscribe = mocks.subscribe;
     exportDatabase = mocks.exportDatabase;
     importDatabase = mocks.importDatabase;
+    mergeDatabase = mocks.mergeDatabase;
   },
 }));
 vi.mock("~/stores/taskStore", () => ({ initializeTaskStore: mocks.initializeTaskStore }));
@@ -40,6 +42,7 @@ describe("Do shared sync integration", () => {
     expect(mocks.databaseConstructor).toHaveBeenCalledWith("microstep.sqlite3", expect.any(Object));
     expect(options.exportDatabase).toBe(mocks.exportDatabase);
     expect(options.importDatabase).toBe(mocks.importDatabase);
+    expect(options.mergeDatabase).toBe(mocks.mergeDatabase);
     await options.afterImport();
     expect(mocks.initializeTaskStore).toHaveBeenCalledOnce();
   });

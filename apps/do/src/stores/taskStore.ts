@@ -16,7 +16,7 @@ const nanoid = () => {
 export type Task = {
   id: string;
   parentId: string | null;
-  workspaceId: string;
+  spaceId: string;
   text: string;
   completed: boolean;
   createdAt: number;
@@ -26,7 +26,7 @@ export type Task = {
   isStalled: boolean;
 };
 
-export type Workspace = {
+export type Space = {
   id: string;
   name: string;
   createdAt: number;
@@ -34,8 +34,8 @@ export type Workspace = {
 };
 
 export const STALE_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
-export const DEFAULT_WORKSPACE_ID = "default";
-const WORKSPACE_STORAGE_KEY = "do.tildom:selected-workspace-id";
+export const DEFAULT_SPACE_ID = "default";
+const SPACE_STORAGE_KEY = "do.tildom:selected-space-id";
 
 export const isStalled = (task: Task, now: number = Date.now()): boolean =>
   task.updatedAt === task.createdAt && (now - task.createdAt) > STALE_THRESHOLD_MS;
@@ -48,7 +48,7 @@ export type TreeNode = Task & {
 const dbRowToTask = (row: any): Task => ({
   id: row.id,
   parentId: row.parent_id,
-  workspaceId: row.workspace_id,
+  spaceId: row.workspace_id,
   text: row.text,
   completed: Boolean(row.completed),
   createdAt: row.created_at,
@@ -58,53 +58,53 @@ const dbRowToTask = (row: any): Task => ({
   isStalled: Boolean(row.is_stalled),
 });
 
-const dbRowToWorkspace = (row: any): Workspace => ({
+const dbRowToSpace = (row: any): Space => ({
   id: row.id,
   name: row.name,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
 
-const readSelectedWorkspacePreference = () => {
+const readSelectedSpacePreference = () => {
   if (isServer || typeof window === "undefined") {
     return null;
   }
 
   try {
-    return window.localStorage.getItem(WORKSPACE_STORAGE_KEY);
+    return window.localStorage.getItem(SPACE_STORAGE_KEY);
   } catch (error) {
-    console.warn("Failed to read selected workspace preference:", error);
+    console.warn("Failed to read selected space preference:", error);
     return null;
   }
 };
 
-const writeSelectedWorkspacePreference = (workspaceId: string | null) => {
+const writeSelectedSpacePreference = (spaceId: string | null) => {
   if (isServer || typeof window === "undefined") {
     return;
   }
 
   try {
-    if (workspaceId) {
-      window.localStorage.setItem(WORKSPACE_STORAGE_KEY, workspaceId);
+    if (spaceId) {
+      window.localStorage.setItem(SPACE_STORAGE_KEY, spaceId);
       return;
     }
 
-    window.localStorage.removeItem(WORKSPACE_STORAGE_KEY);
+    window.localStorage.removeItem(SPACE_STORAGE_KEY);
   } catch (error) {
-    console.warn("Failed to persist selected workspace preference:", error);
+    console.warn("Failed to persist selected space preference:", error);
   }
 };
 
-export const resolveSelectedWorkspaceId = (
-  availableWorkspaces: Workspace[],
-  preferredWorkspaceId: string | null
+export const resolveSelectedSpaceId = (
+  availableSpaces: Space[],
+  preferredSpaceId: string | null
 ) => {
-  if (preferredWorkspaceId && availableWorkspaces.some((workspace) => workspace.id === preferredWorkspaceId)) {
-    return preferredWorkspaceId;
+  if (preferredSpaceId && availableSpaces.some((space) => space.id === preferredSpaceId)) {
+    return preferredSpaceId;
   }
 
-  const defaultWorkspace = availableWorkspaces.find((workspace) => workspace.id === DEFAULT_WORKSPACE_ID);
-  return defaultWorkspace?.id ?? availableWorkspaces[0]?.id ?? null;
+  const defaultSpace = availableSpaces.find((space) => space.id === DEFAULT_SPACE_ID);
+  return defaultSpace?.id ?? availableSpaces[0]?.id ?? null;
 };
 
 const compareDueThenRank = (a: Task, b: Task) => {
@@ -117,13 +117,13 @@ const compareDueThenRank = (a: Task, b: Task) => {
 const computeInitialRank = async (
   parentId: string | null,
   dueAt: number | null,
-  workspaceId: string
+  spaceId: string
 ) => {
   let rows: any[];
   if (parentId) {
-    rows = await db.sql`SELECT * FROM tasks WHERE parent_id = ${parentId}`;
+    rows = await db.sql`SELECT * FROM tasks WHERE parent_id = ${parentId} AND deleted_at IS NULL`;
   } else {
-    rows = await db.sql`SELECT * FROM tasks WHERE parent_id IS NULL AND workspace_id = ${workspaceId}`;
+    rows = await db.sql`SELECT * FROM tasks WHERE parent_id IS NULL AND workspace_id = ${spaceId} AND deleted_at IS NULL`;
   }
 
   if (!rows || !Array.isArray(rows) || rows.length === 0) {
@@ -159,29 +159,29 @@ const taskStore = createRoot(() => {
   const [state, setState] = createStore({
     tasks: {} as Record<string, Task>,
     expandedTaskIds: {} as Record<string, boolean>,
-    workspaces: [] as Workspace[],
-    selectedWorkspaceId: null as string | null,
+    spaces: [] as Space[],
+    selectedSpaceId: null as string | null,
   });
 
-  const setSelectedWorkspace = (workspaceId: string | null) => {
-    setState("selectedWorkspaceId", workspaceId);
-    writeSelectedWorkspacePreference(workspaceId);
+  const setSelectedSpace = (spaceId: string | null) => {
+    setState("selectedSpaceId", spaceId);
+    writeSelectedSpacePreference(spaceId);
   };
 
-  const refreshWorkspaces = async () => {
+  const refreshSpaces = async () => {
     const rows = await db.sql`SELECT * FROM workspaces ORDER BY created_at ASC`;
-    const nextWorkspaces = Array.isArray(rows) ? rows.map(dbRowToWorkspace) : [];
-    setState("workspaces", nextWorkspaces);
-    return nextWorkspaces;
+    const nextSpaces = Array.isArray(rows) ? rows.map(dbRowToSpace) : [];
+    setState("spaces", nextSpaces);
+    return nextSpaces;
   };
 
-  const refreshTasks = async (workspaceId: string | null = state.selectedWorkspaceId) => {
-    if (!workspaceId) {
+  const refreshTasks = async (spaceId: string | null = state.selectedSpaceId) => {
+    if (!spaceId) {
       setState("tasks", {});
       return;
     }
 
-    const rows = await fetchMainViewTasks(workspaceId);
+    const rows = await fetchMainViewTasks(spaceId);
     const taskMap: Record<string, Task> = {};
     
     if (Array.isArray(rows)) {
@@ -194,21 +194,21 @@ const taskStore = createRoot(() => {
     setState("tasks", taskMap);
   };
 
-  const refreshWorkspaceState = async (preferredWorkspaceId: string | null) => {
-    const availableWorkspaces = await refreshWorkspaces();
-    const resolvedWorkspaceId = resolveSelectedWorkspaceId(availableWorkspaces, preferredWorkspaceId);
+  const refreshSpaceState = async (preferredSpaceId: string | null) => {
+    const availableSpaces = await refreshSpaces();
+    const resolvedSpaceId = resolveSelectedSpaceId(availableSpaces, preferredSpaceId);
 
-    if (resolvedWorkspaceId !== state.selectedWorkspaceId) {
-      setSelectedWorkspace(resolvedWorkspaceId);
+    if (resolvedSpaceId !== state.selectedSpaceId) {
+      setSelectedSpace(resolvedSpaceId);
     }
 
-    await refreshTasks(resolvedWorkspaceId);
-    return resolvedWorkspaceId;
+    await refreshTasks(resolvedSpaceId);
+    return resolvedSpaceId;
   };
 
   // Auto-refresh when db changes via worker broadcast
   db.subscribe(() => {
-    void refreshWorkspaceState(state.selectedWorkspaceId ?? readSelectedWorkspacePreference());
+    void refreshSpaceState(state.selectedSpaceId ?? readSelectedSpacePreference());
   });
 
   let initPromise: Promise<void> | null = null;
@@ -220,7 +220,7 @@ const taskStore = createRoot(() => {
     initPromise = (async () => {
       try {
         await db.init();
-        await refreshWorkspaceState(readSelectedWorkspacePreference());
+        await refreshSpaceState(readSelectedSpacePreference());
       } catch (err) {
         console.error("Failed to initialize task store:", err);
       }
@@ -244,6 +244,9 @@ const taskStore = createRoot(() => {
       if (t.parentId && nodeMap.has(t.parentId)) {
         nodeMap.get(t.parentId)!.children.push(node);
       } else {
+        if (t.parentId) {
+          node.parentId = null;
+        }
         roots.push(node);
       }
     });
@@ -277,14 +280,14 @@ const taskStore = createRoot(() => {
     return roots;
   });
 
-  return { state, setState, initializeTaskStore, tasks, refreshTasks, setSelectedWorkspace };
+  return { state, setState, initializeTaskStore, tasks, refreshTasks, setSelectedSpace };
 });
 
-const { state, setState, initializeTaskStore, tasks, refreshTasks, setSelectedWorkspace } = taskStore;
+const { state, setState, initializeTaskStore, tasks, refreshTasks, setSelectedSpace } = taskStore;
 
 export { initializeTaskStore, tasks };
-export const workspaces = () => state.workspaces;
-export const selectedWorkspaceId = () => state.selectedWorkspaceId;
+export const spaces = () => state.spaces;
+export const selectedSpaceId = () => state.selectedSpaceId;
 
 export const isTaskExpanded = (taskId: string) => Boolean(state.expandedTaskIds[taskId]);
 export const setTaskExpanded = (taskId: string, value: boolean) => {
@@ -297,33 +300,33 @@ type NewTaskPayload = {
 };
 
 export const addTask = async (data: NewTaskPayload, parentId: string | null = null) => {
-  if (!state.selectedWorkspaceId && !parentId) {
+  if (!state.selectedSpaceId && !parentId) {
     await initializeTaskStore();
   }
 
   const id = nanoid();
-  const workspaceId = parentId
-    ? (await db.sql<{ workspace_id: string }>`SELECT workspace_id FROM tasks WHERE id = ${parentId}`)[0]?.workspace_id
-    : (state.selectedWorkspaceId || DEFAULT_WORKSPACE_ID);
+  const spaceId = parentId
+    ? (await db.sql<{ workspace_id: string }>`SELECT workspace_id FROM tasks WHERE id = ${parentId} AND deleted_at IS NULL`)[0]?.workspace_id
+    : (state.selectedSpaceId || DEFAULT_SPACE_ID);
 
-  if (!workspaceId) {
-    throw new Error("Cannot create a task without a selected workspace");
+  if (!spaceId) {
+    throw new Error("Cannot create a task without a selected space");
   }
 
   const dueAt = normalizeDueDateValue(data.dueDate);
 
-  const rank = await computeInitialRank(parentId, dueAt, workspaceId);
+  const rank = await computeInitialRank(parentId, dueAt, spaceId);
 
   const now = Date.now();
   await db.sql`
     INSERT INTO tasks (id, parent_id, text, completed, created_at, updated_at, due_at, rank, workspace_id)
-    VALUES (${id}, ${parentId}, ${data.content}, 0, ${now}, ${now}, ${dueAt}, ${rank}, ${workspaceId})
+    VALUES (${id}, ${parentId}, ${data.content}, 0, ${now}, ${now}, ${dueAt}, ${rank}, ${spaceId})
   `;
 
   const newTask: Task = {
     id,
     parentId,
-    workspaceId,
+    spaceId,
     text: data.content,
     completed: false,
     createdAt: now,
@@ -336,16 +339,16 @@ export const addTask = async (data: NewTaskPayload, parentId: string | null = nu
   return newTask;
 };
 
-export const selectWorkspace = async (workspaceId: string) => {
-  if (!state.workspaces.some((workspace) => workspace.id === workspaceId)) {
+export const selectSpace = async (spaceId: string) => {
+  if (!state.spaces.some((space) => space.id === spaceId)) {
     return;
   }
 
-  setSelectedWorkspace(workspaceId);
-  await refreshTasks(workspaceId);
+  setSelectedSpace(spaceId);
+  await refreshTasks(spaceId);
 };
 
-export const createWorkspace = async (name: string) => {
+export const createSpace = async (name: string) => {
   const trimmedName = name.trim();
   if (!trimmedName) {
     return null;
@@ -359,12 +362,12 @@ export const createWorkspace = async (name: string) => {
     VALUES (${id}, ${trimmedName}, ${now}, ${now})
   `;
 
-  setSelectedWorkspace(id);
+  setSelectedSpace(id);
   setState("tasks", {});
   return id;
 };
 
-export const renameWorkspace = async (id: string, name: string) => {
+export const renameSpace = async (id: string, name: string) => {
   const trimmedName = name.trim();
   if (!trimmedName) {
     return;
@@ -377,7 +380,7 @@ export const renameWorkspace = async (id: string, name: string) => {
 };
 
 export const updateTask = async (id: string, fields: Partial<Task>) => {
-  const rows = await db.sql`SELECT * FROM tasks WHERE id = ${id}`;
+  const rows = await db.sql`SELECT * FROM tasks WHERE id = ${id} AND deleted_at IS NULL`;
   
   if (!rows || !Array.isArray(rows) || rows.length === 0) return;
 
@@ -402,7 +405,7 @@ export const moveTask = async (
   prevSiblingRank?: string, 
   nextSiblingRank?: string
 ) => {
-  const rows = await db.sql`SELECT * FROM tasks WHERE id = ${taskId}`;
+  const rows = await db.sql`SELECT * FROM tasks WHERE id = ${taskId} AND deleted_at IS NULL`;
   
   if (!rows || !Array.isArray(rows) || rows.length === 0) return;
 
@@ -428,7 +431,7 @@ export const deleteTask = async (id: string) => {
 
   while (found) {
     found = false;
-    const rows = await db.sql`SELECT * FROM tasks`;
+    const rows = await db.sql`SELECT * FROM tasks WHERE deleted_at IS NULL`;
     if (Array.isArray(rows)) {
       rows.forEach((row: any) => {
         if (toRemove.includes(row.parent_id) && !toRemove.includes(row.id)) {
@@ -439,8 +442,9 @@ export const deleteTask = async (id: string) => {
     }
   }
 
+  const now = Date.now();
   for (const taskId of toRemove) {
     setTaskExpanded(taskId, false);
-    await db.sql`DELETE FROM tasks WHERE id = ${taskId}`;
+    await db.sql`UPDATE tasks SET deleted_at = ${now}, updated_at = ${now} WHERE id = ${taskId}`;
   }
 };

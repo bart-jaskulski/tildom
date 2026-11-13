@@ -30,7 +30,8 @@ const CREATE_TABLE = `
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
     due_at INTEGER,
-    rank TEXT NOT NULL
+    rank TEXT NOT NULL,
+    deleted_at INTEGER
   )
 `;
 

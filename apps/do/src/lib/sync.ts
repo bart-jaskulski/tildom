@@ -13,6 +13,7 @@ const client = createSyncClient({
   state: syncState,
   exportDatabase: db.exportDatabase,
   importDatabase: db.importDatabase,
+  mergeDatabase: db.mergeDatabase,
   afterImport: initializeTaskStore,
   requestPrefetch,
   queueBackgroundSync: async () => {

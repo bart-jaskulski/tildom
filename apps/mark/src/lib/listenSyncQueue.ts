@@ -26,7 +26,7 @@ async function reconcileAudio(signal: AbortSignal) {
   if (!relevant.size) return;
   const { client } = await import("./db");
   const { prepareListenArticle, stripReaderMedia } = await import("./listenText");
-  const rows = await client.sql<{ title: string; markdown: string }>`SELECT e.title, c.markdown FROM entries e JOIN reader_captures c ON c.entry_id = e.id WHERE c.status = 'ready'`;
+  const rows = await client.sql<{ title: string; markdown: string }>`SELECT e.title, c.markdown FROM entries e JOIN reader_captures c ON c.entry_id = e.id WHERE c.status = 'ready' AND e.deleted_at IS NULL`;
   const active = new Set<string>();
   for (const row of rows) {
     signal.throwIfAborted();

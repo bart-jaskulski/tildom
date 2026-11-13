@@ -6,7 +6,7 @@ import TasksList from "./TasksList";
 const makeNode = (overrides: Partial<TreeNode> = {}): TreeNode => ({
   id: "task-1",
   parentId: null,
-  workspaceId: "default",
+  spaceId: "default",
   text: "Parent task",
   completed: false,
   createdAt: 1,
@@ -25,9 +25,9 @@ describe("TasksList", () => {
   });
 
   it("renders the provided empty state when no tasks are visible", () => {
-    render(() => <TasksList tasks={[]} emptyState={<div>No stalled tasks in this workspace.</div>} />);
+    render(() => <TasksList tasks={[]} emptyState={<div>No stalled tasks in this space.</div>} />);
 
-    expect(screen.getByText("No stalled tasks in this workspace.")).toBeInTheDocument();
+    expect(screen.getByText("No stalled tasks in this space.")).toBeInTheDocument();
   });
 
   it("shows subtasks immediately when a task is marked expanded", () => {

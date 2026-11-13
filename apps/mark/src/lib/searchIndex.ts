@@ -210,7 +210,7 @@ const searchStrictTag = async (rawQuery: string, domain?: string): Promise<Searc
       JOIN entry_tags ON entry_tags.entry_id = e.id
       JOIN tags ON tags.id = entry_tags.tag_id
       ${tagTotalsJoin}
-      WHERE tags.name = ?${domain ? " AND search_documents.domain = ?" : ""}
+      WHERE tags.name = ?${domain ? " AND search_documents.domain = ?" : ""} AND e.deleted_at IS NULL
       ORDER BY COALESCE(e.last_commented_at, e.created_at) DESC
       LIMIT 200
     `,
@@ -259,7 +259,7 @@ export const searchLocalEntries = async (rawQuery: string, domain?: string): Pro
       JOIN entries e ON e.id = search_documents_fts.entry_id
       LEFT JOIN reader_captures ON reader_captures.entry_id = e.id
       ${tagTotalsJoin}
-      WHERE search_documents_fts MATCH ?${domain ? " AND search_documents_fts.domain = ?" : ""}
+      WHERE search_documents_fts MATCH ?${domain ? " AND search_documents_fts.domain = ?" : ""} AND e.deleted_at IS NULL
       ORDER BY
         bm25(search_documents_fts, 0.0, 8.0, 5.0, 2.0, 2.0, 3.0, 1.0, 0.0, 0.0) ASC,
         COALESCE(e.last_commented_at, e.created_at) DESC
@@ -290,7 +290,7 @@ export const searchLocalEntries = async (rawQuery: string, domain?: string): Pro
       JOIN entries e ON e.id = search_documents.entry_id
       LEFT JOIN reader_captures ON reader_captures.entry_id = e.id
       ${tagTotalsJoin}
-      WHERE ${buildContainsClause(terms, domain)}
+      WHERE (${buildContainsClause(terms, domain)}) AND e.deleted_at IS NULL
       ORDER BY COALESCE(e.last_commented_at, e.created_at) DESC
       LIMIT 200
     `,
@@ -319,10 +319,10 @@ export const searchLocalEntries = async (rawQuery: string, domain?: string): Pro
       JOIN entries e ON e.id = search_documents.entry_id
       LEFT JOIN reader_captures ON reader_captures.entry_id = e.id
       ${tagTotalsJoin}
-      WHERE ${[
+      WHERE (${[
         ...terms.map(() => "tag_totals.tag_text LIKE ?"),
         ...(domain ? ["search_documents.domain = ?"] : []),
-      ].join(" AND ")}
+      ].join(" AND ")}) AND e.deleted_at IS NULL
       ORDER BY COALESCE(e.last_commented_at, e.created_at) DESC
       LIMIT 200
     `,

@@ -164,14 +164,16 @@ describe("entryStore (Real SQLite Behavioral Integration)", () => {
     expect(rows[0].body).toBe("#read #research");
   });
 
-  it("deletes entries with cascading comments and tags in SQLite", async () => {
+  it("soft-deletes entries and comments, clearing entry tags in SQLite", async () => {
     const entryId = await createEntry("To delete #temporary");
     await addCommentToEntry(entryId, "temporary comment");
 
     await deleteEntry(entryId);
 
-    expect(queryEntries("id = ?", [entryId])).toHaveLength(0);
-    const comments = memDb.prepare("SELECT * FROM comments WHERE entry_id = ?").all(entryId);
+    expect(queryEntries("id = ? AND deleted_at IS NULL", [entryId])).toHaveLength(0);
+    const entryRow = queryEntries("id = ?", [entryId])[0];
+    expect(entryRow.deleted_at).toBeGreaterThan(0);
+    const comments = memDb.prepare("SELECT * FROM comments WHERE entry_id = ? AND deleted_at IS NULL").all(entryId);
     expect(comments).toHaveLength(0);
     const entryTags = memDb.prepare("SELECT * FROM entry_tags WHERE entry_id = ?").all(entryId);
     expect(entryTags).toHaveLength(0);
@@ -187,14 +189,16 @@ describe("entryStore (Real SQLite Behavioral Integration)", () => {
     expect(comments[0].body).toBe("updated comment");
   });
 
-  it("deletes comments", async () => {
+  it("soft-deletes comments", async () => {
     const entryId = await createEntry("Entry");
     const comment = (await addCommentToEntry(entryId, "to delete"))!;
 
     await deleteComment(comment.id);
 
-    const comments = memDb.prepare("SELECT * FROM comments WHERE id = ?").all(comment.id);
-    expect(comments).toHaveLength(0);
+    const activeComments = memDb.prepare("SELECT * FROM comments WHERE id = ? AND deleted_at IS NULL").all(comment.id);
+    expect(activeComments).toHaveLength(0);
+    const commentRow = memDb.prepare("SELECT * FROM comments WHERE id = ?").all(comment.id) as any[];
+    expect(commentRow[0].deleted_at).toBeGreaterThan(0);
   });
 
   it("retrieves full entry detail with tags and comments from real tables", async () => {

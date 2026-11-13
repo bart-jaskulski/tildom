@@ -1,4 +1,4 @@
-import { A } from "@solidjs/router";
+import { A, useNavigate } from "@solidjs/router";
 import { For, Show, createSignal } from "solid-js";
 import { Button, Popover, PopoverItem, Search, useSearchContext } from "@tildom/ui";
 import { hasEntryLink, type Entry, type SearchResult } from "~/lib/entries";
@@ -27,6 +27,7 @@ const previewText = (entry: Entry | SearchResult) => {
 };
 
 export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
+  const navigate = useNavigate();
   const searchCtx = useSearchContext();
   const entry = () => props.entry;
   const [copied, setCopied] = createSignal(false);
@@ -50,14 +51,39 @@ export default function EntryListItemPreview(props: EntryListItemPreviewProps) {
     } catch {}
   };
 
+  const handleRowClick = (event: MouseEvent) => {
+    if (props.loading || event.defaultPrevented || event.button !== 0) return;
+
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+
+    if (target.closest("a, button, input, textarea, select, [role='button'], dialog, [popover]")) {
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (selection && selection.toString().trim().length > 0) return;
+
+    const id = entry().id;
+    if (!id) return;
+
+    if (event.metaKey || event.ctrlKey) {
+      window.open(`/item/${id}`, "_blank");
+    } else {
+      navigate(`/item/${id}`);
+    }
+  };
+
   return (
     <article
       class={styles.row}
       classList={{
         [styles.activeRow]: props.isActive,
+        [styles.loadingRow]: props.loading,
       }}
       data-entry-row
       data-active={props.isActive ? "" : undefined}
+      onClick={handleRowClick}
     >
       <Show
         when={!props.loading}

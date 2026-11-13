@@ -3,7 +3,7 @@
 Read the root AGENTS.md, PRODUCT.md, and DESIGN.md first. Do is a static SolidJS
 application built with Vite and explicit `@solidjs/router` routes, not SolidStart.
 
-- Tasks and workspaces belong to Do. `src/lib/schema.ts` owns migrations;
+- Tasks and spaces belong to Do. `src/lib/schema.ts` owns migrations;
   `src/lib/db.ts` uses `@tildom/browser-db` and keeps the existing
   `microstep.sqlite3` OPFS database. `src/stores/taskStore.ts` mirrors local SQL
   into Solid state. Ordering uses LexoRank. No CRDT or Y.js layer is present.
@@ -12,7 +12,7 @@ application built with Vite and explicit `@solidjs/router` routes, not SolidStar
   accessible targets and keyboard rules. Do not introduce a separate palette.
 - Optional encrypted snapshot sync uses `@tildom/sync-client` through
   `src/lib/sync.ts` and `syncState.ts`. Local database change events mark sync
-  dirty; imported snapshots refresh tasks and workspaces without becoming
+  dirty; imported snapshots refresh tasks and spaces without becoming
   local writes. Configure `VITE_SYNC_BASE_URL` for production; development uses
   the `/sync` proxy.
 - Previous `vault_store` IndexedDB pairing records are deliberately left intact,

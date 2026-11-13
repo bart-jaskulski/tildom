@@ -3,7 +3,7 @@ export type DbMigration = {
   sql: string;
 };
 
-export type DbChangeSource = 'local' | 'import';
+export type DbChangeSource = 'local' | 'import' | 'merge';
 
 export type DbChangeEvent = {
   source: DbChangeSource;
@@ -21,6 +21,7 @@ export type DbRequestBody =
   | { type: 'tx:rollback'; txId: number }
   | { type: 'export' }
   | { type: 'import'; bytes: Uint8Array; dbName: string; source?: DbChangeSource }
+  | { type: 'merge'; bytes: Uint8Array; dbName: string; source?: DbChangeSource }
   | { type: 'close' }
   | { type: 'delete'; dbName: string };
 

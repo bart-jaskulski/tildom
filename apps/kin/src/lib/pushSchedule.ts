@@ -63,7 +63,7 @@ export const buildContactReminders = async (
   const reminders: PushReminderItem[] = [];
 
   for (const contact of contacts) {
-    if (!contact.birthday) continue;
+    if (contact.deleted_at || !contact.birthday) continue;
     const parts = birthdayParts(contact.birthday);
     if (!parts.day || !parts.month) continue;
 

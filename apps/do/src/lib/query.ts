@@ -10,7 +10,7 @@ SELECT *,
     ELSE 0
   END as is_stalled
 FROM tasks
-WHERE workspace_id = ?
+WHERE workspace_id = ? AND deleted_at IS NULL
 ORDER BY
   CASE WHEN due_at IS NULL THEN 1 ELSE 0 END ASC,
   due_at DESC,
@@ -18,8 +18,8 @@ ORDER BY
   rank ASC
 `;
 
-export const fetchMainViewTasks = <T = any>(workspaceId: string): Promise<T[]> =>
-  db.query<T>(MAIN_VIEW_QUERY, [workspaceId]);
+export const fetchMainViewTasks = <T = any>(spaceId: string): Promise<T[]> =>
+  db.query<T>(MAIN_VIEW_QUERY, [spaceId]);
 
 type QueryCallback = () => any;
 

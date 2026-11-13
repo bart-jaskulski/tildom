@@ -16,10 +16,10 @@ import {
   type ListFilter,
 } from "~/stores/preferencesStore";
 import {
-  selectedWorkspaceId,
-  selectWorkspace,
+  selectedSpaceId,
+  selectSpace,
   tasks,
-  workspaces,
+  spaces,
   type TreeNode,
 } from "~/stores/taskStore";
 
@@ -81,18 +81,18 @@ export default function Home() {
 
   const emptyStateMessage = createMemo(() => {
     if (listFilter() === "active") {
-      return "No active tasks in this workspace.";
+      return "No active tasks in this space.";
     }
 
     if (listFilter() === "completed") {
-      return "No completed tasks in this workspace.";
+      return "No completed tasks in this space.";
     }
 
     if (listFilter() === "stalled") {
-      return "No stalled tasks in this workspace.";
+      return "No stalled tasks in this space.";
     }
 
-    return "No tasks in this workspace yet.";
+    return "No tasks in this space yet.";
   });
 
   const handleScroll = (event: Event) => {
@@ -117,19 +117,19 @@ export default function Home() {
       {/* Main Container */}
       <div class="tui-container">
         
-        {/* Workspace Switcher in TUI Style */}
+        {/* Space Switcher in TUI Style */}
         <section class="do-section">
-          <h2 class="tui-heading">Workspaces</h2>
+          <h2 class="tui-heading">Spaces</h2>
           <div class="do-radio-group">
-            <For each={workspaces()}>
-              {(workspace) => {
-                const isSelected = () => selectedWorkspaceId() === workspace.id;
+            <For each={spaces()}>
+              {(space) => {
+                const isSelected = () => selectedSpaceId() === space.id;
                 return (
                   <RadioButton
-                    name="workspace"
+                    name="space"
                     checked={isSelected()}
-                    onChange={() => void selectWorkspace(workspace.id)}
-                    label={workspace.name}
+                    onChange={() => void selectSpace(space.id)}
+                    label={space.name}
                   />
                 );
               }}

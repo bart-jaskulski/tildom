@@ -19,7 +19,6 @@ export const createSyncWorker = (state: SyncState) => {
     const revision = await uploadSnapshot(config, pending.body, pending.revision);
     if (!revision) {
       await state.clearPendingUpload();
-      await state.setSyncRuntime({ ...(await state.getSyncRuntime()), hasLocalChanges: false, lastError: null });
       await prefetchLatestSnapshot();
       return;
     }

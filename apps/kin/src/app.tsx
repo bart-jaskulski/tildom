@@ -70,8 +70,10 @@ export default function App() {
 
   createEffect(() => {
     if (isUnlocked() && !isContactStoreReady()) {
-      void initializeContactStore();
-      window.setTimeout(() => void initializeSync(), 1_000);
+      void (async () => {
+        await initializeContactStore();
+        void initializeSync();
+      })();
     }
   });
 

@@ -17,6 +17,7 @@ const client = createSyncClient({
   state: syncState,
   exportDatabase: databaseClient.exportDatabase,
   importDatabase: databaseClient.importDatabase,
+  mergeDatabase: databaseClient.mergeDatabase,
   afterImport: async () => { await refreshEntries(); void flushCompletedAudio(); },
   queueBackgroundSync: async () => {
     const registration = await navigator.serviceWorker?.ready;
